@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0D0E26"/>
+      <stop offset="100%" style="stop-color:#1A1D52"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700"/>
+      <stop offset="100%" style="stop-color:#FFA500"/>
+    </linearGradient>
+    <linearGradient id="silver" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E0E0E0"/>
+      <stop offset="100%" style="stop-color:#A0A0A0"/>
+    </linearGradient>
+    <linearGradient id="bronze" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#CD7F32"/>
+      <stop offset="100%" style="stop-color:#8B4513"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  
+  <!-- Grid -->
+  <g stroke="rgba(255,255,255,0.05)" stroke-width="1">
+    <line x1="0" y1="100" x2="1200" y2="100"/>
+    <line x1="0" y1="200" x2="1200" y2="200"/>
+    <line x1="0" y1="300" x2="1200" y2="300"/>
+    <line x1="0" y1="400" x2="1200" y2="400"/>
+    <line x1="0" y1="500" x2="1200" y2="500"/>
+    <line x1="300" y1="0" x2="300" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/>
+    <line x1="900" y1="0" x2="900" y2="630"/>
+  </g>
+  
+  <!-- Title - CENTERED -->
+  <text x="600" y="70" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="4">🏆 GLOBAL LEADERBOARD</text>
+  
+  <!-- Header - CENTERED HORIZONTALLY -->
+  <g transform="translate(150, 110)">
+    <rect x="0" y="0" width="900" height="45" rx="10" fill="rgba(0,82,255,0.25)" stroke="rgba(0,82,255,0.4)" stroke-width="2"/>
+    <text x="50" y="28" font-family="Arial, sans-serif" font-size="18" fill="#8FA3FF">#</text>
+    <text x="120" y="28" font-family="Arial, sans-serif" font-size="18" fill="#8FA3FF">Player</text>
+    <text x="750" y="28" font-family="Arial, sans-serif" font-size="18" fill="#8FA3FF" text-anchor="end">Score</text>
+    <text x="850" y="28" font-family="Arial, sans-serif" font-size="18" fill="#8FA3FF" text-anchor="end">Streak</text>
+  </g>
+  
+  <!-- Rank 1 - CENTERED -->
+  <g transform="translate(150, 175)">
+    <rect x="0" y="0" width="900" height="65" rx="12" fill="url(#gold)" opacity="0.25" filter="url(#glow)"/>
+    <rect x="0" y="0" width="900" height="65" rx="12" fill="none" stroke="#FFD700" stroke-width="2"/>
+    <text x="50" y="42" font-family="Arial, sans-serif" font-size="32" fill="#FFD700">🥇</text>
+    <text x="120" y="42" font-family="monospace" font-size="22" fill="#FFFFFF">0x1234...5678</text>
+    <text x="750" y="42" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#FFD700" text-anchor="end">25,450</text>
+    <text x="850" y="42" font-family="Arial, sans-serif" font-size="22" fill="#FFB800" text-anchor="end">🔥 15d</text>
+  </g>
+  
+  <!-- Rank 2 - CENTERED -->
+  <g transform="translate(150, 255)">
+    <rect x="0" y="0" width="900" height="65" rx="12" fill="url(#silver)" opacity="0.2"/>
+    <rect x="0" y="0" width="900" height="65" rx="12" fill="none" stroke="#E0E0E0" stroke-width="2"/>
+    <text x="50" y="42" font-family="Arial, sans-serif" font-size="32" fill="#E0E0E0">🥈</text>
+    <text x="120" y="42" font-family="monospace" font-size="22" fill="#FFFFFF">0xabcd...efgh</text>
+    <text x="750" y="42" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#E0E0E0" text-anchor="end">18,320</text>
+    <text x="850" y="42" font-family="Arial, sans-serif" font-size="22" fill="#FFB800" text-anchor="end">🔥 12d</text>
+  </g>
+  
+  <!-- Rank 3 - CENTERED -->
+  <g transform="translate(150, 335)">
+    <rect x="0" y="0" width="900" height="65" rx="12" fill="url(#bronze)" opacity="0.2"/>
+    <rect x="0" y="0" width="900" height="65" rx="12" fill="none" stroke="#CD7F32" stroke-width="2"/>
+    <text x="50" y="42" font-family="Arial, sans-serif" font-size="32" fill="#CD7F32">🥉</text>
+    <text x="120" y="42" font-family="monospace" font-size="22" fill="#FFFFFF">0x9876...ijkl</text>
+    <text x="750" y="42" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#CD7F32" text-anchor="end">12,890</text>
+    <text x="850" y="42" font-family="Arial, sans-serif" font-size="22" fill="#FFB800" text-anchor="end">🔥 8d</text>
+  </g>
+  
+  <!-- Rank 4 - CENTERED -->
+  <g transform="translate(150, 415)">
+    <rect x="0" y="0" width="900" height="55" rx="10" fill="rgba(255,255,255,0.05)"/>
+    <text x="50" y="36" font-family="Arial, sans-serif" font-size="22" fill="#FFFFFF">#4</text>
+    <text x="120" y="36" font-family="monospace" font-size="18" fill="#B8C7FF">0xmnop...qrst</text>
+    <text x="750" y="36" font-family="Arial, sans-serif" font-size="22" fill="#FFFFFF" text-anchor="end">8,540</text>
+    <text x="850" y="36" font-family="Arial, sans-serif" font-size="18" fill="#FFB800" text-anchor="end">🔥 5d</text>
+  </g>
+  
+  <!-- Rank 5 - CENTERED -->
+  <g transform="translate(150, 485)">
+    <rect x="0" y="0" width="900" height="55" rx="10" fill="rgba(255,255,255,0.05)"/>
+    <text x="50" y="36" font-family="Arial, sans-serif" font-size="22" fill="#FFFFFF">#5</text>
+    <text x="120" y="36" font-family="monospace" font-size="18" fill="#B8C7FF">0xuvwx...yzab</text>
+    <text x="750" y="36" font-family="Arial, sans-serif" font-size="22" fill="#FFFFFF" text-anchor="end">6,210</text>
+    <text x="850" y="36" font-family="Arial, sans-serif" font-size="18" fill="#FFB800" text-anchor="end">🔥 3d</text>
+  </g>
+  
+  <!-- Info - CENTERED -->
+  <g transform="translate(600, 590)">
+    <rect x="-220" y="-20" width="440" height="35" rx="10" fill="rgba(0,82,255,0.15)" stroke="rgba(0,82,255,0.3)" stroke-width="1"/>
+    <text x="0" y="5" font-family="Arial, sans-serif" font-size="14" fill="#8FA3FF" text-anchor="middle">💡 Daily check-in required to save scores. Miss a day = reset!</text>
+  </g>
+</svg>

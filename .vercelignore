@@ -1,0 +1,23 @@
+# Vercel ignore file
+.git
+.gitignore
+.env
+.env.local
+.env.example
+*.md
+!README.md
+DEPLOYMENT.md
+RUN_INSTRUCTIONS.md
+DEPLOY_GUIDE.md
+VERCEL_DEPLOYMENT.md
+hardhat.config.js
+scripts/
+contracts/
+artifacts/
+cache/
+typechain-types/
+.devcontainer/
+.vscode/
+.idea/
+*.log
+coverage/

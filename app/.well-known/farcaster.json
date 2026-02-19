@@ -1,0 +1,30 @@
+{
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "base dash",
+    "subtitle": "endless runner on base",
+    "description": "endless runner game on base blockchain. daily check-ins, on-chain leaderboard.",
+    "screenshotUrls": [
+      "https://your-domain.vercel.app/screenshots/screenshot-1.png",
+      "https://your-domain.vercel.app/screenshots/screenshot-2.png",
+      "https://your-domain.vercel.app/screenshots/screenshot-3.png"
+    ],
+    "iconUrl": "https://your-domain.vercel.app/icons/icon-192.png",
+    "splashImageUrl": "https://your-domain.vercel.app/splash.png",
+    "splashBackgroundColor": "#0052FF",
+    "homeUrl": "https://your-domain.vercel.app",
+    "webhookUrl": "https://your-domain.vercel.app/api/webhook",
+    "primaryCategory": "games",
+    "tags": ["game", "runner", "base", "leaderboard", "arcade", "endless"],
+    "heroImageUrl": "https://your-domain.vercel.app/hero.png",
+    "tagline": "jump. dash. conquer.",
+    "ogTitle": "base dash - endless runner",
+    "ogDescription": "endless runner game on base blockchain. daily check-ins, on-chain leaderboard.",
+    "ogImageUrl": "https://your-domain.vercel.app/og-image.png"
+  }
+}
