@@ -33,4 +33,7 @@ module.exports = {
       baseSepolia: process.env.BASESCAN_API_KEY || '',
     },
   },
+  logging: {
+    quiet: true,
+  },
 }
