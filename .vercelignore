@@ -12,7 +12,6 @@ DEPLOY_GUIDE.md
 VERCEL_DEPLOYMENT.md
 hardhat.config.js
 scripts/
-contracts/
 artifacts/
 cache/
 typechain-types/
