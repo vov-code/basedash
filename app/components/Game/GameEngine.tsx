@@ -72,6 +72,7 @@ interface Candle {
   id: number
   kind: CandleKind
   x: number
+  y: number
   width: number
   bodyHeight: number
   bodyY: number
@@ -315,7 +316,7 @@ const createCandle = (id: number, kind: CandleKind, x: number, height: number, w
   const bodyY = CFG.GROUND - lowerWick - bodyHeight
 
   return {
-    id, kind, x, width, bodyHeight, bodyY,
+    id, kind, x, y: bodyY, width, bodyHeight, bodyY,
     bodyTop: bodyY + bodyHeight,
     wickTop: bodyY - upperWick,
     wickBottom: bodyY + bodyHeight + lowerWick,

@@ -8,9 +8,6 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  // Отключаем telemetry
-  telemetry: false,
-  
   images: {
     domains: ['localhost'],
     remotePatterns: [{ protocol: 'https', hostname: '**' }],
