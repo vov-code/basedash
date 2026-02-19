@@ -1,8 +1,18 @@
 /**
  * ============================================================================
- * BASE DASH — Premium Trading-Themed Endless Runner
- * Smooth 60FPS gameplay with beautiful animations
- * ============================================================================
+ * BASE DASH — Premium Geometry Dash-Style Endless Runner
+ * Trading-Themed with Candle Obstacles
+ * 
+ * Features:
+ * - Smooth 60FPS gameplay with advanced physics
+ * - Multiple game modes and worlds
+ * - Trading candle obstacles (red = death, green = slowdown)
+ * - Beautiful particle effects and animations
+ * - Procedural obstacle generation
+ * - On-chain score submission
+ * 
+ * @version 4.0.0
+ * @author Base Dash Team
  */
 
 'use client'
@@ -13,13 +23,18 @@ import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS } from '@/app/contracts'
 import { useDailyCheckin } from '@/app/hooks/useDailyCheckin'
 import { useWallet } from '@/app/hooks/useWallet'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────────────────────────────────────
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
 
 type GameMode = 'menu' | 'playing' | 'paused' | 'gameover'
 type CandleKind = 'red' | 'green'
-type ObstacleType = 'single' | 'double' | 'triple' | 'stair' | 'wave'
+type ObstaclePattern = 'single' | 'double' | 'triple' | 'stair' | 'wave' | 'pyramid' | 'gap'
+type ParticleType = 'spark' | 'glow' | 'star' | 'ring' | 'burst' | 'trail' | 'coin' | 'smoke'
+
+// ============================================================================
+// WORLD THEMES
+// ============================================================================
 
 interface WorldTheme {
   name: string
@@ -35,14 +50,194 @@ interface WorldTheme {
   redB: string
   greenA: string
   greenB: string
-  floorPattern: 'diagonal' | 'circuit' | 'waves' | 'grid'
+  floorPattern: 'diagonal' | 'circuit' | 'waves' | 'grid' | 'neon'
+  backgroundElements: ('building' | 'cloud' | 'mountain' | 'crystal' | 'orb')[]
 }
+
+const WORLDS: WorldTheme[] = [
+  {
+    name: 'Foundation',
+    startScore: 0,
+    skyTop: '#050811',
+    skyMid: '#0f1a2e',
+    skyBottom: '#173257',
+    groundTop: '#1a2740',
+    groundBottom: '#0a0f1a',
+    accent: '#3f7fff',
+    grid: 'rgba(63,127,255,0.08)',
+    redA: '#ff6078', redB: '#ac3348',
+    greenA: '#16e79a', greenB: '#0b9f68',
+    floorPattern: 'diagonal',
+    backgroundElements: ['building', 'cloud', 'orb'],
+  },
+  {
+    name: 'Data Storm',
+    startScore: 300,
+    skyTop: '#120a20',
+    skyMid: '#231341',
+    skyBottom: '#3a2166',
+    groundTop: '#2d1a4a',
+    groundBottom: '#0f0a1a',
+    accent: '#a16eff',
+    grid: 'rgba(161,110,255,0.08)',
+    redA: '#ff7390', redB: '#ba3a59',
+    greenA: '#44f5c6', greenB: '#1aa88a',
+    floorPattern: 'circuit',
+    backgroundElements: ['crystal', 'orb', 'cloud'],
+  },
+  {
+    name: 'Bear Valley',
+    startScore: 750,
+    skyTop: '#18090a',
+    skyMid: '#321518',
+    skyBottom: '#4f2327',
+    groundTop: '#4a2025',
+    groundBottom: '#1a0a0b',
+    accent: '#ff9347',
+    grid: 'rgba(255,147,71,0.08)',
+    redA: '#ff6f61', redB: '#b43d30',
+    greenA: '#70f6ae', greenB: '#2cb06d',
+    floorPattern: 'waves',
+    backgroundElements: ['mountain', 'cloud', 'crystal'],
+  },
+  {
+    name: 'Liquid Night',
+    startScore: 1300,
+    skyTop: '#061218',
+    skyMid: '#0d2532',
+    skyBottom: '#12465a',
+    groundTop: '#1a3d4a',
+    groundBottom: '#0a151a',
+    accent: '#33d1ff',
+    grid: 'rgba(51,209,255,0.08)',
+    redA: '#ff7ba6', redB: '#b13b61',
+    greenA: '#67ffd9', greenB: '#21b89f',
+    floorPattern: 'grid',
+    backgroundElements: ['orb', 'crystal', 'cloud'],
+  },
+  {
+    name: 'Void Circuit',
+    startScore: 2000,
+    skyTop: '#0a0a0a',
+    skyMid: '#181818',
+    skyBottom: '#262626',
+    groundTop: '#2a2a2a',
+    groundBottom: '#0a0a0a',
+    accent: '#f0b90b',
+    grid: 'rgba(240,185,11,0.08)',
+    redA: '#ff845e', redB: '#b85a38',
+    greenA: '#9cff78', greenB: '#4ca93f',
+    floorPattern: 'neon',
+    backgroundElements: ['building', 'crystal', 'orb'],
+  },
+  {
+    name: 'Neon Horizon',
+    startScore: 2800,
+    skyTop: '#1a0a28',
+    skyMid: '#2a1540',
+    skyBottom: '#4a2560',
+    groundTop: '#3a1a50',
+    groundBottom: '#150a20',
+    accent: '#ff00ff',
+    grid: 'rgba(255,0,255,0.08)',
+    redA: '#ff5577', redB: '#aa3355',
+    greenA: '#55ffaa', greenB: '#33aa77',
+    floorPattern: 'neon',
+    backgroundElements: ['building', 'orb', 'crystal'],
+  },
+  {
+    name: 'Quantum Realm',
+    startScore: 3800,
+    skyTop: '#0a1a0a',
+    skyMid: '#153015',
+    skyBottom: '#204520',
+    groundTop: '#255025',
+    groundBottom: '#0a150a',
+    accent: '#00ff88',
+    grid: 'rgba(0,255,136,0.08)',
+    redA: '#ff6688', redB: '#aa4455',
+    greenA: '#88ffcc', greenB: '#44cc99',
+    floorPattern: 'grid',
+    backgroundElements: ['crystal', 'orb', 'mountain'],
+  },
+]
+
+// ============================================================================
+// SPEED TIERS
+// ============================================================================
 
 interface SpeedTier {
   label: string
   startScore: number
   multiplier: number
+  color: string
 }
+
+const SPEEDS: SpeedTier[] = [
+  { label: 'Chill', startScore: 0, multiplier: 1.0, color: '#88ccff' },
+  { label: 'Warming Up', startScore: 200, multiplier: 1.12, color: '#88ff88' },
+  { label: 'Picking Up', startScore: 450, multiplier: 1.28, color: '#ffff88' },
+  { label: 'Fast AF', startScore: 850, multiplier: 1.48, color: '#ffcc88' },
+  { label: 'Degen Mode', startScore: 1400, multiplier: 1.72, color: '#ff8888' },
+  { label: 'Impossible', startScore: 2200, multiplier: 2.0, color: '#ff88ff' },
+  { label: 'GOD MODE', startScore: 3200, multiplier: 2.35, color: '#88ffff' },
+]
+
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
+const CFG = {
+  // Canvas
+  WIDTH: 960,
+  HEIGHT: 540,
+  GROUND: 430,
+  
+  // Player
+  PLAYER_X: 180,
+  PLAYER_SIZE: 42,
+  HITBOX: 10,
+  
+  // Physics
+  STEP: 1 / 60,
+  MAX_DELTA: 0.033,
+  UI_RATE: 1 / 8,
+  
+  GRAVITY: 2900,
+  JUMP: -920,
+  DOUBLE_JUMP: -780,
+  MAX_FALL: 1550,
+  COYOTE: 0.11,
+  BUFFER: 0.14,
+  ROT_SPEED: 9.5,
+  
+  // Speed
+  BASE_SPEED: 400,
+  MAX_SPEED: 750,
+  SPEED_INCREMENT: 22,
+  DOUBLE_JUMP_AT: 150,
+  
+  // Spawning
+  BASE_SPAWN_GAP: 460,
+  MIN_SPAWN_GAP: 270,
+  GAP_DECREASE: 0.075,
+  
+  // Scoring
+  RED_SCORE: 10,
+  GREEN_SCORE: 5,
+  SLOW_MULT: 0.58,
+  SLOW_TIME: 2.2,
+  
+  // Effects
+  PARTICLE_LIMIT: 220,
+  TRAIL_LIMIT: 12,
+  STAR_COUNT: 80,
+  BG_ELEMENT_COUNT: 12,
+}
+
+// ============================================================================
+// INTERFACES
+// ============================================================================
 
 interface TrailPoint {
   x: number
@@ -50,6 +245,7 @@ interface TrailPoint {
   life: number
   alpha: number
   size: number
+  rotation: number
 }
 
 interface Player {
@@ -66,6 +262,7 @@ interface Player {
   invincible: number
   scale: number
   squash: number
+  flash: number
 }
 
 interface Candle {
@@ -74,6 +271,7 @@ interface Candle {
   x: number
   y: number
   width: number
+  height: number
   bodyHeight: number
   bodyY: number
   bodyTop: number
@@ -85,6 +283,11 @@ interface Candle {
   flickerSpeed: number
   collectProgress: number
   scaleAnim: number
+  rotation: number
+  targetY: number
+  moveSpeed: number
+  movePhase: number
+  isMoving: boolean
 }
 
 interface Particle {
@@ -95,12 +298,15 @@ interface Particle {
   life: number
   maxLife: number
   size: number
+  targetSize: number
   color: string
   color2?: string
   gravity: number
-  type: 'spark' | 'glow' | 'star' | 'ring' | 'burst'
+  type: ParticleType
   angle: number
+  rotation: number
   rotationSpeed: number
+  friction: number
 }
 
 interface Star {
@@ -110,6 +316,20 @@ interface Star {
   alpha: number
   depth: number
   twinkle: number
+  twinkleSpeed: number
+  color: string
+}
+
+interface BackgroundElement {
+  type: 'building' | 'cloud' | 'mountain' | 'crystal' | 'orb'
+  x: number
+  y: number
+  width: number
+  height: number
+  color: string
+  alpha: number
+  phase: number
+  speed: number
 }
 
 interface EngineState {
@@ -117,6 +337,7 @@ interface EngineState {
   candles: Candle[]
   particles: Particle[]
   stars: Star[]
+  backgroundElements: BackgroundElement[]
   speed: number
   distance: number
   score: number
@@ -134,164 +355,60 @@ interface EngineState {
   alive: boolean
   gameTime: number
   totalCollected: number
+  totalJumps: number
+  distanceTraveled: number
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CONFIG
-// ─────────────────────────────────────────────────────────────────────────────
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
 
-const CFG = {
-  WIDTH: 960,
-  HEIGHT: 540,
-  GROUND: 430,
-  PLAYER_X: 180,
-  PLAYER_SIZE: 42,
-  HITBOX: 10,
-
-  STEP: 1 / 60,
-  MAX_DELTA: 0.033,
-  UI_RATE: 1 / 8,
-
-  GRAVITY: 2800,
-  JUMP: -900,
-  DOUBLE_JUMP: -750,
-  MAX_FALL: 1500,
-  COYOTE: 0.1,
-  BUFFER: 0.13,
-  ROT_SPEED: 9,
-
-  BASE_SPEED: 380,
-  MAX_SPEED: 700,
-  DOUBLE_JUMP_AT: 150,
-
-  BASE_SPAWN_GAP: 450,
-  MIN_SPAWN_GAP: 260,
-
-  RED_SCORE: 10,
-  GREEN_SCORE: 5,
-  SLOW_MULT: 0.62,
-  SLOW_TIME: 2.8,
-
-  PARTICLE_LIMIT: 180,
-  TRAIL_LIMIT: 10,
-  STAR_COUNT: 70,
+const clamp = (v: number, min: number, max: number): number => Math.max(min, Math.min(max, v))
+const lerp = (a: number, b: number, t: number): number => a + (b - a) * clamp(t, 0, 1)
+const lerpAngle = (a: number, b: number, t: number): number => {
+  let diff = b - a
+  while (diff > Math.PI) diff -= Math.PI * 2
+  while (diff < -Math.PI) diff += Math.PI * 2
+  return a + diff * clamp(t, 0, 1)
 }
+const rand = (min: number, max: number): number => Math.random() * (max - min) + min
+const randInt = (min: number, max: number): number => Math.floor(rand(min, max + 1))
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SPEED TIERS
-// ─────────────────────────────────────────────────────────────────────────────
+const getWorld = (score: number): WorldTheme => WORLDS.filter(w => score >= w.startScore).at(-1) || WORLDS[0]
+const getSpeed = (score: number): SpeedTier => SPEEDS.filter(s => score >= s.startScore).at(-1) || SPEEDS[0]
+const getJumps = (score: number): number => score >= CFG.DOUBLE_JUMP_AT ? 2 : 1
 
-const SPEEDS: SpeedTier[] = [
-  { label: 'chill', startScore: 0, multiplier: 1.0 },
-  { label: 'warming up', startScore: 200, multiplier: 1.15 },
-  { label: 'picking up', startScore: 450, multiplier: 1.35 },
-  { label: 'fast af', startScore: 850, multiplier: 1.58 },
-  { label: 'degen mode', startScore: 1400, multiplier: 1.85 },
-  { label: 'impossible', startScore: 2200, multiplier: 2.15 },
-]
+// ============================================================================
+// CREATION FUNCTIONS
+// ============================================================================
 
-// ─────────────────────────────────────────────────────────────────────────────
-// WORLDS
-// ─────────────────────────────────────────────────────────────────────────────
-
-const WORLDS: WorldTheme[] = [
-  {
-    name: 'foundation',
-    startScore: 0,
-    skyTop: '#050811',
-    skyMid: '#0f1a2e',
-    skyBottom: '#173257',
-    groundTop: '#1a2740',
-    groundBottom: '#0a0f1a',
-    accent: '#3f7fff',
-    grid: 'rgba(63,127,255,0.08)',
-    redA: '#ff6078', redB: '#ac3348',
-    greenA: '#16e79a', greenB: '#0b9f68',
-    floorPattern: 'diagonal',
-  },
-  {
-    name: 'data storm',
-    startScore: 300,
-    skyTop: '#120a20',
-    skyMid: '#231341',
-    skyBottom: '#3a2166',
-    groundTop: '#2d1a4a',
-    groundBottom: '#0f0a1a',
-    accent: '#a16eff',
-    grid: 'rgba(161,110,255,0.08)',
-    redA: '#ff7390', redB: '#ba3a59',
-    greenA: '#44f5c6', greenB: '#1aa88a',
-    floorPattern: 'circuit',
-  },
-  {
-    name: 'bear valley',
-    startScore: 750,
-    skyTop: '#18090a',
-    skyMid: '#321518',
-    skyBottom: '#4f2327',
-    groundTop: '#4a2025',
-    groundBottom: '#1a0a0b',
-    accent: '#ff9347',
-    grid: 'rgba(255,147,71,0.08)',
-    redA: '#ff6f61', redB: '#b43d30',
-    greenA: '#70f6ae', greenB: '#2cb06d',
-    floorPattern: 'waves',
-  },
-  {
-    name: 'liquid night',
-    startScore: 1300,
-    skyTop: '#061218',
-    skyMid: '#0d2532',
-    skyBottom: '#12465a',
-    groundTop: '#1a3d4a',
-    groundBottom: '#0a151a',
-    accent: '#33d1ff',
-    grid: 'rgba(51,209,255,0.08)',
-    redA: '#ff7ba6', redB: '#b13b61',
-    greenA: '#67ffd9', greenB: '#21b89f',
-    floorPattern: 'grid',
-  },
-  {
-    name: 'void circuit',
-    startScore: 2000,
-    skyTop: '#0a0a0a',
-    skyMid: '#181818',
-    skyBottom: '#262626',
-    groundTop: '#2a2a2a',
-    groundBottom: '#0a0a0a',
-    accent: '#f0b90b',
-    grid: 'rgba(240,185,11,0.08)',
-    redA: '#ff845e', redB: '#b85a38',
-    greenA: '#9cff78', greenB: '#4ca93f',
-    floorPattern: 'circuit',
-  },
-]
-
-// ─────────────────────────────────────────────────────────────────────────────
-// UTILS
-// ─────────────────────────────────────────────────────────────────────────────
-
-const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
-const lerp = (a: number, b: number, t: number) => a + (b - a) * clamp(t, 0, 1)
-const rand = (min: number, max: number) => Math.random() * (max - min) + min
-
-const getWorld = (score: number) => WORLDS.filter(w => score >= w.startScore).at(-1) || WORLDS[0]
-const getSpeed = (score: number) => SPEEDS.filter(s => score >= s.startScore).at(-1) || SPEEDS[0]
-const getJumps = (score: number) => score >= CFG.DOUBLE_JUMP_AT ? 2 : 1
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CREATE FUNCTIONS
-// ─────────────────────────────────────────────────────────────────────────────
-
-const createStars = (): Star[] =>
-  Array.from({ length: CFG.STAR_COUNT }, () => ({
+const createStars = (count: number = CFG.STAR_COUNT): Star[] =>
+  Array.from({ length: count }, () => ({
     x: Math.random() * CFG.WIDTH,
     y: Math.random() * (CFG.GROUND - 60),
-    size: rand(0.5, 2),
+    size: rand(0.5, 2.2),
     alpha: rand(0.4, 0.9),
-    depth: rand(0.2, 0.9),
+    depth: rand(0.2, 0.95),
     twinkle: rand(0, Math.PI * 2),
+    twinkleSpeed: rand(1.5, 3.5),
+    color: rand(0, 1) > 0.9 ? '#aaccff' : rand(0, 1) > 0.85 ? '#ffddaa' : '#ffffff',
   }))
+
+const createBackgroundElements = (world: WorldTheme, count: number = CFG.BG_ELEMENT_COUNT): BackgroundElement[] =>
+  Array.from({ length: count }, () => {
+    const type = world.backgroundElements[randInt(0, world.backgroundElements.length - 1)]
+    return {
+      type,
+      x: rand(0, CFG.WIDTH),
+      y: rand(80, CFG.GROUND - 100),
+      width: rand(40, 120),
+      height: rand(60, 180),
+      color: world.accent,
+      alpha: rand(0.12, 0.28),
+      phase: rand(0, Math.PI * 2),
+      speed: rand(0.02, 0.05),
+    }
+  })
 
 const createPlayer = (): Player => ({
   x: CFG.PLAYER_X,
@@ -307,24 +424,30 @@ const createPlayer = (): Player => ({
   invincible: 0,
   scale: 1,
   squash: 0,
+  flash: 0,
 })
 
-const createCandle = (id: number, kind: CandleKind, x: number, height: number, width: number): Candle => {
+const createCandle = (id: number, kind: CandleKind, x: number, height: number, width: number, isMoving = false): Candle => {
   const upperWick = height * rand(0.18, 0.26)
   const lowerWick = height * rand(0.08, 0.14)
   const bodyHeight = height - upperWick - lowerWick
   const bodyY = CFG.GROUND - lowerWick - bodyHeight
 
   return {
-    id, kind, x, y: bodyY, width, bodyHeight, bodyY,
+    id, kind, x, y: bodyY, width, height, bodyHeight, bodyY,
     bodyTop: bodyY + bodyHeight,
     wickTop: bodyY - upperWick,
     wickBottom: bodyY + bodyHeight + lowerWick,
     passed: false, collected: false,
     phase: rand(0, Math.PI * 2),
-    flickerSpeed: rand(6, 10),
+    flickerSpeed: rand(6, 11),
     collectProgress: 0,
     scaleAnim: 1,
+    rotation: 0,
+    targetY: bodyY,
+    moveSpeed: isMoving ? rand(30, 60) : 0,
+    movePhase: rand(0, Math.PI * 2),
+    isMoving,
   }
 }
 
@@ -335,6 +458,7 @@ const createEngine = (): EngineState => {
     candles: [],
     particles: [],
     stars: createStars(),
+    backgroundElements: createBackgroundElements(world),
     speed: CFG.BASE_SPEED,
     distance: 0,
     score: 0,
@@ -350,12 +474,14 @@ const createEngine = (): EngineState => {
     alive: true,
     gameTime: 0,
     totalCollected: 0,
+    totalJumps: 0,
+    distanceTraveled: 0,
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ============================================================================
 // MAIN COMPONENT
-// ─────────────────────────────────────────────────────────────────────────────
+// ============================================================================
 
 export default function GameEngine() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -386,11 +512,15 @@ export default function GameEngine() {
     [address]
   )
 
-  // ───────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
   // PARTICLE SYSTEM
-  // ───────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
 
-  const addParticles = useCallback((x: number, y: number, color: string, count: number, type: Particle['type'] = 'spark', spread: number = Math.PI * 2) => {
+  const addParticles = useCallback((
+    x: number, y: number, color: string, count: number,
+    type: ParticleType = 'spark', spread: number = Math.PI * 2,
+    speedMin: number = 80, speedMax: number = 320
+  ) => {
     const e = engineRef.current
     if (e.particles.length > CFG.PARTICLE_LIMIT) {
       e.particles.splice(0, e.particles.length - CFG.PARTICLE_LIMIT)
@@ -399,27 +529,28 @@ export default function GameEngine() {
       const baseAngle = spread === Math.PI * 2 ? 0 : -spread / 2
       const angle = spread === Math.PI * 2
         ? Math.random() * Math.PI * 2
-        : baseAngle + (spread / count) * i + rand(-0.15, 0.15)
-      const speed = rand(80, 320)
+        : baseAngle + (spread / count) * i + rand(-0.12, 0.12)
+      const speed = rand(speedMin, speedMax)
       e.particles.push({
         x, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: 1,
-        maxLife: 1,
-        size: rand(2, 5),
-        color,
-        gravity: type === 'spark' ? 450 : type === 'star' ? 150 : 0,
+        life: 1, maxLife: 1,
+        size: rand(2, 5.5),
+        targetSize: rand(1, 3),
+        color, color2: undefined,
+        gravity: type === 'spark' ? 480 : type === 'coin' ? 180 : type === 'star' ? 150 : 0,
         type,
         angle,
+        rotation: rand(0, Math.PI * 2),
         rotationSpeed: rand(-4, 4),
+        friction: 0.965,
       })
     }
   }, [])
 
-  const addRingParticles = useCallback((x: number, y: number, color: string) => {
+  const addRingParticles = useCallback((x: number, y: number, color: string, count: number = 12) => {
     const e = engineRef.current
-    const count = 12
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 / count) * i
       const speed = rand(100, 180)
@@ -427,43 +558,65 @@ export default function GameEngine() {
         x, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: 1,
-        maxLife: 1,
+        life: 1, maxLife: 1,
         size: rand(2, 4),
+        targetSize: 2,
         color,
         gravity: 0,
         type: 'ring',
         angle,
+        rotation: 0,
         rotationSpeed: 0,
+        friction: 0.97,
       })
     }
   }, [])
 
-  const addBurstParticles = useCallback((x: number, y: number, color: string) => {
+  const addBurstParticles = useCallback((x: number, y: number, color: string, count: number = 18) => {
     const e = engineRef.current
-    const count = 16
     for (let i = 0; i < count; i++) {
       const angle = rand(0, Math.PI * 2)
-      const speed = rand(120, 280)
+      const speed = rand(130, 300)
       e.particles.push({
         x, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: 1,
-        maxLife: 1,
-        size: rand(2.5, 5.5),
+        life: 1, maxLife: 1,
+        size: rand(2.5, 6),
+        targetSize: 2,
         color,
-        gravity: 200,
+        gravity: 220,
         type: 'burst',
         angle,
+        rotation: rand(0, Math.PI * 2),
         rotationSpeed: rand(-3, 3),
+        friction: 0.955,
       })
     }
   }, [])
 
-  // ───────────────────────────────────────────────────────────────────────────
+  const addTrailParticles = useCallback((x: number, y: number, color: string) => {
+    const e = engineRef.current
+    e.particles.push({
+      x, y,
+      vx: rand(-20, 20),
+      vy: rand(-20, 20),
+      life: 1, maxLife: 1,
+      size: rand(3, 6),
+      targetSize: 1,
+      color,
+      gravity: 0,
+      type: 'trail',
+      angle: 0,
+      rotation: 0,
+      rotationSpeed: 0,
+      friction: 0.92,
+    })
+  }, [])
+
+  // ──────────────────────────────────────────────────────────────────────────
   // GAME HELPERS
-  // ───────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
 
   const saveBest = useCallback((v: number) => {
     if (v <= highScoreRef.current) return
@@ -481,8 +634,8 @@ export default function GameEngine() {
     const e = engineRef.current
     if (!e.alive) return
     e.alive = false
-    shake(20, 0.3)
-    addBurstParticles(CFG.PLAYER_X + CFG.PLAYER_SIZE / 2, e.player.y + CFG.PLAYER_SIZE / 2, '#ff6078')
+    shake(22, 0.35)
+    addBurstParticles(CFG.PLAYER_X + CFG.PLAYER_SIZE / 2, e.player.y + CFG.PLAYER_SIZE / 2, '#ff6078', 25)
     setDeathScore(runScore)
     setScore(runScore)
     saveBest(runScore)
@@ -541,24 +694,25 @@ export default function GameEngine() {
     }
   }, [address, canSubmitScore, deathScore, submitting, writeContractAsync])
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // SPAWN PATTERNS - DIVERSE OBSTACLES
-  // ───────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
+  // SPAWN PATTERNS
+  // ──────────────────────────────────────────────────────────────────────────
 
   const spawnPattern = useCallback((e: EngineState) => {
-    const diff = clamp(e.score / 3500, 0, 1)
-    const complexity = Math.min(4, Math.floor(e.score / 500))
-    const startX = CFG.WIDTH + 130
-    const baseH = lerp(75, 115, diff)
-    const baseW = lerp(28, 40, diff)
+    const diff = clamp(e.score / 4000, 0, 1)
+    const complexity = Math.min(5, Math.floor(e.score / 550))
+    const startX = CFG.WIDTH + 140
+    const baseH = lerp(78, 118, diff)
+    const baseW = lerp(30, 42, diff)
 
-    const push = (offset: number, kind: CandleKind, hM = 1, wM = 1) => {
+    const push = (offset: number, kind: CandleKind, hM = 1, wM = 1, isMoving = false) => {
       e.candles.push(createCandle(
         e.nextCandleId++,
         kind,
         startX + offset,
         baseH * rand(0.88, 1.18) * hM,
-        baseW * rand(0.9, 1.12) * wM
+        baseW * rand(0.92, 1.12) * wM,
+        isMoving
       ))
     }
 
@@ -566,127 +720,162 @@ export default function GameEngine() {
 
     // Разнообразные паттерны препятствий
     if (complexity === 0) {
-      if (roll < 0.65) {
-        // Одиночная красная
+      if (roll < 0.62) {
         push(0, 'red')
-      } else if (roll < 0.85) {
-        // Красная + зелёная сзади
+      } else if (roll < 0.82) {
         push(0, 'red', 1.08)
-        push(110, 'green')
-      } else {
-        // Одиночная зелёная
+        push(115, 'green')
+      } else if (roll < 0.92) {
         push(0, 'green')
+      } else {
+        push(0, 'red', 1, 1, true) // Движущаяся
       }
     } else if (complexity === 1) {
-      if (roll < 0.25) {
-        // Две красные подряд
+      if (roll < 0.22) {
         push(0, 'red')
-        push(130, 'red', 1.05)
-      } else if (roll < 0.45) {
-        // Зелёная + красная
+        push(135, 'red', 1.06)
+      } else if (roll < 0.42) {
         push(0, 'green')
-        push(105, 'red', 1.12)
-      } else if (roll < 0.65) {
-        // Лесенка вверх
+        push(110, 'red', 1.12)
+      } else if (roll < 0.62) {
         push(0, 'red', 0.92)
-        push(115, 'red', 1.15)
-      } else if (roll < 0.85) {
-        // Три свечи: К-З-К
+        push(120, 'red', 1.15)
+      } else if (roll < 0.82) {
         push(0, 'red')
-        push(95, 'green')
-        push(195, 'red', 1.08)
+        push(100, 'green')
+        push(205, 'red', 1.08)
       } else {
-        // Волна
         push(0, 'red', 1.1)
-        push(100, 'red', 0.88)
-        push(200, 'red', 1.12)
+        push(105, 'red', 0.9)
+        push(210, 'red', 1.12)
       }
     } else if (complexity === 2) {
-      if (roll < 0.2) {
-        // Три красные
+      if (roll < 0.18) {
         push(0, 'red', 1.08)
-        push(110, 'red', 0.92)
-        push(220, 'red', 1.12)
-      } else if (roll < 0.4) {
-        // Зелёная + две красные
+        push(115, 'red', 0.92)
+        push(230, 'red', 1.12)
+      } else if (roll < 0.36) {
         push(0, 'green')
-        push(100, 'red', 1.18)
-        push(210, 'red', 0.95)
-      } else if (roll < 0.6) {
-        // Четыре свечи: З-К-К-З
+        push(105, 'red', 1.18)
+        push(220, 'red', 0.95)
+      } else if (roll < 0.54) {
         push(0, 'green')
-        push(95, 'red', 1.12)
-        push(195, 'red', 0.95)
-        push(295, 'green')
-      } else if (roll < 0.8) {
-        // Лесенка из 3
+        push(100, 'red', 1.12)
+        push(205, 'red', 0.95)
+        push(310, 'green')
+      } else if (roll < 0.72) {
         push(0, 'red', 0.88)
-        push(105, 'red', 1.08)
-        push(215, 'red', 1.22)
-      } else {
-        // Пять свечей волной
+        push(110, 'red', 1.08)
+        push(225, 'red', 1.22)
+      } else if (roll < 0.9) {
         push(0, 'red', 0.95)
-        push(90, 'green')
-        push(185, 'red', 1.15)
-        push(280, 'red', 0.9)
+        push(95, 'green')
+        push(195, 'red', 1.15)
+        push(295, 'red', 0.9)
+      } else {
+        push(0, 'red', 1, 1, true)
+        push(120, 'red', 1.08)
+        push(240, 'green')
+      }
+    } else if (complexity === 3) {
+      if (roll < 0.15) {
+        push(0, 'red')
+        push(105, 'red', 1.08)
+        push(215, 'red', 0.92)
+        push(325, 'red', 1.15)
+      } else if (roll < 0.3) {
+        push(0, 'green')
+        push(90, 'red', 1.15)
+        push(185, 'red', 0.95)
+        push(280, 'red', 1.1)
         push(375, 'green')
+      } else if (roll < 0.45) {
+        push(0, 'red', 0.9)
+        push(100, 'red', 1.12)
+        push(205, 'red', 0.88)
+        push(305, 'red', 1.18)
+      } else if (roll < 0.6) {
+        push(0, 'red', 1.05)
+        push(92, 'green')
+        push(190, 'red', 1.18)
+        push(285, 'red', 0.92)
+        push(380, 'green')
+      } else if (roll < 0.75) {
+        push(0, 'red', 0.95)
+        push(95, 'red', 1.1)
+        push(195, 'green')
+        push(295, 'red', 1.15)
+        push(395, 'red', 0.88)
+      } else {
+        push(0, 'red', 1, 1, true)
+        push(110, 'red', 1.08)
+        push(220, 'red', 0.92)
+        push(330, 'green')
       }
     } else {
       // Максимальная сложность
-      if (roll < 0.15) {
-        // Четыре красные
+      if (roll < 0.12) {
         push(0, 'red')
-        push(100, 'red', 1.08)
-        push(200, 'red', 0.92)
-        push(300, 'red', 1.15)
-      } else if (roll < 0.3) {
-        // Шесть свечей
+        push(95, 'red', 1.08)
+        push(195, 'red', 0.92)
+        push(290, 'red', 1.15)
+        push(390, 'red', 0.88)
+      } else if (roll < 0.24) {
         push(0, 'green')
         push(85, 'red', 1.15)
         push(175, 'red', 0.95)
-        push(265, 'red', 1.1)
-        push(355, 'green')
-      } else if (roll < 0.5) {
-        // Двойная лесенка
-        push(0, 'red', 0.9)
-        push(95, 'red', 1.12)
-        push(195, 'red', 0.88)
-        push(290, 'red', 1.18)
-      } else if (roll < 0.7) {
-        // Волна из 5
-        push(0, 'red', 1.05)
-        push(88, 'green')
-        push(180, 'red', 1.18)
-        push(270, 'red', 0.92)
-        push(360, 'green')
-      } else {
-        // Смешанный паттерн
-        push(0, 'red', 0.95)
-        push(92, 'red', 1.1)
-        push(188, 'green')
+        push(270, 'red', 1.1)
+        push(365, 'green')
+        push(460, 'red', 1.05)
+      } else if (roll < 0.4) {
+        push(0, 'red', 0.92)
+        push(90, 'red', 1.12)
+        push(185, 'green')
         push(285, 'red', 1.15)
-        push(380, 'red', 0.88)
+        push(385, 'red', 0.88)
+        push(480, 'green')
+      } else if (roll < 0.55) {
+        push(0, 'red', 1, 1, true)
+        push(105, 'red', 1.08)
+        push(210, 'red', 0.92)
+        push(315, 'red', 1.12)
+        push(420, 'green')
+      } else if (roll < 0.7) {
+        push(0, 'red', 0.88)
+        push(88, 'red', 1.15)
+        push(180, 'red', 0.92)
+        push(270, 'green')
+        push(365, 'red', 1.18)
+        push(460, 'red', 0.85)
+      } else {
+        push(0, 'green')
+        push(95, 'red', 1.12)
+        push(190, 'red', 0.95)
+        push(285, 'red', 1.08)
+        push(380, 'green')
+        push(475, 'red', 1.15)
       }
     }
 
     const gap = lerp(CFG.BASE_SPAWN_GAP, CFG.MIN_SPAWN_GAP, diff)
-    e.nextSpawnDistance = e.distance + gap * rand(0.92, 1.08)
+    e.nextSpawnDistance = e.distance + gap * rand(0.93, 1.07)
   }, [])
 
-  // ───────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
   // UPDATE
-  // ───────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
 
   const update = useCallback((dt: number) => {
     const e = engineRef.current
     if (!e.alive) return
 
     e.gameTime += dt
+    e.distanceTraveled += e.speed * dt
     const p = e.player
 
-    // Speed
+    // Speed calculation
     const tier = getSpeed(e.score)
-    const diffMult = lerp(1, 1.38, clamp(e.score / 3500, 0, 1))
+    const diffMult = lerp(1, 1.42, clamp(e.score / 4000, 0, 1))
     let targetSpeed = CFG.BASE_SPEED * tier.multiplier * diffMult
     targetSpeed = Math.min(targetSpeed, CFG.MAX_SPEED)
 
@@ -703,6 +892,7 @@ export default function GameEngine() {
     p.jumpBufferTimer = Math.max(0, p.jumpBufferTimer - dt)
     p.coyoteTimer = p.onGround ? CFG.COYOTE : Math.max(0, p.coyoteTimer - dt)
     p.invincible = Math.max(0, p.invincible - dt)
+    p.flash = Math.max(0, p.flash - dt)
 
     // Jump
     if (p.jumpBufferTimer > 0 && (p.onGround || p.coyoteTimer > 0)) {
@@ -712,12 +902,16 @@ export default function GameEngine() {
       p.jumpCount++
       p.jumpBufferTimer = 0
       p.coyoteTimer = 0
-      p.squash = -0.15
+      p.squash = -0.18
+      p.flash = 0.08
+
+      e.totalJumps++
 
       if (p.jumpCount === 1) {
-        addParticles(CFG.PLAYER_X + CFG.PLAYER_SIZE / 2, CFG.GROUND - 2, '#ffffff', 10, 'spark', Math.PI)
+        addParticles(CFG.PLAYER_X + CFG.PLAYER_SIZE / 2, CFG.GROUND - 2, '#ffffff', 12, 'spark', Math.PI, 80, 240)
+        addTrailParticles(CFG.PLAYER_X + CFG.PLAYER_SIZE / 2, CFG.GROUND - 5, '#88ccff')
       } else {
-        addRingParticles(CFG.PLAYER_X + CFG.PLAYER_SIZE / 2, p.y + CFG.PLAYER_SIZE, '#88ccff')
+        addRingParticles(CFG.PLAYER_X + CFG.PLAYER_SIZE / 2, p.y + CFG.PLAYER_SIZE, '#88ccff', 14)
       }
     }
 
@@ -725,7 +919,7 @@ export default function GameEngine() {
     p.velocityY = Math.min(CFG.MAX_FALL, p.velocityY + CFG.GRAVITY * dt)
     p.y += p.velocityY * dt
 
-    // Ground
+    // Ground collision
     if (p.y >= CFG.GROUND - CFG.PLAYER_SIZE) {
       p.y = CFG.GROUND - CFG.PLAYER_SIZE
       p.velocityY = 0
@@ -733,30 +927,37 @@ export default function GameEngine() {
       p.jumpCount = 0
       p.maxJumps = getJumps(e.score)
       const targetRot = Math.round(p.rotation / (Math.PI / 2)) * (Math.PI / 2)
-      p.rotation = lerp(p.rotation, targetRot, dt * 12)
-      p.squash = lerp(p.squash, 0, dt * 8)
+      p.rotation = lerpAngle(p.rotation, targetRot, dt * 13)
+      p.squash = lerp(p.squash, 0, dt * 9)
     } else {
       p.onGround = false
       p.rotation += CFG.ROT_SPEED * dt
-      p.squash = lerp(p.squash, 0.05, dt * 3)
+      p.squash = lerp(p.squash, 0.06, dt * 3.5)
     }
 
-    p.scale = lerp(p.scale, 1 + p.squash * 0.3, dt * 10)
+    p.scale = lerp(p.scale, 1 + p.squash * 0.35, dt * 11)
 
     // Trail
-    if (e.gameTime % 0.035 < dt) {
-      p.trail.push({ x: CFG.PLAYER_X, y: p.y, life: 0.4, alpha: 0.5, size: CFG.PLAYER_SIZE * p.scale })
+    if (e.gameTime % 0.032 < dt) {
+      p.trail.push({
+        x: CFG.PLAYER_X,
+        y: p.y,
+        life: 0.45,
+        alpha: 0.55,
+        size: CFG.PLAYER_SIZE * p.scale,
+        rotation: p.rotation,
+      })
       if (p.trail.length > CFG.TRAIL_LIMIT) p.trail.shift()
     }
     for (let i = p.trail.length - 1; i >= 0; i--) {
-      p.trail[i].life -= 0.07
+      p.trail[i].life -= 0.075
       if (p.trail[i].life <= 0) p.trail.splice(i, 1)
     }
 
     // Spawn
     if (e.distance >= e.nextSpawnDistance) spawnPattern(e)
 
-    // Candles
+    // Update candles
     const pad = CFG.HITBOX
     const px = CFG.PLAYER_X + pad
     const py = p.y + pad
@@ -764,14 +965,23 @@ export default function GameEngine() {
 
     for (let i = e.candles.length - 1; i >= 0; i--) {
       const c = e.candles[i]
+      
+      // Moving candle logic
+      if (c.isMoving) {
+        c.movePhase += dt * 2.5
+        c.targetY = c.bodyY + Math.sin(c.movePhase) * 25
+        c.y = lerp(c.y, c.targetY, dt * 3)
+      }
+
       c.x -= e.speed * dt
       c.phase += c.flickerSpeed * dt
 
       // Collect animation
       if (c.collected && c.collectProgress < 1) {
-        c.collectProgress += dt * 8
-        c.scaleAnim = 1 + Math.sin(c.collectProgress * Math.PI) * 0.3
-        c.y = (c.bodyY || 0) - c.collectProgress * 40
+        c.collectProgress += dt * 7
+        c.scaleAnim = 1 + Math.sin(c.collectProgress * Math.PI) * 0.35
+        c.y = c.bodyY - c.collectProgress * 45
+        c.rotation += dt * 8
       }
 
       if (!c.passed && c.x + c.width < CFG.PLAYER_X) {
@@ -784,7 +994,7 @@ export default function GameEngine() {
         }
       }
 
-      if (c.x + c.width < -80) { e.candles.splice(i, 1); continue }
+      if (c.x + c.width < -85) { e.candles.splice(i, 1); continue }
 
       const bodyHit = (px < c.x + c.width - 2 && px + ps > c.x + 2 && py < c.bodyTop - 1 && py + ps > c.bodyY + 1)
       const wickHit = (px < c.x + c.width * 0.55 && px + ps > c.x + c.width * 0.35 && py < c.wickBottom && py + ps > c.wickTop)
@@ -802,48 +1012,59 @@ export default function GameEngine() {
         e.slowdownTimer = Math.max(e.slowdownTimer, CFG.SLOW_TIME)
         e.totalCollected++
 
-        // Красивая анимация сбора
-        addRingParticles(c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, '#16e79a')
-        addBurstParticles(c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, '#44f5c6')
-        shake(6, 0.12)
+        addRingParticles(c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, '#16e79a', 14)
+        addBurstParticles(c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, '#44f5c6', 20)
+        shake(7, 0.13)
       }
     }
 
-    // Particles
+    // Update particles
     for (let i = e.particles.length - 1; i >= 0; i--) {
       const pt = e.particles[i]
       pt.x += pt.vx * dt
       pt.y += pt.vy * dt
       pt.vy += pt.gravity * dt
-      pt.vx *= 0.96
-      pt.vy *= 0.96
-      pt.life -= 0.028
-      pt.size *= 0.985
+      pt.vx *= pt.friction
+      pt.vy *= pt.friction
+      pt.life -= 0.026
+      pt.size = lerp(pt.size, pt.targetSize, dt * 4)
+      pt.rotation += pt.rotationSpeed * dt
       if (pt.life <= 0) e.particles.splice(i, 1)
     }
 
-    // Stars
+    // Update stars
     for (const s of e.stars) {
-      s.x -= e.speed * 0.025 * s.depth * dt
-      s.twinkle += 2 * dt
+      s.x -= e.speed * 0.022 * s.depth * dt
+      s.twinkle += s.twinkleSpeed * dt
       if (s.x < -10) { s.x = CFG.WIDTH + 10; s.y = rand(15, CFG.GROUND - 50) }
+    }
+
+    // Update background elements
+    for (const elem of e.backgroundElements) {
+      elem.x -= e.speed * elem.speed * dt
+      elem.phase += elem.speed * dt
+      if (elem.x < -elem.width) {
+        elem.x = CFG.WIDTH + rand(0, 150)
+        elem.y = rand(80, CFG.GROUND - 100)
+      }
     }
 
     // World transition
     const world = getWorld(e.score)
     if (world.name !== e.worldName) {
       e.worldName = world.name
-      e.worldBannerTimer = 2.2
-      shake(10, 0.2)
-      addRingParticles(CFG.WIDTH / 2, 80, world.accent)
+      e.worldBannerTimer = 2.4
+      e.backgroundElements = createBackgroundElements(world)
+      shake(12, 0.22)
+      addRingParticles(CFG.WIDTH / 2, 85, world.accent, 16)
     } else if (e.worldBannerTimer > 0) {
       e.worldBannerTimer -= dt
     }
 
-    // Shake
+    // Camera shake
     if (e.shakeTimer > 0) {
       e.shakeTimer -= dt
-      const intensity = e.shakeTimer * 1.5
+      const intensity = e.shakeTimer * 1.6
       e.shakeX = (Math.random() - 0.5) * intensity
       e.shakeY = (Math.random() - 0.5) * intensity
     } else {
@@ -851,7 +1072,7 @@ export default function GameEngine() {
       e.shakeY = 0
     }
 
-    // UI
+    // UI update
     e.uiTimer += dt
     if (e.uiTimer > CFG.UI_RATE) {
       e.uiTimer = 0
@@ -860,11 +1081,89 @@ export default function GameEngine() {
       setWorldName(world.name)
       setSpeedName(tier.label)
     }
-  }, [addParticles, addRingParticles, addBurstParticles, shake, spawnPattern, stopGame])
+  }, [addParticles, addRingParticles, addBurstParticles, addTrailParticles, shake, spawnPattern, stopGame])
 
-  // ───────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
   // DRAW
-  // ───────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
+
+  const drawBackgroundElement = useCallback((
+    ctx: CanvasRenderingContext2D,
+    elem: BackgroundElement,
+    world: WorldTheme
+  ) => {
+    ctx.save()
+    ctx.globalAlpha = elem.alpha * (0.75 + Math.sin(elem.phase) * 0.25)
+
+    switch (elem.type) {
+      case 'building':
+        const buildingGrad = ctx.createLinearGradient(elem.x, elem.y, elem.x, elem.y + elem.height)
+        buildingGrad.addColorStop(0, world.accent)
+        buildingGrad.addColorStop(1, 'transparent')
+        ctx.fillStyle = buildingGrad
+        ctx.fillRect(elem.x, elem.y, elem.width, elem.height)
+        // Windows
+        ctx.fillStyle = 'rgba(255,255,255,0.25)'
+        for (let wy = elem.y + 12; wy < elem.y + elem.height - 12; wy += 16) {
+          for (let wx = elem.x + 10; wx < elem.x + elem.width - 10; wx += 14) {
+            if ((wx + wy) % 7 > 2) ctx.fillRect(wx, wy, 7, 11)
+          }
+        }
+        break
+
+      case 'cloud':
+        const cloudGrad = ctx.createRadialGradient(
+          elem.x + elem.width / 2, elem.y + elem.height / 2, 0,
+          elem.x + elem.width / 2, elem.y + elem.height / 2, elem.width
+        )
+        cloudGrad.addColorStop(0, world.accent + '35')
+        cloudGrad.addColorStop(1, 'transparent')
+        ctx.fillStyle = cloudGrad
+        ctx.beginPath()
+        ctx.ellipse(elem.x + elem.width / 2, elem.y + elem.height / 2, elem.width / 2, elem.height / 2, 0, 0, Math.PI * 2)
+        ctx.fill()
+        break
+
+      case 'mountain':
+        ctx.fillStyle = world.groundTop + '55'
+        ctx.beginPath()
+        ctx.moveTo(elem.x, elem.y + elem.height)
+        ctx.lineTo(elem.x + elem.width / 2, elem.y)
+        ctx.lineTo(elem.x + elem.width, elem.y + elem.height)
+        ctx.closePath()
+        ctx.fill()
+        break
+
+      case 'crystal':
+        const crystalGrad = ctx.createLinearGradient(elem.x, elem.y, elem.x + elem.width, elem.y + elem.height)
+        crystalGrad.addColorStop(0, world.accent)
+        crystalGrad.addColorStop(1, world.accent + '40')
+        ctx.fillStyle = crystalGrad
+        ctx.beginPath()
+        ctx.moveTo(elem.x + elem.width / 2, elem.y)
+        ctx.lineTo(elem.x + elem.width, elem.y + elem.height * 0.65)
+        ctx.lineTo(elem.x + elem.width / 2, elem.y + elem.height)
+        ctx.lineTo(elem.x, elem.y + elem.height * 0.65)
+        ctx.closePath()
+        ctx.fill()
+        break
+
+      case 'orb':
+        const orbGrad = ctx.createRadialGradient(
+          elem.x + elem.width / 2, elem.y + elem.height / 2, 0,
+          elem.x + elem.width / 2, elem.y + elem.height / 2, elem.width / 2
+        )
+        orbGrad.addColorStop(0, '#ffffff')
+        orbGrad.addColorStop(0.25, world.accent)
+        orbGrad.addColorStop(1, 'transparent')
+        ctx.fillStyle = orbGrad
+        ctx.beginPath()
+        ctx.arc(elem.x + elem.width / 2, elem.y + elem.height / 2, elem.width / 2, 0, Math.PI * 2)
+        ctx.fill()
+        break
+    }
+    ctx.restore()
+  }, [])
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -874,6 +1173,7 @@ export default function GameEngine() {
     const e = engineRef.current
     const w = getWorld(e.score)
 
+    // Background
     ctx.fillStyle = w.skyBottom
     ctx.fillRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
 
@@ -883,19 +1183,19 @@ export default function GameEngine() {
     // Sky gradient
     const skyGrad = ctx.createLinearGradient(0, 0, 0, CFG.GROUND)
     skyGrad.addColorStop(0, w.skyTop)
-    skyGrad.addColorStop(0.55, w.skyMid)
+    skyGrad.addColorStop(0.52, w.skyMid)
     skyGrad.addColorStop(1, w.skyBottom)
     ctx.fillStyle = skyGrad
     ctx.fillRect(0, 0, CFG.WIDTH, CFG.GROUND)
 
     // Stars
-    ctx.globalAlpha = 0.75
+    ctx.globalAlpha = 0.72
     ctx.fillStyle = '#ffffff'
     for (const s of e.stars) {
-      const alpha = (s.alpha + Math.sin(s.twinkle) * 0.12) * 0.65
+      const alpha = (s.alpha + Math.sin(s.twinkle) * 0.14) * 0.62
       ctx.globalAlpha = alpha
       ctx.beginPath()
-      ctx.arc(s.x, s.y, s.size * 0.75, 0, Math.PI * 2)
+      ctx.arc(s.x, s.y, s.size * 0.72, 0, Math.PI * 2)
       ctx.fill()
     }
     ctx.globalAlpha = 1
@@ -903,34 +1203,39 @@ export default function GameEngine() {
     // Grid
     ctx.strokeStyle = w.grid
     ctx.lineWidth = 1
-    const off = (e.distance * 0.1) % 55
-    for (let x = -off; x <= CFG.WIDTH; x += 55) {
+    const off = (e.distance * 0.095) % 52
+    for (let x = -off; x <= CFG.WIDTH; x += 52) {
       ctx.beginPath()
       ctx.moveTo(x, 0)
       ctx.lineTo(x, CFG.GROUND)
       ctx.stroke()
     }
 
+    // Background elements
+    for (const elem of e.backgroundElements) {
+      drawBackgroundElement(ctx, elem, w)
+    }
+
     // Ground
     ctx.fillStyle = w.groundTop
     ctx.fillRect(0, CFG.GROUND, CFG.WIDTH, CFG.HEIGHT - CFG.GROUND)
 
-    // Ground line
+    // Ground line glow
     ctx.strokeStyle = w.accent
-    ctx.lineWidth = 2.5
+    ctx.lineWidth = 2.8
     ctx.beginPath()
     ctx.moveTo(0, CFG.GROUND)
     ctx.lineTo(CFG.WIDTH, CFG.GROUND)
     ctx.stroke()
 
     // Floor pattern
-    const fOff = (e.distance * 0.38) % 48
-    ctx.fillStyle = 'rgba(255,255,255,0.035)'
-    for (let x = -fOff; x < CFG.WIDTH + 48; x += 48) {
+    const fOff = (e.distance * 0.36) % 46
+    ctx.fillStyle = 'rgba(255,255,255,0.038)'
+    for (let x = -fOff; x < CFG.WIDTH + 46; x += 46) {
       ctx.beginPath()
       ctx.moveTo(x, CFG.GROUND)
-      ctx.lineTo(x + 24, CFG.GROUND + 14)
-      ctx.lineTo(x + 48, CFG.GROUND)
+      ctx.lineTo(x + 23, CFG.GROUND + 13)
+      ctx.lineTo(x + 46, CFG.GROUND)
       ctx.closePath()
       ctx.fill()
     }
@@ -941,19 +1246,19 @@ export default function GameEngine() {
       const isRed = c.kind === 'red'
       const a = isRed ? w.redA : w.greenA
       const b = isRed ? w.redB : w.greenB
-      const flicker = 0.85 + Math.sin(c.phase) * 0.15
+      const flicker = 0.84 + Math.sin(c.phase) * 0.16
 
       // Wick
       ctx.strokeStyle = a
-      ctx.lineWidth = Math.max(2.2, c.width * 0.13)
-      ctx.globalAlpha = flicker * 0.6
+      ctx.lineWidth = Math.max(2.3, c.width * 0.14)
+      ctx.globalAlpha = flicker * 0.58
       ctx.beginPath()
       ctx.moveTo(c.x + c.width / 2, c.wickTop)
       ctx.lineTo(c.x + c.width / 2, c.wickBottom)
       ctx.stroke()
       ctx.globalAlpha = 1
 
-      // Body
+      // Body gradient
       const bodyGrad = ctx.createLinearGradient(c.x, c.bodyY, c.x, c.bodyY + c.bodyHeight)
       bodyGrad.addColorStop(0, a)
       bodyGrad.addColorStop(1, b)
@@ -966,32 +1271,41 @@ export default function GameEngine() {
       const scaledX = c.x + (c.width - scaledW) / 2
       const scaledY = drawY + (c.bodyHeight - scaledH) / 2
 
-      ctx.fillRect(scaledX, scaledY, scaledW, scaledH)
-
+      // Candle body with rotation
+      ctx.save()
+      ctx.translate(c.x + c.width / 2, scaledY + scaledH / 2)
+      ctx.rotate(c.rotation)
+      ctx.fillRect(-scaledW / 2, -scaledH / 2, scaledW, scaledH)
+      
       // Highlight
-      ctx.fillStyle = 'rgba(255,255,255,0.16)'
-      ctx.fillRect(scaledX + 3, scaledY + 2, scaledW * 0.18, scaledH - 4)
+      ctx.fillStyle = 'rgba(255,255,255,0.17)'
+      ctx.fillRect(-scaledW / 2 + 3, -scaledH / 2 + 2, scaledW * 0.2, scaledH - 4)
+      ctx.restore()
 
       // Collection glow
       if (c.collected && c.collectProgress < 1) {
-        ctx.globalAlpha = (1 - c.collectProgress) * 0.6
+        ctx.globalAlpha = (1 - c.collectProgress) * 0.55
         ctx.fillStyle = isRed ? w.redA : w.greenA
         ctx.beginPath()
-        ctx.arc(c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, c.width * (1.5 + c.collectProgress * 2), 0, Math.PI * 2)
+        ctx.arc(c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, c.width * (1.4 + c.collectProgress * 2.2), 0, Math.PI * 2)
         ctx.fill()
         ctx.globalAlpha = 1
       }
     }
 
-    // Trail
+    // Player trail
     for (const t of e.player.trail) {
-      ctx.globalAlpha = t.alpha * t.life * 0.55
+      ctx.globalAlpha = t.alpha * t.life * 0.52
+      ctx.save()
+      ctx.translate(CFG.PLAYER_X + CFG.PLAYER_SIZE / 2, t.y + CFG.PLAYER_SIZE / 2)
+      ctx.rotate(t.rotation)
       if (logoLoaded && logoRef.current) {
-        ctx.drawImage(logoRef.current, t.x, t.y, t.size, t.size)
+        ctx.drawImage(logoRef.current, -t.size / 2, -t.size / 2, t.size, t.size)
       } else {
         ctx.fillStyle = w.accent
-        ctx.fillRect(t.x, t.y, t.size, t.size)
+        ctx.fillRect(-t.size / 2, -t.size / 2, t.size, t.size)
       }
+      ctx.restore()
     }
     ctx.globalAlpha = 1
 
@@ -1010,11 +1324,11 @@ export default function GameEngine() {
       ctx.fillRect(-CFG.PLAYER_SIZE / 2 + 6, -CFG.PLAYER_SIZE / 2 + 6, CFG.PLAYER_SIZE - 12, CFG.PLAYER_SIZE - 12)
     }
 
-    // Invincibility flash
-    if (e.player.invincible > 0 && Math.floor(e.gameTime * 18) % 2 === 0) {
-      ctx.strokeStyle = '#ffffff'
-      ctx.lineWidth = 2
-      ctx.strokeRect(-CFG.PLAYER_SIZE / 2 - 2, -CFG.PLAYER_SIZE / 2 - 2, CFG.PLAYER_SIZE + 4, CFG.PLAYER_SIZE + 4)
+    // Flash effect
+    if (e.player.flash > 0) {
+      ctx.globalAlpha = e.player.flash * 4
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(-CFG.PLAYER_SIZE / 2 - 2, -CFG.PLAYER_SIZE / 2 - 2, CFG.PLAYER_SIZE + 4, CFG.PLAYER_SIZE + 4)
     }
 
     ctx.restore()
@@ -1024,15 +1338,20 @@ export default function GameEngine() {
       ctx.save()
       ctx.globalAlpha = clamp(pt.life, 0, 1)
       ctx.translate(pt.x, pt.y)
-      ctx.rotate(pt.angle + pt.rotationSpeed * (1 - pt.life))
+      ctx.rotate(pt.rotation)
       ctx.fillStyle = pt.color
 
       if (pt.type === 'ring') {
         ctx.beginPath()
-        ctx.arc(0, 0, pt.size * pt.life * 1.2, 0, Math.PI * 2)
+        ctx.arc(0, 0, pt.size * pt.life * 1.15, 0, Math.PI * 2)
         ctx.fill()
       } else if (pt.type === 'burst') {
         ctx.fillRect(-pt.size / 2, -pt.size / 2, pt.size * pt.life, pt.size * pt.life)
+      } else if (pt.type === 'trail') {
+        ctx.globalAlpha *= 0.6
+        ctx.beginPath()
+        ctx.arc(0, 0, pt.size * pt.life, 0, Math.PI * 2)
+        ctx.fill()
       } else {
         ctx.beginPath()
         ctx.arc(0, 0, pt.size * Math.max(0.5, pt.life), 0, Math.PI * 2)
@@ -1044,29 +1363,29 @@ export default function GameEngine() {
 
     // World banner
     if (e.worldBannerTimer > 0) {
-      const alpha = clamp(e.worldBannerTimer / 2.2, 0, 1)
+      const alpha = clamp(e.worldBannerTimer / 2.4, 0, 1)
       ctx.save()
       ctx.globalAlpha = alpha
-      ctx.fillStyle = 'rgba(0,0,0,0.65)'
-      const bw = 270, bh = 50
-      const bx = CFG.WIDTH / 2 - bw / 2, by = 40
+      ctx.fillStyle = 'rgba(0,0,0,0.68)'
+      const bw = 280, bh = 52
+      const bx = CFG.WIDTH / 2 - bw / 2, by = 42
       ctx.fillRect(bx, by, bw, bh)
       ctx.strokeStyle = w.accent
-      ctx.lineWidth = 2.5
+      ctx.lineWidth = 2.8
       ctx.strokeRect(bx, by, bw, bh)
       ctx.fillStyle = '#ffffff'
-      ctx.font = 'bold 20px Inter, sans-serif'
+      ctx.font = 'bold 21px Inter, sans-serif'
       ctx.textAlign = 'center'
       ctx.fillText(w.name, CFG.WIDTH / 2, by + bh / 2 + 2)
       ctx.restore()
     }
 
     ctx.restore()
-  }, [logoLoaded])
+  }, [logoLoaded, drawBackgroundElement])
 
-  // ───────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
   // EFFECTS
-  // ───────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     setTimeout(() => setLoading(false), 500)
@@ -1122,9 +1441,9 @@ export default function GameEngine() {
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
   }, [mode, update, draw])
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // RENDER
-  // ───────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
+  // RENDER UI
+  // ──────────────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -1157,7 +1476,7 @@ export default function GameEngine() {
                   <img src="/base-logo.png" alt="" className="w-16 h-16 rounded-xl object-cover" />
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-1">basedash</h2>
-                <p className="text-white/40 text-xs">ape into candles, don't get rekt</p>
+                <p className="text-white/40 text-xs">geometry dash meets trading</p>
               </div>
 
               <button
@@ -1182,8 +1501,9 @@ export default function GameEngine() {
                 <p className="text-green-400 text-xs font-medium mb-1.5">how to play</p>
                 <ul className="text-white/50 text-[11px] space-y-1 text-left">
                   <li>🕯️ <span className="text-red-400">red candles</span> = instant rekt</li>
-                  <li>🕯️ <span className="text-green-400">green candles</span> = chill mode + points</li>
+                  <li>🕯️ <span className="text-green-400">green candles</span> = chill mode (2s slowdown)</li>
                   <li>⚡ double jump at 150 pts</li>
+                  <li>🌍 7 unique worlds to unlock</li>
                 </ul>
               </div>
             </div>
@@ -1209,7 +1529,7 @@ export default function GameEngine() {
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center">
             <div className="text-center px-6 max-w-sm">
               <h2 className="text-3xl font-bold text-red-400 mb-1">rekt</h2>
-              <p className="text-white/40 text-xs mb-5">ate a red candle</p>
+              <p className="text-white/40 text-xs mb-5">hit a red candle</p>
 
               <div className="grid grid-cols-2 gap-2.5 mb-5">
                 <div className="px-4 py-3 rounded-xl bg-white/5 border border-white/8">
@@ -1226,7 +1546,7 @@ export default function GameEngine() {
                 </div>
                 <div className="px-4 py-3 rounded-xl bg-white/5 border border-white/8">
                   <p className="text-white/35 text-[10px] uppercase tracking-wide mb-0.5">speed</p>
-                  <p className="text-sm font-semibold" style={{ color: getSpeed(score).startScore === 0 ? '#88ccff' : '#88ff88' }}>{speedName}</p>
+                  <p className="text-sm font-semibold" style={{ color: getSpeed(score).color }}>{speedName}</p>
                 </div>
               </div>
 
@@ -1243,7 +1563,7 @@ export default function GameEngine() {
                   onClick={connectWallet}
                   className="w-full px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-blue-500 to-blue-700 text-white transition-all mb-2"
                 >
-                  connect wallet to save
+                  connect wallet
                 </button>
               ) : null}
 
@@ -1276,13 +1596,13 @@ export default function GameEngine() {
             <div className="absolute top-3 right-3">
               <div className="px-3.5 py-2 rounded-xl bg-black/50 backdrop-blur-sm border border-white/10 text-right">
                 <p className="text-white/35 text-[10px] uppercase tracking-wide">{worldName}</p>
-                <p className="text-xs font-semibold" style={{ color: getSpeed(score).startScore === 0 ? '#88ccff' : '#88ff88' }}>{speedName}</p>
+                <p className="text-xs font-semibold" style={{ color: getSpeed(score).color }}>{speedName}</p>
               </div>
             </div>
 
             {engineRef.current.slowdownTimer > 0 && (
               <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-xl bg-green-500/15 backdrop-blur-sm border border-green-500/30">
-                <p className="text-green-400 text-xs font-medium">chill mode</p>
+                <p className="text-green-400 text-xs font-medium">⚡ chill mode</p>
               </div>
             )}
 
