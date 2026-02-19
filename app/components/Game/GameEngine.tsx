@@ -380,6 +380,8 @@ const createStars = (count: number = CFG.STAR_COUNT): Star[] =>
     alpha: rand(0.4, 0.8),
     depth: rand(0.2, 0.9),
     twinkle: rand(0, Math.PI * 2),
+    twinkleSpeed: rand(1, 3),
+    color: '#ffffff',
   }))
 
 const createPlayer = (): Player => ({
