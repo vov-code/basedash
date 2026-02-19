@@ -20,3 +20,4 @@ typechain-types/
 .idea/
 *.log
 coverage/
+"# Vercel auto-rebuild trigger"  
