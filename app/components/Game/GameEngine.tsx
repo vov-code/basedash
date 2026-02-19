@@ -449,21 +449,6 @@ const createEngine = (): EngineState => {
     distanceTraveled: 0,
   }
 }
-    maxCombo: 0,
-    slowdownTimer: 0,
-    nextSpawnDistance: CFG.BASE_SPAWN_GAP,
-    nextCandleId: 1,
-    shakeX: 0, shakeY: 0, shakeTimer: 0,
-    worldName: world.name,
-    worldBannerTimer: 0,
-    uiTimer: 0,
-    alive: true,
-    gameTime: 0,
-    totalCollected: 0,
-    totalJumps: 0,
-    distanceTraveled: 0,
-  }
-}
 
 // ============================================================================
 // MAIN COMPONENT
