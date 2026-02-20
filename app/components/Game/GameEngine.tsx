@@ -29,7 +29,6 @@ import { useWallet } from '@/app/hooks/useWallet'
 
 type GameMode = 'menu' | 'playing' | 'paused' | 'gameover'
 type CandleKind = 'red' | 'green'
-type ObstaclePattern = 'single' | 'double' | 'triple' | 'stair' | 'wave' | 'pyramid' | 'gap'
 type ParticleType = 'spark' | 'glow' | 'star' | 'ring' | 'burst' | 'trail' | 'coin' | 'smoke'
 
 // ============================================================================
@@ -222,7 +221,6 @@ const CFG = {
   PARTICLE_LIMIT: 120,
   TRAIL_LIMIT: 6,
   STAR_COUNT: 50,
-  BG_ELEMENT_COUNT: 6,
   MAX_CANDLES: 12,
 }
 
@@ -311,18 +309,6 @@ interface Star {
   color: string
 }
 
-interface BackgroundElement {
-  type: 'building' | 'cloud' | 'mountain' | 'crystal' | 'orb'
-  x: number
-  y: number
-  width: number
-  height: number
-  color: string
-  alpha: number
-  phase: number
-  speed: number
-}
-
 interface EngineState {
   player: Player
   candles: Candle[]
@@ -362,7 +348,6 @@ const lerpAngle = (a: number, b: number, t: number): number => {
   return a + diff * clamp(t, 0, 1)
 }
 const rand = (min: number, max: number): number => Math.random() * (max - min) + min
-const randInt = (min: number, max: number): number => Math.floor(rand(min, max + 1))
 
 const getWorld = (score: number): WorldTheme => WORLDS.filter(w => score >= w.startScore).at(-1) || WORLDS[0]
 const getSpeed = (score: number): SpeedTier => SPEEDS.filter(s => score >= s.startScore).at(-1) || SPEEDS[0]
@@ -956,22 +941,11 @@ export default function GameEngine() {
       if (s.x < -10) { s.x = CFG.WIDTH + 10; s.y = rand(15, CFG.GROUND - 50) }
     }
 
-    // Update background elements
-    for (const elem of e.backgroundElements) {
-      elem.x -= e.speed * elem.speed * dt
-      elem.phase += elem.speed * dt
-      if (elem.x < -elem.width) {
-        elem.x = CFG.WIDTH + rand(0, 150)
-        elem.y = rand(80, CFG.GROUND - 100)
-      }
-    }
-
     // World transition
     const world = getWorld(e.score)
     if (world.name !== e.worldName) {
       e.worldName = world.name
       e.worldBannerTimer = 2.4
-      e.backgroundElements = createBackgroundElements(world)
       shake(12, 0.22)
       addRingParticles(CFG.WIDTH / 2, 85, world.accent, 16)
     } else if (e.worldBannerTimer > 0) {
