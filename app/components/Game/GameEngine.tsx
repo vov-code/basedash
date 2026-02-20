@@ -629,8 +629,7 @@ export default function GameEngine() {
         kind,
         startX + offset,
         baseH * rand(0.88, 1.18) * hM,
-        baseW * rand(0.92, 1.12) * wM,
-        isMoving
+        baseW * rand(0.92, 1.12) * wM
       ))
     }
 
