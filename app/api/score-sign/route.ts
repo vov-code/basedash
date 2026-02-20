@@ -14,11 +14,42 @@ const publicClient = createPublicClient({
   transport: http(),
 })
 
+// Anti-cheat: track recent requests per IP
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+// Anti-cheat: per-address cooldown (30 seconds between submissions)
+const addressCooldown = new Map<string, number>()
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const record = rateLimitMap.get(ip)
+
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + 60000 })
+    return true
+  }
+
+  if (record.count >= 10) {
+    return false
+  }
+
+  record.count++
+  return true
+}
+
+// Anti-cheat: validate score progression
+const maxScoreIncrease = 2.5 // max 2.5x previous best
+
 export async function GET(request: NextRequest) {
   try {
     const pk = process.env.SCORE_SIGNER_PRIVATE_KEY
     if (!pk) {
       return NextResponse.json({ error: 'SCORE_SIGNER_PRIVATE_KEY not configured' }, { status: 503 })
+    }
+
+    // Rate limiting
+    const ip = request.headers.get('x-forwarded-for') || 'unknown'
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
     }
 
     const searchParams = request.nextUrl.searchParams
@@ -34,10 +65,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'invalid score' }, { status: 400 })
     }
 
-    // “верхний предел” — не защита от всего, но режет очевидные абузы
-    if (score > 1_000_000) {
+    // Anti-cheat: reasonable score limits (max 50K)
+    if (score > 50_000) {
       return NextResponse.json({ error: 'score too large' }, { status: 400 })
     }
+
+    // Anti-cheat: per-address cooldown (30 seconds)
+    const addrLower = address.toLowerCase()
+    const lastSubmit = addressCooldown.get(addrLower) || 0
+    if (Date.now() - lastSubmit < 30_000) {
+      return NextResponse.json({ error: 'please wait 30 seconds between submissions' }, { status: 429 })
+    }
+    addressCooldown.set(addrLower, Date.now())
 
     if (CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
       return NextResponse.json({ error: 'Contract not deployed' }, { status: 503 })
@@ -66,6 +105,7 @@ export async function GET(request: NextRequest) {
       signer: account.address,
     })
   } catch (error) {
+    console.error('Score signing error:', error)
     return NextResponse.json(
       { error: 'Failed to sign score', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

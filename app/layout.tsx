@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import { Inter, JetBrains_Mono, Space_Grotesk } from 'next/font/google'
 import './styles/globals.css'
 import { Providers } from './components/Providers'
 
@@ -25,8 +25,32 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ['300', '400', '500', '600', '700'],
 })
 
+const brandFont = Space_Grotesk({
+  subsets: ['latin'],
+  display: 'swap',
+  preload: true,
+  variable: '--font-brand',
+  weight: ['500', '600', '700'],
+})
+
+const getMetadataBase = (): URL => {
+  const raw = process.env.NEXT_PUBLIC_APP_URL?.trim()
+  if (!raw) {
+    return new URL('https://basedash-five.vercel.app')
+  }
+
+  const normalized = raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`
+  try {
+    return new URL(normalized)
+  } catch {
+    return new URL('https://basedash-five.vercel.app')
+  }
+}
+
+const metadataBase = getMetadataBase()
+
 // ============================================
-// VIEWPORT CONFIGURATION
+// VIEWPORT CONFIGURATION — Оптимизировано для мобильных
 // ============================================
 
 export const viewport: Viewport = {
@@ -35,7 +59,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: '#0052FF',
-  colorScheme: 'dark',
+  colorScheme: 'light',
+  viewportFit: 'cover',
 }
 
 // ============================================
@@ -43,11 +68,12 @@ export const viewport: Viewport = {
 // ============================================
 
 export const metadata: Metadata = {
+  metadataBase,
   title: {
-    default: 'base dash | built on base',
-    template: '%s | base dash',
+    default: 'Base Dash — Endless Runner on Base',
+    template: '%s | Base Dash',
   },
-  description: 'jump candles, send it to chain. built on base.',
+  description: 'Jump candles, send it to chain. Built on Base.',
   keywords: [
     'base',
     'game',
@@ -57,10 +83,12 @@ export const metadata: Metadata = {
     'web3',
     'runner',
     'dash',
+    'endless runner',
+    'base network',
   ],
-  authors: [{ name: 'base dash team' }],
-  creator: 'base dash',
-  publisher: 'base dash',
+  authors: [{ name: 'Base Dash Team' }],
+  creator: 'Base Dash',
+  publisher: 'Base Dash',
   robots: {
     index: true,
     follow: true,
@@ -73,41 +101,51 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'base dash',
-    description: 'jump candles, send it to chain.',
+    title: 'Base Dash',
+    description: 'Jump candles, send it to chain.',
     type: 'website',
     locale: 'en_US',
-    siteName: 'base dash',
+    siteName: 'Base Dash',
     images: [
       {
-        url: '/og-image.png',
+        url: '/og-image.svg',
         width: 1200,
         height: 630,
-        alt: 'base dash game',
+        alt: 'Base Dash Game',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'base dash',
-    description: 'jump candles, send it to chain.',
-    images: ['/og-image.png'],
+    title: 'Base Dash',
+    description: 'Jump candles, send it to chain.',
+    images: ['/og-image.svg'],
     creator: '@base',
   },
   icons: {
     icon: [
-      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/icons/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
+      { url: '/icons/icon-512.svg', sizes: '512x512', type: 'image/svg+xml' },
     ],
     apple: [
-      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
+      { url: '/icons/icon-512.svg', sizes: '512x512', type: 'image/svg+xml' },
     ],
   },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'base dash',
+    statusBarStyle: 'default',
+    title: 'Base Dash',
+  },
+  // Farcaster Frame meta tags (Improvement #9)
+  other: {
+    'fc:frame': 'vNext',
+    'fc:frame:image': `${metadataBase.toString()}og-image.svg`,
+    'fc:frame:button:1': 'Play Base Dash 🏃‍♂️',
+    'fc:frame:button:1:action': 'link',
+    'fc:frame:button:1:target': metadataBase.toString(),
+    'fc:frame:post_url': metadataBase.toString(),
   },
 }
 
@@ -121,18 +159,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html 
-      lang="en" 
+    <html
+      lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} ${jetbrainsMono.variable}`}
+      className={`${inter.variable} ${jetbrainsMono.variable} ${brandFont.variable}`}
     >
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-      </head>
-      <body className="font-sans antialiased bg-[#0a0b14] text-white">
+      <body className="font-sans antialiased bg-white text-gray-900">
         <Providers>{children}</Providers>
       </body>
     </html>

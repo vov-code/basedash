@@ -1,80 +1,248 @@
 'use client'
 
-import React from 'react'
+import React, { useMemo, useState, useRef, useEffect } from 'react'
 import { useReadContract } from 'wagmi'
 import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS, PlayerScore } from '@/app/contracts'
 import { formatAddress, bigIntToNumber } from '@/app/lib/utils'
+import { useWallet } from '@/app/hooks/useWallet'
+
+interface RankMeta {
+  label: string
+  tone: string
+  border: string
+  text: string
+}
+
+const RANK_META: Record<number, RankMeta> = {
+  1: {
+    label: '1',
+    tone: 'bg-[#fff8dd]',
+    border: 'border-[#f8da7f]',
+    text: 'text-[#b78905]',
+  },
+  2: {
+    label: '2',
+    tone: 'bg-slate-100',
+    border: 'border-slate-300',
+    text: 'text-slate-600',
+  },
+  3: {
+    label: '3',
+    tone: 'bg-orange-50',
+    border: 'border-orange-300',
+    text: 'text-orange-700',
+  },
+}
+
+function Entry({ entry, rank, isSelf, selfRef }: { entry: PlayerScore; rank: number; isSelf: boolean; selfRef?: React.Ref<HTMLDivElement> }) {
+  const score = bigIntToNumber(entry.score)
+  const streak = bigIntToNumber(entry.streakDays)
+  const meta = RANK_META[rank]
+
+  return (
+    <div
+      ref={isSelf ? selfRef : undefined}
+      className={`flex items-center justify-between border p-4 transition-colors ${isSelf
+          ? 'border-[#4f92ff] bg-[#edf4ff] shadow-[0_10px_20px_rgba(0,82,255,0.08)]'
+          : rank <= 3
+            ? `${meta.tone} ${meta.border}`
+            : 'border-slate-200 bg-white hover:border-slate-300'
+        }`}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <div
+          className={`flex h-10 w-10 items-center justify-center border text-sm font-semibold ${rank <= 3 ? `${meta.tone} ${meta.border} ${meta.text}` : 'border-slate-200 bg-slate-50 text-slate-500'
+            }`}
+        >
+          {rank <= 3 ? meta.label : `#${rank}`}
+        </div>
+
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="inline-block border border-slate-200 bg-white px-2.5 py-1.5 font-mono text-xs text-slate-700">
+              {formatAddress(entry.player)}
+            </span>
+            {isSelf && (
+              <span className="border border-[#4f92ff] bg-white px-2 py-1 text-[10px] font-semibold text-[#0052FF]">
+                you
+              </span>
+            )}
+          </div>
+
+          {streak > 0 && (
+            <div className="mt-1.5 inline-flex items-center gap-1.5 border border-orange-200 bg-orange-50 px-2 py-1 text-[10px] text-orange-700">
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 3c1 2-1 3-1 5 0 2 2 2 2 4a3 3 0 0 1-6 0c0-4 3-5 5-9z" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M14 10c1 1 3 2 3 5a5 5 0 0 1-10 0" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {streak} day streak
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="ml-4 flex-shrink-0 text-right">
+        <p className="font-mono text-xl font-bold text-slate-900">{score.toLocaleString()}</p>
+        <p className="text-[10px] text-slate-400">pts</p>
+      </div>
+    </div>
+  )
+}
 
 export default function Leaderboard() {
+  const { address } = useWallet()
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const selfEntryRef = useRef<HTMLDivElement>(null)
+
   const { data: leaderboard, isLoading, refetch } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: GAME_LEADERBOARD_ABI,
     functionName: 'getLeaderboard',
-    args: [BigInt(10)],
-    query: { enabled: CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000' },
+    args: [BigInt(50)],
+    query: {
+      enabled: CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000',
+      refetchInterval: 7000,
+      refetchIntervalInBackground: true,
+    },
   })
+
+  const scores = useMemo(() => {
+    const data = (leaderboard as unknown as PlayerScore[]) || []
+    return data.filter((s) => s.player !== '0x0000000000000000000000000000000000000000')
+  }, [leaderboard])
+
+  // Find user's rank
+  const userRank = useMemo(() => {
+    if (!address) return null
+    const idx = scores.findIndex(s => s.player.toLowerCase() === address.toLowerCase())
+    return idx >= 0 ? idx + 1 : null
+  }, [scores, address])
+
+  // Auto-scroll to user's entry (Improvement #3)
+  useEffect(() => {
+    if (selfEntryRef.current && userRank && userRank > 5) {
+      selfEntryRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [userRank, scores])
+
+  const topScore = scores.length > 0 ? bigIntToNumber(scores[0].score) : 0
+  const maxStreak = scores.reduce((max, s) => Math.max(max, bigIntToNumber(s.streakDays)), 0)
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await refetch()
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   if (CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
     return (
-      <div className="rounded-2xl border border-white/10 p-8 bg-white/[0.02] text-center">
-        <p className="text-[#F0B90B] font-semibold mb-2">Contract not deployed</p>
-        <p className="text-white/40 text-sm">Deploy smart contract to enable scores</p>
+      <div className="border border-slate-200 bg-white p-8 text-center shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center border border-yellow-300 bg-yellow-50 text-yellow-600">
+          <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <p className="mb-2 font-semibold text-slate-900">contract not deployed</p>
+        <p className="text-sm text-slate-500">deploy contract to enable on-chain leaderboard</p>
       </div>
     )
   }
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl border border-white/10 p-8 bg-white/[0.02] flex items-center justify-center py-12">
-        <div className="w-10 h-10 border-4 border-[#0052FF]/20 rounded-full animate-spin border-t-[#0052FF]" />
-        <span className="ml-4 text-white/50 text-sm">Loading ranks...</span>
+      <div className="flex items-center justify-center border border-slate-200 bg-white p-8 py-14 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+        <div className="h-10 w-10 animate-spin border-4 border-[#0052FF]/20 border-t-[#0052FF]" />
+        <span className="ml-4 text-sm text-slate-500">loading leaderboard...</span>
       </div>
     )
   }
 
-  const scores = ((leaderboard as unknown as PlayerScore[]) || []).filter(s => s.player !== '0x0000000000000000000000000000000000000000')
+  if (scores.length === 0) {
+    return (
+      <div className="border border-slate-200 bg-white p-8 text-center shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center border border-[#bcd4ff] bg-[#edf4ff] text-[#0052FF]">
+          <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 20h16M7 20v-7M12 20V6M17 20v-4" />
+          </svg>
+        </div>
+        <p className="mb-2 font-semibold text-slate-900">no scores yet</p>
+        <p className="mb-1 text-sm text-slate-500">be first in base dash leaderboard</p>
+        <p className="text-xs text-slate-400">play run and submit score on-chain</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="rounded-2xl border border-white/10 p-8 bg-white/[0.02]">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-white">Global Ranks</h2>
-        <button onClick={() => void refetch()} className="px-4 py-2 rounded-lg bg-[#0052FF]/10 hover:bg-[#0052FF]/20 text-[#6B7FFF] text-xs font-semibold transition-colors">
-          Refresh
+    <div className="border border-slate-200 bg-white p-6 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-900">
+            <svg className="h-5 w-5 text-[#0052FF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M8 21h8" strokeLinecap="round" />
+              <path d="M12 17v4" strokeLinecap="round" />
+              <path d="M7 4h10v4a5 5 0 0 1-10 0z" />
+            </svg>
+            global leaderboard
+          </h2>
+          <p className="mt-1 text-xs text-slate-500">auto refresh every 7 seconds</p>
+        </div>
+
+        <button
+          onClick={() => void handleRefresh()}
+          className="inline-flex items-center gap-2 border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100"
+        >
+          <svg className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          refresh
         </button>
       </div>
 
-      {scores.length > 0 ? (
-        <div className="space-y-2">
-          {scores.map((entry, i) => (
-            <div key={i} className={`flex items-center justify-between p-4 rounded-xl border ${
-              i === 0 ? 'bg-[#FFD700]/10 border-[#FFD700]/30' :
-              i === 1 ? 'bg-[#C0C0C0]/10 border-[#C0C0C0]/30' :
-              i === 2 ? 'bg-[#CD7F32]/10 border-[#CD7F32]/30' :
-              'bg-white/5 border-white/10'
-            }`}>
-              <div className="flex items-center gap-3">
-                <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
-                  i === 0 ? 'bg-[#FFD700]/20 text-[#FFD700]' :
-                  i === 1 ? 'bg-[#C0C0C0]/20 text-[#C0C0C0]' :
-                  i === 2 ? 'bg-[#CD7F32]/20 text-[#CD7F32]' :
-                  'bg-white/10 text-white/60'
-                }`}>#{i + 1}</span>
-                <span className="font-mono text-xs text-white/70 bg-black/40 px-3 py-1.5 rounded-lg">{formatAddress(entry.player)}</span>
-              </div>
-              <div className="text-right">
-                <p className={`font-bold text-sm ${i < 3 ? 'text-[#F0B90B]' : 'text-white/80'}`}>
-                  {bigIntToNumber(entry.score).toLocaleString()} pts
-                </p>
-              </div>
-            </div>
-          ))}
+      <div className="mb-6 grid grid-cols-3 gap-3">
+        <div className="border border-slate-200 bg-slate-50 p-3 text-center">
+          <p className="text-2xl font-semibold text-slate-900">{scores.length}</p>
+          <p className="mt-0.5 text-[10px] tracking-wide text-slate-500">players</p>
         </div>
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-white/80 font-semibold mb-2">No scores yet</p>
-          <p className="text-white/40 text-sm">Be the first to claim #1</p>
+
+        <div className="border border-[#bcd4ff] bg-[#edf4ff] p-3 text-center">
+          <p className="text-2xl font-semibold text-[#0052FF]">{topScore.toLocaleString()}</p>
+          <p className="mt-0.5 text-[10px] tracking-wide text-slate-500">top score</p>
+        </div>
+
+        <div className="border border-orange-200 bg-orange-50 p-3 text-center">
+          <p className="text-2xl font-semibold text-orange-600">{maxStreak}</p>
+          <p className="mt-0.5 text-[10px] tracking-wide text-slate-500">best streak</p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {scores.map((entry, i) => (
+          <Entry
+            key={`${entry.player}-${i}`}
+            entry={entry}
+            rank={i + 1}
+            isSelf={!!address && entry.player.toLowerCase() === address.toLowerCase()}
+            selfRef={selfEntryRef}
+          />
+        ))}
+      </div>
+
+      {/* User rank indicator (Improvement #3) */}
+      {userRank && (
+        <div className="mt-4 flex items-center justify-center gap-2 border border-[#0052FF]/20 bg-[#edf4ff] px-4 py-2.5">
+          <svg className="w-4 h-4 text-[#0052FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <span className="text-sm font-semibold text-[#0052FF]">your rank: #{userRank}</span>
         </div>
       )}
+
+      <div className="mt-6 border-t border-slate-100 pt-4 text-center">
+        <p className="text-xs text-slate-400">scores are stored on-chain on base network</p>
+      </div>
     </div>
   )
 }

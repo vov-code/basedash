@@ -3,26 +3,29 @@
 @tailwind utilities;
 
 /* ============================================================================
-   BASE DASH — Base.org Design System
-   Clean, minimal, professional
+   BASE DASH — Premium Base.org Design System
+   Минимализм в двух цветах: синий (#0052FF) и белый (#FFFFFF)
+   Вдохновлено дизайном Base.org
    ============================================================================ */
 
 :root {
-  /* Base Brand Colors */
+  /* ========================================
+     BASE BRAND COLORS — Official Palette
+     ======================================== */
   --base-blue: #0052FF;
-  --base-blue-dark: #0040CC;
+  --base-blue-hover: #0040CC;
+  --base-blue-active: #0033AA;
   --base-blue-light: #3378FF;
   --base-blue-pale: #E8F0FE;
   --base-blue-ultra-light: #F5F8FF;
   
-  /* Trading Colors */
-  --bull-green: #0ECB81;
-  --bull-green-light: #14E89A;
-  --bear-red: #F6465D;
-  --bear-red-light: #FF5A72;
+  --base-white: #FFFFFF;
+  --base-black: #0A0B14;
   
-  /* Neutrals */
-  --white: #FFFFFF;
+  /* ========================================
+     NEUTRAL GRAYS — Precise Scale
+     ======================================== */
+  --gray-0: #FFFFFF;
   --gray-50: #F8F9FC;
   --gray-100: #F0F2F8;
   --gray-200: #E0E4F0;
@@ -33,57 +36,160 @@
   --gray-700: #3D4660;
   --gray-800: #283048;
   --gray-900: #1A2030;
-  --black: #0D121C;
+  --gray-950: #0D121C;
   
-  /* Semantic */
+  /* ========================================
+     TRADING COLORS — Candle Sticks
+     ======================================== */
+  --bull-green: #0ECB81;
+  --bull-green-light: #14E89A;
+  --bull-green-dark: #0A9F68;
+  --bear-red: #F6465D;
+  --bear-red-light: #FF5A72;
+  --bear-red-dark: #D63048;
+  
+  /* ========================================
+     SEMANTIC COLORS
+     ======================================== */
   --success: #0ECB81;
+  --success-bg: #E8F8F0;
   --error: #F6465D;
+  --error-bg: #FFF0F2;
   --warning: #F0B90B;
+  --warning-bg: #FFFBEB;
+  --info: #0052FF;
+  --info-bg: #E8F0FE;
   
-  /* Backgrounds */
+  /* ========================================
+     BACKGROUNDS — Layered System
+     ======================================== */
   --bg-primary: #FFFFFF;
   --bg-secondary: #F8F9FC;
   --bg-tertiary: #F0F2F8;
   --bg-card: #FFFFFF;
-  --bg-overlay: rgba(26, 32, 48, 0.8);
+  --bg-overlay: rgba(10, 11, 20, 0.8);
+  --bg-backdrop: rgba(255, 255, 255, 0.8);
   
-  /* Text */
+  /* ========================================
+     TEXT COLORS — Hierarchy
+     ======================================== */
   --text-primary: #1A2030;
   --text-secondary: #5A6480;
   --text-tertiary: #A0A8C0;
   --text-inverse: #FFFFFF;
+  --text-link: #0052FF;
   
-  /* Borders */
+  /* ========================================
+     BORDERS — Subtle to Strong
+     ======================================== */
   --border-subtle: #E0E4F0;
   --border-default: #C8CDE0;
   --border-strong: #A0A8C0;
   --border-focus: #0052FF;
+  --border-hover: #0052FF;
   
-  /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(26, 32, 48, 0.06);
-  --shadow-sm: 0 2px 8px rgba(26, 32, 48, 0.08);
-  --shadow-md: 0 4px 16px rgba(26, 32, 48, 0.1);
-  --shadow-lg: 0 8px 32px rgba(26, 32, 48, 0.12);
-  --shadow-xl: 0 16px 64px rgba(26, 32, 48, 0.16);
+  /* ========================================
+     SHADOWS — Elevation System
+     ======================================== */
+  --shadow-xs: 0 1px 2px rgba(26, 32, 48, 0.04);
+  --shadow-sm: 0 2px 8px rgba(26, 32, 48, 0.06);
+  --shadow-md: 0 4px 16px rgba(26, 32, 48, 0.08);
+  --shadow-lg: 0 8px 24px rgba(26, 32, 48, 0.09);
+  --shadow-xl: 0 12px 32px rgba(26, 32, 48, 0.11);
+  --shadow-2xl: 0 18px 44px rgba(26, 32, 48, 0.13);
+  
   --shadow-blue: 0 4px 24px rgba(0, 82, 255, 0.15);
-  --shadow-blue-lg: 0 8px 48px rgba(0, 82, 255, 0.2);
+  --shadow-blue-lg: 0 10px 30px rgba(0, 82, 255, 0.18);
+  --shadow-blue-glow: 0 0 40px rgba(0, 82, 255, 0.3);
   
-  /* Radius */
+  --shadow-green: 0 4px 24px rgba(14, 203, 129, 0.2);
+  --shadow-red: 0 4px 24px rgba(246, 70, 93, 0.2);
+  
+  /* ========================================
+     BORDER RADIUS — Smooth Curves
+     ======================================== */
+  --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 20px;
   --radius-2xl: 28px;
+  --radius-3xl: 36px;
   --radius-full: 9999px;
   
-  /* Transitions */
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* ========================================
+     TRANSITIONS — Smooth Motion
+     ======================================== */
+  --ease-out: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --ease-in-out: cubic-bezier(0.645, 0.045, 0.355, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  
+  --transition-fast: 150ms var(--ease-out);
+  --transition-base: 250ms var(--ease-out);
+  --transition-slow: 400ms var(--ease-spring);
+  --transition-bounce: 600ms var(--ease-spring);
+  
+  /* ========================================
+     SPACING — 8pt Grid System
+     ======================================== */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  
+  /* ========================================
+     TYPOGRAPHY — Fluid Scale
+     ======================================== */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --text-4xl: 36px;
+  --text-5xl: 48px;
+  
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+  
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;
+  
+  /* ========================================
+     Z-INDEX — Layer Management
+     ======================================== */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-modal-backdrop: 400;
+  --z-modal: 500;
+  --z-popover: 600;
+  --z-tooltip: 700;
+  
+  /* ========================================
+     GAME SPECIFIC
+     ======================================== */
+  --game-canvas-width: 960px;
+  --game-canvas-height: 540px;
+  --game-ground-y: 430px;
 }
 
 /* ============================================================================
-   BASE & RESET
+   BASE & RESET — Modern Reset
    ============================================================================ */
 
 *, *::before, *::after {
@@ -97,57 +203,99 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+  overscroll-behavior: none;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
-  line-height: 1.6;
-  letter-spacing: -0.01em;
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-tight);
+  overflow-x: hidden;
 }
 
+/* Selection */
 ::selection {
   background: var(--base-blue);
-  color: white;
+  color: var(--text-inverse);
+}
+
+/* Focus */
+:focus-visible {
+  outline: 2px solid var(--base-blue);
+  outline-offset: 2px;
+}
+
+/* Scrollbar — Custom */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-400);
 }
 
 /* ============================================================================
-   TYPOGRAPHY
+   TYPOGRAPHY — Clean & Readable
    ============================================================================ */
 
 h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.3;
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  color: var(--text-primary);
 }
 
-h1 { font-size: 48px; }
-h2 { font-size: 36px; }
-h3 { font-size: 28px; }
-h4 { font-size: 22px; }
-h5 { font-size: 18px; }
-h6 { font-size: 16px; }
+h1 { font-size: var(--text-5xl); }
+h2 { font-size: var(--text-4xl); }
+h3 { font-size: var(--text-3xl); }
+h4 { font-size: var(--text-2xl); }
+h5 { font-size: var(--text-xl); }
+h6 { font-size: var(--text-lg); }
 
 p {
   color: var(--text-secondary);
-  line-height: 1.7;
+  line-height: var(--leading-relaxed);
+}
+
+a {
+  color: var(--text-link);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--base-blue-hover);
 }
 
 /* ============================================================================
-   ANIMATIONS
+   ANIMATIONS — Premium Motion
    ============================================================================ */
 
+/* Fade In */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
+/* Fade In Up */
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(24px);
+    transform: translateY(0);
   }
   to {
     opacity: 1;
@@ -155,6 +303,7 @@ p {
   }
 }
 
+/* Scale In */
 @keyframes scaleIn {
   from {
     opacity: 0;
@@ -166,11 +315,7 @@ p {
   }
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
+/* Slide In Right */
 @keyframes slideInRight {
   from {
     opacity: 0;
@@ -182,60 +327,214 @@ p {
   }
 }
 
+/* Pulse */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Spin */
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
+/* Float */
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-8px); }
 }
 
+/* Glow */
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(0, 82, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(0, 82, 255, 0.4);
+  }
+}
+
+/* Bounce */
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+/* Shimmer */
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+/* Rain */
+@keyframes rain {
+  0% {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+@keyframes rainStreak {
+  0% {
+    transform: translate3d(0, -20vh, 0) rotate(13deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(-12vw, 120vh, 0) rotate(13deg);
+    opacity: 0;
+  }
+}
+
+@keyframes rainSplash {
+  0% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
+  }
+  55% {
+    opacity: 0;
+  }
+  70% {
+    transform: translateY(-8px) scale(1);
+    opacity: 0.35;
+  }
+  100% {
+    transform: translateY(-14px) scale(1.25);
+    opacity: 0;
+  }
+}
+
+/* Wave */
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(10deg); }
+  75% { transform: rotate(-10deg); }
+}
+
+/* Utility Classes */
 .animate-fade-in { animation: fadeIn 300ms var(--transition-base) forwards; }
-.animate-fade-in-up { animation: fadeInUp 400ms var(--transition-base) forwards; }
+.animate-fade-in-up { animation: fadeInUp 220ms var(--transition-base) forwards; }
 .animate-scale-in { animation: scaleIn 300ms var(--transition-base) forwards; }
-.animate-pulse { animation: pulse 2s var(--transition-base) infinite; }
 .animate-slide-in-right { animation: slideInRight 300ms var(--transition-base) forwards; }
+.animate-pulse { animation: pulse 2s var(--transition-base) infinite; }
 .animate-spin { animation: spin 1s linear infinite; }
 .animate-float { animation: float 3s var(--transition-base) infinite; }
+.animate-glow { animation: glow 2s var(--transition-base) infinite; }
+.animate-bounce { animation: bounce 2s var(--transition-bounce) infinite; }
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+  background: linear-gradient(90deg, var(--gray-100) 0%, var(--gray-200) 50%, var(--gray-100) 100%);
+  background-size: 1000px 100%;
+}
+.animate-rain {
+  animation-name: rain;
+}
+
+.rain-streak {
+  position: absolute;
+  width: 1px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(0, 82, 255, 0.56));
+  animation: rainStreak linear infinite;
+  will-change: transform, opacity;
+}
+
+.rain-splash {
+  position: absolute;
+  bottom: 4%;
+  width: 6px;
+  height: 6px;
+  border: 1px solid rgba(0, 82, 255, 0.35);
+  border-radius: 999px;
+  animation: rainSplash ease-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes rainDrift {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+}
+
+.rain-dust {
+  position: absolute;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(120, 190, 255, 0.8) 0%, rgba(120, 190, 255, 0) 72%);
+  animation: rainDrift linear infinite;
+  will-change: transform, opacity;
+}
 
 /* ============================================================================
-   BUTTON STYLES
+   BUTTON STYLES — Base Design
    ============================================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1;
+  border-radius: var(--radius-lg);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
 
 .btn-primary {
   background: var(--base-blue);
-  color: white;
-  font-weight: 500;
+  color: var(--text-inverse);
   padding: 12px 24px;
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-fast);
-  border: none;
-  cursor: pointer;
-  font-size: 15px;
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover {
-  background: var(--base-blue-dark);
+  background: var(--base-blue-hover);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md), var(--shadow-blue);
 }
 
 .btn-primary:active {
   transform: translateY(0);
+  background: var(--base-blue-active);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .btn-secondary {
   background: var(--bg-secondary);
   color: var(--text-primary);
-  font-weight: 500;
   padding: 12px 24px;
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-fast);
   border: 1px solid var(--border-default);
-  cursor: pointer;
-  font-size: 15px;
 }
 
 .btn-secondary:hover {
@@ -243,15 +542,36 @@ p {
   border-color: var(--border-strong);
 }
 
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 8px 16px;
+}
+
+.btn-ghost:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: var(--text-xs);
+}
+
+.btn-lg {
+  padding: 16px 32px;
+  font-size: var(--text-base);
+}
+
 /* ============================================================================
-   CARD STYLES
+   CARD STYLES — Elevated Surfaces
    ============================================================================ */
 
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  padding: 24px;
+  padding: var(--space-6);
   transition: all var(--transition-base);
   box-shadow: var(--shadow-sm);
 }
@@ -262,10 +582,111 @@ p {
   transform: translateY(-2px);
 }
 
+.card-elevated {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-md);
+}
+
+.card-interactive {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  transition: all var(--transition-base);
+  cursor: pointer;
+}
+
+.card-interactive:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-lg), var(--shadow-blue);
+  transform: translateY(-4px);
+}
+
+/* ============================================================================
+   INPUT STYLES — Clean Forms
+   ============================================================================ */
+
+.input {
+  width: 100%;
+  padding: 12px 16px;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
+}
+
+.input:hover {
+  border-color: var(--border-strong);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--base-blue-pale);
+}
+
+.input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.input:disabled {
+  background: var(--bg-secondary);
+  cursor: not-allowed;
+}
+
+/* ============================================================================
+   BADGE STYLES — Status Indicators
+   ============================================================================ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.badge-primary {
+  background: var(--base-blue-pale);
+  color: var(--base-blue);
+}
+
+.badge-success {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.badge-error {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.badge-warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.badge-gray {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
 /* ============================================================================
    UTILITY CLASSES
    ============================================================================ */
 
+/* Text Gradient */
 .text-gradient {
   background: linear-gradient(135deg, var(--base-blue), var(--base-blue-light));
   -webkit-background-clip: text;
@@ -273,10 +694,12 @@ p {
   background-clip: text;
 }
 
+/* Text Glow */
 .text-glow {
   text-shadow: 0 0 20px rgba(0, 82, 255, 0.3);
 }
 
+/* Background Grid */
 .bg-grid {
   background-image:
     linear-gradient(rgba(0, 82, 255, 0.03) 1px, transparent 1px),
@@ -284,6 +707,13 @@ p {
   background-size: 40px 40px;
 }
 
+/* Background Dots */
+.bg-dots {
+  background-image: radial-gradient(rgba(0, 82, 255, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Scrollbar Hide */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -293,12 +723,162 @@ p {
   display: none;
 }
 
+/* Backdrop Blur */
+.backdrop-blur {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Glass Effect */
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
 /* ============================================================================
-   MOBILE
+   GAME SPECIFIC STYLES
    ============================================================================ */
 
+.game-container {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-xl);
+}
+
+.game-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  background: var(--base-black);
+  cursor: pointer;
+  /* Prevent touch callout and selection on mobile */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+}
+
+.game-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.game-ui {
+  position: absolute;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Body lock when game is playing — prevents bounce scroll */
+html, body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN — Mobile First (Base App is phone-only)
+   ============================================================================ */
+
+/* Mobile: ≤768px */
 @media (max-width: 768px) {
-  html { font-size: 14px; }
-  body { touch-action: manipulation; }
-  button, a { min-height: 44px; min-width: 44px; }
+  html {
+    font-size: 14px;
+  }
+
+  body {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Touch targets — but NOT inside game overlays */
+  button, a, input, select {
+    min-height: 40px;
+  }
+
+  /* Game overlay buttons can be smaller */
+  .game-overlay button {
+    min-height: auto;
+    min-width: auto;
+  }
+
+  /* Game container — full width, no border on mobile */
+  .game-container {
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* Game overlay — tighter on mobile */
+  .game-overlay {
+    padding: 8px;
+  }
+
+  /* Adjust typography */
+  h1 { font-size: 28px; }
+  h2 { font-size: 22px; }
+  h3 { font-size: 18px; }
+
+  /* Adjust card spacing */
+  .card { padding: var(--space-4); }
+}
+
+/* Small mobile: ≤480px */
+@media (max-width: 480px) {
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Safe area insets for notched phones (iPhone X+) */
+@supports (padding: env(safe-area-inset-bottom)) {
+  footer {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+  }
+
+  header {
+    padding-top: calc(0px + env(safe-area-inset-top));
+  }
+}
+
+/* ============================================================================
+   REDUCED MOTION — Accessibility
+   ============================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================================
+   PRINT STYLES
+   ============================================================================ */
+
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  .no-print {
+    display: none !important;
+  }
 }

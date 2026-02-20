@@ -6,7 +6,7 @@
   "outputDirectory": ".next",
   "regions": ["iad1"],
   "env": {
-    "NEXT_PUBLIC_APP_URL": "https://your-app.vercel.app",
+    "NEXT_PUBLIC_APP_URL": "https://basedash-five.vercel.app",
     "NEXT_PUBLIC_CONTRACT_ADDRESS": "0xEEB40d65dE99f134a4763d0fe25b4dED439eFBAb",
     "NEXT_PUBLIC_USE_TESTNET": "true",
     "NEXT_PUBLIC_MINIKIT_APP_ID": ""

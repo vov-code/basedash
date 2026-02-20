@@ -23,6 +23,7 @@ contract GameLeaderboard {
     address public owner;
     address public scoreSigner;
     uint256 public constant MAX_LEADERBOARD_SIZE = 100;
+    uint256 public constant MAX_SCORE = 50000;
     
     // Mapping Farcaster FID к адресу кошелька
     mapping(uint256 => address) public fidToAddress;
@@ -131,13 +132,12 @@ contract GameLeaderboard {
      * @param score Счёт игрока
      */
     function submitScore(uint256 score, uint256 nonce, bytes calldata signature) external validScore(score) {
-        require(addressToFid[msg.sender] != 0, "Wallet not linked");
-        
+        require(score <= MAX_SCORE, "Score exceeds maximum");
         DailyCheckIn storage checkIn = checkIns[msg.sender];
         uint256 lastDay = checkIn.lastCheckIn / 1 days;
         uint256 today = block.timestamp / 1 days;
-        
-        require(today <= lastDay + 1, "Missed daily check-in - score reset");
+        bool streakActive = checkIn.lastCheckIn != 0 && (today <= lastDay + 1) && !checkIn.hasMissed;
+        uint256 streakForScore = streakActive ? checkIn.streak : 0;
         require(score > playerBestScore[msg.sender], "Score not better than best");
 
         require(nonce == scoreNonces[msg.sender], "Invalid nonce");
@@ -160,15 +160,15 @@ contract GameLeaderboard {
         playerBestScore[msg.sender] = score;
         
         // Добавление в лидерборд
-        _updateLeaderboard(msg.sender, score);
+        _updateLeaderboard(msg.sender, score, streakForScore);
         
-        emit ScoreSubmitted(msg.sender, score, checkIn.streak);
+        emit ScoreSubmitted(msg.sender, score, streakForScore);
     }
     
     /**
      * @dev Обновление лидерборда
      */
-    function _updateLeaderboard(address player, uint256 score) internal {
+    function _updateLeaderboard(address player, uint256 score, uint256 streakDays) internal {
         // Удаляем старую запись если есть
         for (uint256 i = 0; i < leaderboard.length; i++) {
             if (leaderboard[i].player == player) {
@@ -183,7 +183,7 @@ contract GameLeaderboard {
             player: player,
             score: score,
             timestamp: block.timestamp,
-            streakDays: checkIns[player].streak
+            streakDays: streakDays
         }));
         
         // Сортировка и обрезка

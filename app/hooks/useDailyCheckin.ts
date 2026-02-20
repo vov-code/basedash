@@ -61,12 +61,18 @@ export function useDailyCheckin(address: `0x${string}` | undefined) {
     return today > lastDay
   }, [isLinked, lastCheckIn])
 
-  const canSubmitScore = useMemo(() => {
-    if (!isLinked) return false
+  const isCheckInActive = useMemo(() => {
     if (!checkInData || !Array.isArray(checkInData)) return false
     const [, , isActive] = checkInData as [bigint, bigint, boolean]
     return isActive
-  }, [isLinked, checkInData])
+  }, [checkInData])
+
+  const canSubmitScore = useMemo(() => {
+    if (!address) return false
+    if (!isContractReady) return false
+    // Can submit if contract is ready (check-in is optional for testing)
+    return true
+  }, [address, isContractReady])
 
   const linkWallet = useCallback(
     async (fid: bigint) => {
@@ -111,7 +117,7 @@ export function useDailyCheckin(address: `0x${string}` | undefined) {
   return {
     checkInStatus: {
       streak,
-      isActive: canSubmitScore,
+      isActive: isCheckInActive,
       canCheckIn,
       isLinked,
       linkedFid: isLinked && typeof linkedFid === 'bigint' ? linkedFid : BigInt(0),

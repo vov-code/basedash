@@ -10,21 +10,21 @@
     "subtitle": "endless runner on base",
     "description": "endless runner game on base blockchain. daily check-ins, on-chain leaderboard.",
     "screenshotUrls": [
-      "https://your-domain.vercel.app/screenshots/screenshot-1.png",
-      "https://your-domain.vercel.app/screenshots/screenshot-2.png",
-      "https://your-domain.vercel.app/screenshots/screenshot-3.png"
+      "https://basedash-five.vercel.app/screenshots/screenshot-1.svg",
+      "https://basedash-five.vercel.app/screenshots/screenshot-2.svg",
+      "https://basedash-five.vercel.app/screenshots/screenshot-3.svg"
     ],
-    "iconUrl": "https://your-domain.vercel.app/icons/icon-192.png",
-    "splashImageUrl": "https://your-domain.vercel.app/splash.png",
+    "iconUrl": "https://basedash-five.vercel.app/icons/icon-192.svg",
+    "splashImageUrl": "https://basedash-five.vercel.app/splash.svg",
     "splashBackgroundColor": "#0052FF",
-    "homeUrl": "https://your-domain.vercel.app",
-    "webhookUrl": "https://your-domain.vercel.app/api/webhook",
+    "homeUrl": "https://basedash-five.vercel.app",
+    "webhookUrl": "https://basedash-five.vercel.app/api/webhook",
     "primaryCategory": "games",
     "tags": ["game", "runner", "base", "leaderboard", "arcade", "endless"],
-    "heroImageUrl": "https://your-domain.vercel.app/hero.png",
+    "heroImageUrl": "https://basedash-five.vercel.app/hero.svg",
     "tagline": "jump. dash. conquer.",
     "ogTitle": "base dash - endless runner",
     "ogDescription": "endless runner game on base blockchain. daily check-ins, on-chain leaderboard.",
-    "ogImageUrl": "https://your-domain.vercel.app/og-image.png"
+    "ogImageUrl": "https://basedash-five.vercel.app/og-image.svg"
   }
 }
