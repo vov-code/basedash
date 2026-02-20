@@ -1155,7 +1155,7 @@ export default function GameEngine({
           tabIndex={0}
           role="application"
           aria-label="Base Dash Game Canvas"
-          style={{ imageRendering: 'optimizeQuality' }}
+          style={{ imageRendering: 'pixelated' }}
         />
 
         {/* ===================== MENU OVERLAY ===================== */}
