@@ -56,13 +56,13 @@ const WORLDS: WorldTheme[] = [
   {
     name: 'Foundation',
     startScore: 0,
-    skyTop: '#F5F8FF',
-    skyMid: '#E8F0FE',
-    skyBottom: '#D0E0FF',
-    groundTop: '#C8D4F0',
-    groundBottom: '#A0B4E0',
+    skyTop: '#FFFFFF',
+    skyMid: '#F0F4FF',
+    skyBottom: '#E0E8FF',
+    groundTop: '#C5D4F0',
+    groundBottom: '#A0B8E0',
     accent: '#0052FF',
-    grid: 'rgba(0,82,255,0.06)',
+    grid: 'rgba(0,82,255,0.08)',
     redA: '#F6465D', redB: '#D63048',
     greenA: '#0ECB81', greenB: '#0A9F68',
     floorPattern: 'diagonal',
@@ -70,13 +70,13 @@ const WORLDS: WorldTheme[] = [
   {
     name: 'Data Storm',
     startScore: 300,
-    skyTop: '#E8F0FE',
-    skyMid: '#D0E0FF',
-    skyBottom: '#B8D0FF',
-    groundTop: '#A0B8E8',
-    groundBottom: '#88A0D8',
+    skyTop: '#F5F7FF',
+    skyMid: '#E8EEFF',
+    skyBottom: '#D5E0FF',
+    groundTop: '#B8C8F0',
+    groundBottom: '#95A8E0',
     accent: '#3378FF',
-    grid: 'rgba(51,120,255,0.06)',
+    grid: 'rgba(51,120,255,0.08)',
     redA: '#FF5A72', redB: '#E04058',
     greenA: '#14E89A', greenB: '#0EC080',
     floorPattern: 'circuit',
@@ -84,13 +84,13 @@ const WORLDS: WorldTheme[] = [
   {
     name: 'Bear Valley',
     startScore: 750,
-    skyTop: '#F0E8FE',
-    skyMid: '#E0D0FF',
-    skyBottom: '#D0B8FF',
-    groundTop: '#B8A0E8',
-    groundBottom: '#A088D8',
+    skyTop: '#F8F5FF',
+    skyMid: '#F0E8FF',
+    skyBottom: '#E5D5FF',
+    groundTop: '#D0C0F0',
+    groundBottom: '#B095E0',
     accent: '#6E5CFF',
-    grid: 'rgba(110,92,255,0.06)',
+    grid: 'rgba(110,92,255,0.08)',
     redA: '#FF6B7D', redB: '#E05065',
     greenA: '#28F0A8', greenB: '#1ED890',
     floorPattern: 'waves',
@@ -98,13 +98,13 @@ const WORLDS: WorldTheme[] = [
   {
     name: 'Liquid Night',
     startScore: 1300,
-    skyTop: '#E0F0FF',
-    skyMid: '#C8E0FF',
-    skyBottom: '#B0D0FF',
-    groundTop: '#90B8E8',
-    groundBottom: '#78A0D8',
+    skyTop: '#F0F6FF',
+    skyMid: '#E0EEFF',
+    skyBottom: '#CCE0FF',
+    groundTop: '#A8C8F0',
+    groundBottom: '#88A8E0',
     accent: '#0090FF',
-    grid: 'rgba(0,144,255,0.06)',
+    grid: 'rgba(0,144,255,0.08)',
     redA: '#FF7B90', redB: '#E06078',
     greenA: '#40F8B8', greenB: '#28E0A0',
     floorPattern: 'grid',
@@ -112,13 +112,13 @@ const WORLDS: WorldTheme[] = [
   {
     name: 'Void Circuit',
     startScore: 2000,
-    skyTop: '#F0F0F8',
-    skyMid: '#E0E0F0',
-    skyBottom: '#D0D0E8',
-    groundTop: '#B8B8D8',
-    groundBottom: '#A0A0C8',
+    skyTop: '#F5F5F8',
+    skyMid: '#E8E8F0',
+    skyBottom: '#D8D8E8',
+    groundTop: '#C0C0D8',
+    groundBottom: '#A0A0C0',
     accent: '#5A50E0',
-    grid: 'rgba(90,80,224,0.06)',
+    grid: 'rgba(90,80,224,0.08)',
     redA: '#FF8090', redB: '#E06578',
     greenA: '#58FFC8', greenB: '#40E8B0',
     floorPattern: 'circuit',
@@ -126,13 +126,13 @@ const WORLDS: WorldTheme[] = [
   {
     name: 'Neon Horizon',
     startScore: 2800,
-    skyTop: '#E8F0FF',
-    skyMid: '#D0E0FF',
-    skyBottom: '#B8D0FF',
-    groundTop: '#90B8E8',
-    groundBottom: '#78A0D8',
+    skyTop: '#F0F6FF',
+    skyMid: '#E0EEFF',
+    skyBottom: '#CCE0FF',
+    groundTop: '#A0C0F0',
+    groundBottom: '#80A0E0',
     accent: '#0078FF',
-    grid: 'rgba(0,120,255,0.06)',
+    grid: 'rgba(0,120,255,0.08)',
     redA: '#FF5A72', redB: '#E04058',
     greenA: '#14E89A', greenB: '#0EC080',
     floorPattern: 'neon',
@@ -140,13 +140,13 @@ const WORLDS: WorldTheme[] = [
   {
     name: 'Quantum Realm',
     startScore: 3800,
-    skyTop: '#F0F8F0',
-    skyMid: '#E0F0E0',
-    skyBottom: '#D0E8D0',
+    skyTop: '#F5FAF5',
+    skyMid: '#E8F0E8',
+    skyBottom: '#D5E8D5',
     groundTop: '#B8D8B8',
-    groundBottom: '#A0C8A0',
+    groundBottom: '#95C095',
     accent: '#00C060',
-    grid: 'rgba(0,192,96,0.06)',
+    grid: 'rgba(0,192,96,0.08)',
     redA: '#FF6B7D', redB: '#E05065',
     greenA: '#28F0A8', greenB: '#1ED890',
     floorPattern: 'grid',
@@ -975,7 +975,7 @@ export default function GameEngine() {
   }, [addParticles, addRingParticles, addBurstParticles, addTrailParticles, shake, spawnPattern, stopGame])
 
   // ──────────────────────────────────────────────────────────────────────────
-  // DRAW - OPTIMIZED
+  // DRAW - OPTIMIZED WITH ANIMATIONS
   // ──────────────────────────────────────────────────────────────────────────
 
   const draw = useCallback(() => {
@@ -986,15 +986,7 @@ export default function GameEngine() {
     const e = engineRef.current
     const w = getWorld(e.score)
 
-    // Clear and background
-    ctx.fillStyle = w.skyBottom
-    ctx.fillRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
-
-    if (e.shakeTimer > 0) {
-      ctx.translate(e.shakeX, e.shakeY)
-    }
-
-    // Sky gradient - simplified
+    // Sky gradient with subtle animation
     const skyGrad = ctx.createLinearGradient(0, 0, 0, CFG.GROUND)
     skyGrad.addColorStop(0, w.skyTop)
     skyGrad.addColorStop(0.55, w.skyMid)
@@ -1002,35 +994,78 @@ export default function GameEngine() {
     ctx.fillStyle = skyGrad
     ctx.fillRect(0, 0, CFG.WIDTH, CFG.GROUND)
 
-    // Stars - minimal
-    ctx.globalAlpha = 0.6
-    ctx.fillStyle = '#ffffff'
+    // Animated grid background
+    ctx.save()
+    ctx.strokeStyle = w.grid
+    ctx.lineWidth = 1
+    ctx.globalAlpha = 0.5
+    const gridOff = (e.distance * 0.1) % 60
+    for (let x = -gridOff; x <= CFG.WIDTH; x += 60) {
+      ctx.beginPath()
+      ctx.moveTo(x, 0)
+      ctx.lineTo(x, CFG.GROUND)
+      ctx.stroke()
+    }
+    // Horizontal lines with pulse
+    const pulseAlpha = 0.3 + Math.sin(e.gameTime * 2) * 0.15
+    ctx.globalAlpha = pulseAlpha
+    for (let y = 0; y <= CFG.GROUND; y += 80) {
+      ctx.beginPath()
+      ctx.moveTo(0, y)
+      ctx.lineTo(CFG.WIDTH, y)
+      ctx.stroke()
+    }
+    ctx.restore()
+
+    // Animated stars with twinkle
+    ctx.fillStyle = '#0052FF'
     for (const s of e.stars) {
-      ctx.globalAlpha = ((s.alpha + Math.sin(s.twinkle) * 0.1) * 0.55)
-      ctx.fillRect(s.x, s.y, s.size, s.size)
+      const alpha = (s.alpha + Math.sin(s.twinkle + e.gameTime * s.twinkleSpeed) * 0.2) * 0.7
+      ctx.globalAlpha = alpha
+      ctx.fillRect(s.x, s.y, s.size + 1, s.size + 1)
     }
     ctx.globalAlpha = 1
 
-    // Ground
-    ctx.fillStyle = w.groundTop
+    // Ground with gradient
+    const groundGrad = ctx.createLinearGradient(0, CFG.GROUND, 0, CFG.HEIGHT)
+    groundGrad.addColorStop(0, w.groundTop)
+    groundGrad.addColorStop(1, w.groundBottom)
+    ctx.fillStyle = groundGrad
     ctx.fillRect(0, CFG.GROUND, CFG.WIDTH, CFG.HEIGHT - CFG.GROUND)
 
-    // Ground line
+    // Animated ground line glow
+    ctx.save()
+    const glowIntensity = 0.6 + Math.sin(e.gameTime * 3) * 0.2
+    ctx.shadowColor = w.accent
+    ctx.shadowBlur = 15 * glowIntensity
     ctx.strokeStyle = w.accent
     ctx.lineWidth = 3
     ctx.beginPath()
     ctx.moveTo(0, CFG.GROUND)
     ctx.lineTo(CFG.WIDTH, CFG.GROUND)
     ctx.stroke()
+    ctx.shadowBlur = 0
+    ctx.restore()
 
-    // Floor pattern - minimal
-    const fOff = (e.distance * 0.4) % 50
-    ctx.fillStyle = 'rgba(255,255,255,0.03)'
-    for (let x = -fOff; x < CFG.WIDTH; x += 50) {
-      ctx.fillRect(x, CFG.GROUND, 25, 15)
+    // Animated floor pattern
+    const fOff = (e.distance * 0.45) % 55
+    ctx.fillStyle = w.accent + '20'
+    for (let x = -fOff; x < CFG.WIDTH + 55; x += 55) {
+      const height = 12 + Math.sin(e.gameTime * 4 + x * 0.1) * 4
+      ctx.fillRect(x, CFG.GROUND, 28, height)
     }
 
-    // Candles - optimized
+    // Moving particles on ground
+    ctx.fillStyle = w.accent + '40'
+    const particleOff = (e.distance * 0.6) % 100
+    for (let x = -particleOff; x < CFG.WIDTH + 100; x += 100) {
+      const size = 3 + Math.sin(e.gameTime * 5 + x * 0.05) * 2
+      ctx.beginPath()
+      ctx.arc(x, CFG.GROUND + 8, size, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    // Candles with enhanced visibility
     for (const c of e.candles) {
       if (c.collected && c.collectProgress >= 1) continue
       
@@ -1038,37 +1073,45 @@ export default function GameEngine() {
       const a = isRed ? w.redA : w.greenA
       const b = isRed ? w.redB : w.greenB
 
-      // Wick - simple line
+      // Wick with glow
+      ctx.save()
       ctx.strokeStyle = a
-      ctx.lineWidth = 3
-      ctx.globalAlpha = 0.6
+      ctx.lineWidth = 4
+      ctx.shadowColor = a
+      ctx.shadowBlur = 8
+      ctx.globalAlpha = 0.7
       ctx.beginPath()
       ctx.moveTo(c.x + c.width / 2, c.wickTop)
       ctx.lineTo(c.x + c.width / 2, c.wickBottom)
       ctx.stroke()
-      ctx.globalAlpha = 1
+      ctx.restore()
 
-      // Body - simple rectangle
+      // Body with gradient and border
       const drawY = c.collected ? c.y : c.bodyY
-      ctx.fillStyle = isRed ? a : a
+      ctx.fillStyle = a
       ctx.fillRect(c.x, drawY, c.width, c.bodyHeight)
       
-      // Highlight
-      ctx.fillStyle = 'rgba(255,255,255,0.15)'
-      ctx.fillRect(c.x + 3, drawY + 2, c.width * 0.2, c.bodyHeight - 4)
+      // White highlight for depth
+      ctx.fillStyle = 'rgba(255,255,255,0.25)'
+      ctx.fillRect(c.x + 4, drawY + 2, c.width * 0.25, c.bodyHeight - 4)
+      
+      // Border for contrast
+      ctx.strokeStyle = isRed ? '#C62648' : '#009F68'
+      ctx.lineWidth = 2
+      ctx.strokeRect(c.x, drawY, c.width, c.bodyHeight)
 
-      // Collection effect
+      // Collection animation
       if (c.collected && c.collectProgress < 1) {
-        ctx.globalAlpha = (1 - c.collectProgress) * 0.5
+        ctx.globalAlpha = (1 - c.collectProgress) * 0.6
         ctx.fillStyle = a
         ctx.beginPath()
-        ctx.arc(c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, c.width * (1.5 + c.collectProgress * 2), 0, Math.PI * 2)
+        ctx.arc(c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, c.width * (1.5 + c.collectProgress * 2.5), 0, Math.PI * 2)
         ctx.fill()
         ctx.globalAlpha = 1
       }
     }
 
-    // Player trail - minimal
+    // Player trail
     for (const t of e.player.trail) {
       ctx.globalAlpha = t.alpha * t.life * 0.5
       if (logoLoaded && logoRef.current) {
@@ -1080,23 +1123,30 @@ export default function GameEngine() {
     }
     ctx.globalAlpha = 1
 
-    // Player - simplified
+    // Player with shadow
     ctx.save()
     ctx.translate(CFG.PLAYER_X + CFG.PLAYER_SIZE / 2, e.player.y + CFG.PLAYER_SIZE / 2)
     ctx.rotate(e.player.rotation)
     ctx.scale(e.player.scale, e.player.scale)
 
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.15)'
+    ctx.fillRect(-CFG.PLAYER_SIZE / 2 + 3, -CFG.PLAYER_SIZE / 2 + 3, CFG.PLAYER_SIZE, CFG.PLAYER_SIZE)
+
     if (logoLoaded && logoRef.current) {
       ctx.drawImage(logoRef.current, -CFG.PLAYER_SIZE / 2, -CFG.PLAYER_SIZE / 2, CFG.PLAYER_SIZE, CFG.PLAYER_SIZE)
     } else {
-      ctx.fillStyle = '#ffffff'
+      ctx.fillStyle = '#FFFFFF'
       ctx.fillRect(-CFG.PLAYER_SIZE / 2, -CFG.PLAYER_SIZE / 2, CFG.PLAYER_SIZE, CFG.PLAYER_SIZE)
       ctx.fillStyle = w.accent
       ctx.fillRect(-CFG.PLAYER_SIZE / 2 + 6, -CFG.PLAYER_SIZE / 2 + 6, CFG.PLAYER_SIZE - 12, CFG.PLAYER_SIZE - 12)
+      // Inner white square for contrast
+      ctx.fillStyle = '#FFFFFF'
+      ctx.fillRect(-CFG.PLAYER_SIZE / 2 + 10, -CFG.PLAYER_SIZE / 2 + 10, CFG.PLAYER_SIZE - 20, CFG.PLAYER_SIZE - 20)
     }
     ctx.restore()
 
-    // Particles - minimal
+    // Particles
     for (const pt of e.particles) {
       ctx.globalAlpha = clamp(pt.life, 0, 1)
       ctx.fillStyle = pt.color
@@ -1109,14 +1159,14 @@ export default function GameEngine() {
       const alpha = clamp(e.worldBannerTimer / 2.4, 0, 1)
       ctx.save()
       ctx.globalAlpha = alpha
-      ctx.fillStyle = 'rgba(0,0,0,0.65)'
+      ctx.fillStyle = 'rgba(255,255,255,0.95)'
       const bw = 260, bh = 48
       const bx = CFG.WIDTH / 2 - bw / 2, by = 42
       ctx.fillRect(bx, by, bw, bh)
       ctx.strokeStyle = w.accent
-      ctx.lineWidth = 2
+      ctx.lineWidth = 3
       ctx.strokeRect(bx, by, bw, bh)
-      ctx.fillStyle = '#ffffff'
+      ctx.fillStyle = w.accent
       ctx.font = 'bold 18px Inter, sans-serif'
       ctx.textAlign = 'center'
       ctx.fillText(w.name, CFG.WIDTH / 2, by + bh / 2 + 1)
