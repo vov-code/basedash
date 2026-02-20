@@ -70,10 +70,10 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase,
   title: {
-    default: 'Base Dash — Endless Runner on Base',
+    default: 'base dash - endless runner on Base',
     template: '%s | Base Dash',
   },
-  description: 'Jump candles, send it to chain. Built on Base.',
+  description: 'jump candles, send it to chain. built on Base.',
   keywords: [
     'base',
     'game',

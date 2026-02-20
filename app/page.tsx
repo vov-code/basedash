@@ -243,10 +243,18 @@ export default function Home() {
           <div className="mx-auto max-w-3xl px-5 h-14 flex items-center justify-between">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-[#0052FF] flex items-center justify-center">
+              <div
+                className="w-8 h-8 bg-[#0052FF] flex items-center justify-center animate-[pulseGlow_3s_ease-in-out_infinite] transition-transform duration-300 hover:scale-110 cursor-pointer"
+                style={{ borderRadius: '6px' }}
+              >
                 <img src="/base-logo.png" alt="" className="w-8 h-8 object-cover" />
               </div>
-              <span className="text-[15px] font-semibold text-[#1a2030]" style={{ fontFamily: 'var(--font-brand)' }}>base dash</span>
+              <span 
+                className="text-[15px] font-semibold text-transparent bg-clip-text bg-gradient-to-r from-[#0052FF] via-[#3378FF] to-[#0052FF] bg-[length:200%_auto] animate-[shimmer_3s_ease-in-out_infinite] hover:scale-105 transition-transform duration-300"
+                style={{ fontFamily: 'var(--font-brand)' }}
+              >
+                base dash
+              </span>
             </div>
 
             {/* Wallet */}
@@ -357,7 +365,7 @@ export default function Home() {
                       </svg>
                     </div>
                     <p className="text-sm font-medium text-[#1a2030] mb-1">collect green candles</p>
-                    <p className="text-xs text-[#9ca3af]">green = bullish. gives you chill mode slowdown.</p>
+                    <p className="text-xs text-[#9ca3af]">green = bullish. +25 points + chill mode slowdown.</p>
                   </div>
                   <div className="p-5 border border-[#e5e7eb] bg-white">
                     <div className="w-8 h-8 bg-[#eef4ff] flex items-center justify-center mb-3">
@@ -496,16 +504,22 @@ export default function Home() {
 
         {/* ============ FOOTER ============ */}
         <footer className="border-t border-[#e5e7eb] bg-white/80 backdrop-blur-sm">
-          <div className="mx-auto max-w-3xl px-5 py-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#9ca3af]">
-              <p>© 2025 base dash. built on base.</p>
-              <div className="flex items-center gap-5">
+          <div className="mx-auto max-w-3xl px-5 py-5">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-[#9ca3af]">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <a href="#" className="hover:text-[#1a2030] transition-colors">terms</a>
                 <a href="#" className="hover:text-[#1a2030] transition-colors">privacy</a>
                 <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#1a2030] transition-colors flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" /></svg>
                   github
                 </a>
+              </div>
+              <div className="flex flex-wrap items-center gap-4">
+                <span className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                  <span className="inline-block animate-pulse">🔜</span>
+                  <span>score-to-token rewards coming soon</span>
+                </span>
+                <span className="text-[10px] text-slate-500 font-medium">© 2026 base dash. built by vov.</span>
               </div>
             </div>
           </div>

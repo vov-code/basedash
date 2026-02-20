@@ -18,11 +18,13 @@ import {
     type Particle,
     type Star,
     type Cloud,
+    type PowerUp,
     CFG,
     clamp,
     lerp,
     getWorld,
     getSpeed,
+    POWERUP_CONFIG,
     IS_MOBILE,
 } from './gameConfig'
 
@@ -520,10 +522,169 @@ export const drawCandles = (
 }
 
 // ============================================================================
-// PLAYER TRAIL
+// POWER-UP RENDERING
 // ============================================================================
 
-/** Draw player ghost trail */
+/** Draw a single power-up with crypto-themed visuals */
+const drawSinglePowerUp = (
+    ctx: CanvasRenderingContext2D,
+    pu: PowerUp,
+    gameTime: number
+): void => {
+    const config = POWERUP_CONFIG.TYPES[pu.kind]
+    const bobY = Math.sin(pu.phase + gameTime * pu.bobSpeed) * POWERUP_CONFIG.BOB_AMPLITUDE
+    const cx = pu.x + pu.size / 2
+    const cy = pu.y + bobY
+    const glowAlpha = 0.15 + Math.sin(pu.glowPhase + gameTime * 3) * 0.1
+
+    ctx.save()
+
+    if (pu.collected) {
+        // Collection animation
+        const prog = pu.collectProgress
+        ctx.globalAlpha = (1 - prog) * 0.8
+        ctx.strokeStyle = config.color1
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.arc(cx, cy, pu.size * (0.8 + prog * 3), 0, TWO_PI)
+        ctx.stroke()
+        // Float label
+        ctx.fillStyle = config.color1
+        ctx.font = '700 11px Inter, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText(config.label, cx, cy - prog * 30 - 10)
+        ctx.restore()
+        return
+    }
+
+    // Outer glow ring
+    ctx.globalAlpha = glowAlpha
+    ctx.strokeStyle = config.color1
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.arc(cx, cy, pu.size * 0.8 + Math.sin(gameTime * 4) * 3, 0, TWO_PI)
+    ctx.stroke()
+
+    // Inner diamond shape
+    ctx.globalAlpha = 0.9
+    const grad = ctx.createLinearGradient(cx - pu.size / 2, cy - pu.size / 2, cx + pu.size / 2, cy + pu.size / 2)
+    grad.addColorStop(0, config.color1)
+    grad.addColorStop(1, config.color2)
+    ctx.fillStyle = grad
+
+    // Diamond/hexagon shape
+    const r = pu.size * 0.45
+    ctx.beginPath()
+    for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i - Math.PI / 2
+        const hx = cx + r * Math.cos(angle)
+        const hy = cy + r * Math.sin(angle)
+        if (i === 0) ctx.moveTo(hx, hy)
+        else ctx.lineTo(hx, hy)
+    }
+    ctx.closePath()
+    ctx.fill()
+
+    // White shimmer
+    ctx.globalAlpha = 0.4 + Math.sin(gameTime * 5) * 0.2
+    ctx.fillStyle = '#FFFFFF'
+    ctx.beginPath()
+    ctx.arc(cx - r * 0.2, cy - r * 0.2, r * 0.25, 0, TWO_PI)
+    ctx.fill()
+
+    // Emoji symbol
+    ctx.globalAlpha = 1
+    ctx.font = `${Math.floor(pu.size * 0.6)}px sans-serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(config.symbol, cx, cy + 1)
+
+    ctx.restore()
+}
+
+/** Draw all power-ups */
+export const drawPowerUps = (
+    ctx: CanvasRenderingContext2D,
+    e: EngineState
+): void => {
+    for (const pu of e.powerUps) {
+        if (pu.collected && pu.collectProgress >= 1) continue
+        drawSinglePowerUp(ctx, pu, e.gameTime)
+    }
+}
+
+// ============================================================================
+// ACTIVE POWER-UP INDICATORS
+// ============================================================================
+
+/** Draw active power-up indicators at bottom-left */
+export const drawPowerUpIndicators = (
+    ctx: CanvasRenderingContext2D,
+    e: EngineState
+): void => {
+    const indicators: { label: string; color: string; timer: number; maxTime: number }[] = []
+    if (e.shieldActive) indicators.push({ label: '💎', color: '#00D4FF', timer: 1, maxTime: 1 })
+    if (e.moonBoostTimer > 0) indicators.push({ label: '🚀', color: '#FFD700', timer: e.moonBoostTimer, maxTime: 5 })
+    if (e.whaleTimer > 0) indicators.push({ label: '🐋', color: '#7B68EE', timer: e.whaleTimer, maxTime: 4 })
+
+    if (indicators.length === 0) return
+
+    ctx.save()
+    let offsetX = 8
+    for (const ind of indicators) {
+        const y = CFG.GROUND - 30
+        // Background pill
+        ctx.globalAlpha = 0.85
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'
+        ctx.beginPath()
+        ctx.roundRect(offsetX, y, 52, 22, 6)
+        ctx.fill()
+        // Timer bar
+        const ratio = clamp(ind.timer / ind.maxTime, 0, 1)
+        ctx.fillStyle = ind.color
+        ctx.globalAlpha = 0.6
+        ctx.fillRect(offsetX + 2, y + 18, 48 * ratio, 3)
+        // Emoji
+        ctx.globalAlpha = 1
+        ctx.font = '14px sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(ind.label, offsetX + 14, y + 11)
+        // Timer text
+        ctx.fillStyle = '#FFFFFF'
+        ctx.font = '600 10px Inter, sans-serif'
+        ctx.textAlign = 'left'
+        if (ind.maxTime > 1) {
+            ctx.fillText(`${ind.timer.toFixed(1)}s`, offsetX + 26, y + 12)
+        } else {
+            ctx.fillText('on', offsetX + 26, y + 12)
+        }
+        offsetX += 58
+    }
+    ctx.restore()
+}
+
+// ============================================================================
+// PLAYER TRAIL (with trail type effects)
+// ============================================================================
+
+/** Get trail color based on trail type and index */
+const getTrailColor = (trailType: string, gameTime: number, i: number): string => {
+    switch (trailType) {
+        case 'fire':
+            return i % 3 === 0 ? '#FF4500' : i % 3 === 1 ? '#FF8C00' : '#FFD700'
+        case 'rainbow': {
+            const hue = (gameTime * 120 + i * 40) % 360
+            return `hsl(${hue}, 90%, 60%)`
+        }
+        case 'neon':
+            return i % 2 === 0 ? '#00FFFF' : '#FF00FF'
+        default:
+            return '#0052FF'
+    }
+}
+
+/** Draw player ghost trail with visual effects */
 export const drawTrail = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
@@ -531,19 +692,71 @@ export const drawTrail = (
     logo: HTMLImageElement | null,
     logoLoaded: boolean
 ): void => {
-    for (const t of e.player.trail) {
-        ctx.globalAlpha = t.alpha * t.life * 0.4
-        ctx.save()
-        ctx.translate(CFG.PLAYER_X + PLAYER_HALF, t.y + PLAYER_HALF)
-        ctx.rotate(t.rotation)
-        ctx.scale(t.scale, t.scale)
-        if (logoLoaded && logo) {
-            ctx.drawImage(logo, -PLAYER_HALF, -PLAYER_HALF, CFG.PLAYER_SIZE, CFG.PLAYER_SIZE)
+    const trailType = e.activeTrail
+
+    for (let i = 0; i < e.player.trail.length; i++) {
+        const t = e.player.trail[i]
+        const trailAlpha = t.alpha * t.life
+
+        if (trailType === 'default') {
+            // Original trail
+            ctx.globalAlpha = trailAlpha * 0.4
+            ctx.save()
+            ctx.translate(CFG.PLAYER_X + PLAYER_HALF, t.y + PLAYER_HALF)
+            ctx.rotate(t.rotation)
+            ctx.scale(t.scale, t.scale)
+            if (logoLoaded && logo) {
+                ctx.drawImage(logo, -PLAYER_HALF, -PLAYER_HALF, CFG.PLAYER_SIZE, CFG.PLAYER_SIZE)
+            } else {
+                ctx.fillStyle = w.accent
+                ctx.fillRect(-PLAYER_HALF, -PLAYER_HALF, CFG.PLAYER_SIZE, CFG.PLAYER_SIZE)
+            }
+            ctx.restore()
         } else {
-            ctx.fillStyle = w.accent
-            ctx.fillRect(-PLAYER_HALF, -PLAYER_HALF, CFG.PLAYER_SIZE, CFG.PLAYER_SIZE)
+            // Styled trails — glowing colored shapes
+            const color = getTrailColor(trailType, e.gameTime, i)
+            ctx.save()
+            ctx.globalAlpha = trailAlpha * 0.65
+            ctx.translate(CFG.PLAYER_X + PLAYER_HALF, t.y + PLAYER_HALF)
+            ctx.rotate(t.rotation)
+            ctx.scale(t.scale * (0.6 + t.life * 0.4), t.scale * (0.6 + t.life * 0.4))
+
+            // Outer glow
+            ctx.fillStyle = color
+            ctx.globalAlpha = trailAlpha * 0.3
+            ctx.beginPath()
+            ctx.arc(0, 0, PLAYER_HALF + 4, 0, TWO_PI)
+            ctx.fill()
+
+            // Inner shape
+            ctx.globalAlpha = trailAlpha * 0.7
+            ctx.fillStyle = color
+            if (trailType === 'fire') {
+                // Flame-like teardrop
+                ctx.beginPath()
+                ctx.moveTo(0, -PLAYER_HALF * 0.8)
+                ctx.quadraticCurveTo(PLAYER_HALF * 0.8, 0, 0, PLAYER_HALF * 0.6)
+                ctx.quadraticCurveTo(-PLAYER_HALF * 0.8, 0, 0, -PLAYER_HALF * 0.8)
+                ctx.closePath()
+                ctx.fill()
+            } else if (trailType === 'neon') {
+                // Neon ring
+                ctx.strokeStyle = color
+                ctx.lineWidth = 3
+                ctx.beginPath()
+                ctx.arc(0, 0, PLAYER_HALF * 0.7, 0, TWO_PI)
+                ctx.stroke()
+            } else {
+                // Rainbow diamond
+                const s = PLAYER_HALF * 0.7
+                ctx.beginPath()
+                ctx.moveTo(0, -s); ctx.lineTo(s, 0); ctx.lineTo(0, s); ctx.lineTo(-s, 0)
+                ctx.closePath()
+                ctx.fill()
+            }
+
+            ctx.restore()
         }
-        ctx.restore()
     }
     ctx.globalAlpha = 1
 }
@@ -798,8 +1011,13 @@ export const drawFrame = (
 ): void => {
     const w = getWorld(e.score)
 
-    // Clear
-    ctx.clearRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
+    // Clear with world sky gradient (prevents black background)
+    const skyGradient = ctx.createLinearGradient(0, 0, 0, CFG.GROUND)
+    skyGradient.addColorStop(0, w.skyTop)
+    skyGradient.addColorStop(0.45, w.skyMid)
+    skyGradient.addColorStop(1, w.skyBottom)
+    ctx.fillStyle = skyGradient
+    ctx.fillRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
 
     // Camera shake
     ctx.save()
@@ -816,6 +1034,7 @@ export const drawFrame = (
 
     // Game objects
     drawCandles(ctx, e, w)
+    drawPowerUps(ctx, e)
 
     // Player
     drawTrail(ctx, e, w, logo, logoLoaded)
@@ -826,6 +1045,7 @@ export const drawFrame = (
 
     // UI (canvas-rendered)
     drawWorldBanner(ctx, e, w)
+    drawPowerUpIndicators(ctx, e)
 
     // End shake transform
     ctx.restore()

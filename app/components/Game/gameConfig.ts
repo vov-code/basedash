@@ -38,6 +38,10 @@ export type ParticleType =
     | 'collect'
     | 'death'
     | 'jump'
+    | 'powerup'
+
+export type PowerUpKind = 'diamond_hands' | 'moon_boost' | 'whale_mode'
+export type TrailType = 'default' | 'fire' | 'rainbow' | 'neon'
 
 export type FloorPattern =
     | 'diagonal'
@@ -205,9 +209,65 @@ export interface GroundParticle {
     phase: number
 }
 
+export interface PowerUp {
+    id: number
+    kind: PowerUpKind
+    x: number
+    y: number
+    size: number
+    collected: boolean
+    phase: number
+    bobSpeed: number
+    glowPhase: number
+    collectProgress: number
+}
+
+/** Trail unlock milestones (on-chain best score thresholds) */
+export const TRAIL_UNLOCKS: { trail: TrailType; score: number; label: string; description: string }[] = [
+    { trail: 'default', score: 0, label: 'classic', description: 'base blue trail' },
+    { trail: 'fire', score: 500, label: '🔥 fire trail', description: 'unlocked at 500 on-chain score' },
+    { trail: 'rainbow', score: 1500, label: '🌈 rainbow trail', description: 'unlocked at 1500 on-chain score' },
+    { trail: 'neon', score: 3000, label: '⚡ neon trail', description: 'unlocked at 3000 on-chain score' },
+]
+
+export const POWERUP_CONFIG = {
+    /** Crypto-themed power-ups */
+    TYPES: {
+        diamond_hands: {
+            label: '💎 diamond hands',
+            description: 'survive 1 red candle hit',
+            duration: 0, // instant shield
+            color1: '#00D4FF',
+            color2: '#0088CC',
+            symbol: '💎',
+        },
+        moon_boost: {
+            label: '🚀 moon bag',
+            description: '2x score for 5s',
+            duration: 5,
+            color1: '#FFD700',
+            color2: '#FF8C00',
+            symbol: '🌕',
+        },
+        whale_mode: {
+            label: '🐋 whale alert',
+            description: 'slow time for 4s',
+            duration: 4,
+            color1: '#7B68EE',
+            color2: '#4B0082',
+            symbol: '📊',
+        },
+    } as const,
+    SIZE: 32,
+    SPAWN_CHANCE: 0.06, // 6% per pattern after score 200
+    MIN_SCORE: 200,
+    BOB_AMPLITUDE: 12,
+} as const
+
 export interface EngineState {
     player: Player
     candles: Candle[]
+    powerUps: PowerUp[]
     particles: Particle[]
     stars: Star[]
     clouds: Cloud[]
@@ -242,6 +302,16 @@ export interface EngineState {
     scorePulse: number
     /** Combo pulse animation timer */
     comboPulse: number
+    /** Active trail type */
+    activeTrail: TrailType
+    /** Active power-up effects */
+    shieldActive: boolean
+    moonBoostTimer: number
+    whaleTimer: number
+    /** Score multiplier (from moon boost) */
+    scoreMultiplier: number
+    /** Next power-up ID */
+    nextPowerUpId: number
 }
 
 // ============================================================================
@@ -290,7 +360,7 @@ export const CFG = {
 
     // Scoring
     RED_SCORE: 10,
-    GREEN_SCORE: 5,
+    GREEN_SCORE: 25,  // +25 points per green candle
     COMBO_BONUS: 2,
     SLOW_MULT: 0.50,
     SLOW_TIME: 2.5,
@@ -302,6 +372,7 @@ export const CFG = {
     CLOUD_COUNT: IS_MOBILE ? 3 : 6,
     MAX_CANDLES: 14,
     GROUND_PARTICLE_COUNT: IS_MOBILE ? 10 : 24,
+    MAX_POWERUPS: 3,
 } as const
 
 // ============================================================================
@@ -329,7 +400,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'turbo track',
-        startScore: 250,
+        startScore: 500,
         skyTop: '#F8FAFF',
         skyMid: '#EBF0FF',
         skyBottom: '#DCE4FF',
@@ -347,7 +418,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'diamond hands',
-        startScore: 550,
+        startScore: 1200,
         skyTop: '#FAFBFF',
         skyMid: '#F0F2FF',
         skyBottom: '#E2E6FF',
@@ -365,7 +436,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'crystal caves',
-        startScore: 900,
+        startScore: 2000,
         skyTop: '#FAF8FF',
         skyMid: '#F2EBFF',
         skyBottom: '#E5D5FF',
@@ -383,7 +454,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'midnight run',
-        startScore: 1300,
+        startScore: 3000,
         skyTop: '#F0F4FF',
         skyMid: '#E0EAFF',
         skyBottom: '#C8D8FF',
@@ -401,7 +472,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'bull market',
-        startScore: 1700,
+        startScore: 4200,
         skyTop: '#F5FFF5',
         skyMid: '#E8FFE8',
         skyBottom: '#D0F8D0',
@@ -419,7 +490,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'digital core',
-        startScore: 2100,
+        startScore: 5600,
         skyTop: '#F8F8FA',
         skyMid: '#EBEBF0',
         skyBottom: '#DCDCE8',
@@ -437,7 +508,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'neon nights',
-        startScore: 2600,
+        startScore: 7200,
         skyTop: '#F0F5FF',
         skyMid: '#E0EAFF',
         skyBottom: '#C8D8FF',
@@ -455,7 +526,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'bear trap',
-        startScore: 3200,
+        startScore: 9000,
         skyTop: '#FFF8F8',
         skyMid: '#FFE8E8',
         skyBottom: '#FFD0D0',
@@ -473,7 +544,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'moon mission',
-        startScore: 4000,
+        startScore: 11000,
         skyTop: '#F0F0FF',
         skyMid: '#E0E0F8',
         skyBottom: '#D0D0F0',
@@ -667,6 +738,7 @@ export const createCandle = (
 export const createEngine = (): EngineState => ({
     player: createPlayer(),
     candles: [],
+    powerUps: [],
     particles: [],
     stars: createStars(),
     clouds: createClouds(),
@@ -696,6 +768,12 @@ export const createEngine = (): EngineState => ({
     difficulty: 0,
     scorePulse: 0,
     comboPulse: 0,
+    activeTrail: 'default',
+    shieldActive: false,
+    moonBoostTimer: 0,
+    whaleTimer: 0,
+    scoreMultiplier: 1,
+    nextPowerUpId: 1,
 })
 
 // ============================================================================
@@ -749,23 +827,28 @@ export const spawnPattern = (e: EngineState): void => {
     // Pattern selection using weighted random
     const roll = Math.random()
 
-    // --- COMPLEXITY 0: Single candles, very beginner-friendly ---
+    // --- COMPLEXITY 0: Single candles with varied sizes from the start ---
     if (complexity === 0) {
-        if (roll < 0.45) push(0, 'red')
-        else if (roll < 0.65) push(0, 'red', 0.8)
-        else if (roll < 0.82) push(0, 'red', 1.1)
-        else if (roll < 0.92) push(0, 'red', 0.6, 1.2) // short wide
-        else push(0, 'green')
+        if (roll < 0.25) push(0, 'red', 0.7, 1.3)  // short wide
+        else if (roll < 0.40) push(0, 'red', 0.6, 1.4)  // very short wide
+        else if (roll < 0.55) push(0, 'red', 1.2, 0.7)  // tall narrow
+        else if (roll < 0.68) push(0, 'red', 1.3, 0.6)  // very tall narrow
+        else if (roll < 0.78) push(0, 'red', 0.85)  // normal short
+        else if (roll < 0.88) push(0, 'red', 1.1)  // normal tall
+        else if (roll < 0.95) push(0, 'red')  // normal
+        else push(0, 'green')  // green reward
 
-        // --- COMPLEXITY 1: Pairs ---
+        // --- COMPLEXITY 1: Pairs with size variety ---
     } else if (complexity === 1) {
-        if (roll < 0.18) { push(0, 'red'); push(160, 'red', 1.05) }
-        else if (roll < 0.32) { push(0, 'red', 0.85); push(145, 'red', 1.1) }
-        else if (roll < 0.46) { push(0, 'red', 1.1); push(155, 'red', 0.8) }
-        else if (roll < 0.58) { push(0, 'red', 0.7, 1.3); push(140, 'red') }
-        else if (roll < 0.70) { push(0, 'red'); push(130, 'red', 0.9) }
-        else if (roll < 0.80) { push(0, 'red', 1.05); push(150, 'red', 1.0) }
-        else if (roll < 0.90) { push(0, 'green'); push(145, 'red', 1.1) }
+        if (roll < 0.14) { push(0, 'red', 0.7, 1.3); push(160, 'red', 1.2, 0.7) }  // wide + tall
+        else if (roll < 0.26) { push(0, 'red', 0.85); push(145, 'red', 1.1) }
+        else if (roll < 0.38) { push(0, 'red', 1.1); push(155, 'red', 0.8) }
+        else if (roll < 0.48) { push(0, 'red', 0.6, 1.4); push(140, 'red', 1.3, 0.6) }  // extreme sizes
+        else if (roll < 0.58) { push(0, 'red', 1.3, 0.6); push(130, 'red', 0.7, 1.3) }  // tall + short
+        else if (roll < 0.68) { push(0, 'red'); push(130, 'red', 0.9) }
+        else if (roll < 0.76) { push(0, 'green', 0.8, 1.2); push(145, 'red', 1.1) }  // wide green
+        else if (roll < 0.84) { push(0, 'red', 1.05); push(150, 'red', 1.0) }
+        else if (roll < 0.92) { push(0, 'green'); push(145, 'red', 1.1) }
         else { push(0, 'red'); push(130, 'green') }
 
         // --- COMPLEXITY 2: Triples, first mixed patterns ---
@@ -826,6 +909,11 @@ export const spawnPattern = (e: EngineState): void => {
         else { push(0, 'red'); push(85, 'red', 0.85); push(175, 'red', 1.1); push(270, 'red'); push(365, 'green'); push(460, 'red', 1.05); push(555, 'red', 0.9) }
     }
 
+    // Maybe spawn a power-up
+    if (e.score >= POWERUP_CONFIG.MIN_SCORE && Math.random() < POWERUP_CONFIG.SPAWN_CHANCE && e.powerUps.length < CFG.MAX_POWERUPS) {
+        spawnPowerUp(e)
+    }
+
     // Calculate gap based on difficulty
     const gap = lerp(CFG.BASE_SPAWN_GAP, CFG.MIN_SPAWN_GAP, diff)
     e.nextSpawnDistance = e.distance + gap * rand(0.90, 1.10)
@@ -834,4 +922,39 @@ export const spawnPattern = (e: EngineState): void => {
     if (e.candles.length > CFG.MAX_CANDLES) {
         e.candles = e.candles.slice(-CFG.MAX_CANDLES)
     }
+}
+
+// ============================================================================
+// POWER-UP SPAWNING
+// ============================================================================
+
+/** Spawn a random crypto-themed power-up */
+export const spawnPowerUp = (e: EngineState): void => {
+    const kinds: PowerUpKind[] = ['diamond_hands', 'moon_boost', 'whale_mode']
+    // Weighted: diamond_hands slightly rarer
+    const weights = [0.25, 0.40, 0.35]
+    const r = Math.random()
+    let kind: PowerUpKind = 'moon_boost'
+    let cumulative = 0
+    for (let i = 0; i < kinds.length; i++) {
+        cumulative += weights[i]
+        if (r < cumulative) { kind = kinds[i]; break }
+    }
+
+    const x = CFG.WIDTH + rand(200, 400)
+    // Place between ground and mid-air (always reachable)
+    const y = CFG.GROUND - rand(60, 160)
+
+    e.powerUps.push({
+        id: e.nextPowerUpId++,
+        kind,
+        x,
+        y,
+        size: POWERUP_CONFIG.SIZE,
+        collected: false,
+        phase: rand(0, Math.PI * 2),
+        bobSpeed: rand(1.5, 2.5),
+        glowPhase: rand(0, Math.PI * 2),
+        collectProgress: 0,
+    })
 }

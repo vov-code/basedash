@@ -355,6 +355,18 @@ a:hover {
   }
 }
 
+/* Pulse Glow - Logo Animation */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(0, 82, 255, 0.15), 0 0 24px rgba(0, 82, 255, 0.1);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 82, 255, 0.3), 0 0 36px rgba(0, 82, 255, 0.2);
+    opacity: 0.95;
+  }
+}
+
 /* Bounce */
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createPublicClient, http, encodePacked, keccak256 } from 'viem'
+import { createPublicClient, http, encodePacked, keccak256, isAddress } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { base, baseSepolia } from 'viem/chains'
 import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS } from '@/app/contracts'
@@ -58,6 +58,11 @@ export async function GET(request: NextRequest) {
 
     if (!address || !scoreStr) {
       return NextResponse.json({ error: 'address and score are required' }, { status: 400 })
+    }
+
+    // Валидация формата адреса
+    if (!isAddress(address)) {
+      return NextResponse.json({ error: 'invalid address format' }, { status: 400 })
     }
 
     const score = Number(scoreStr)

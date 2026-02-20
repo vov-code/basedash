@@ -1,36 +1,50 @@
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+})
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  
+
   // Отключаем все предупреждения
   eslint: {
     ignoreDuringBuilds: true,
   },
-  
+
   images: {
     domains: ['localhost'],
     remotePatterns: [{ protocol: 'https', hostname: '**' }],
   },
-  
-  webpack: (config) => {
+
+  // Code splitting optimization
+  experimental: {
+    optimizePackageImports: ['wagmi', 'viem', '@tanstack/react-query'],
+  },
+
+  webpack: (config, { isServer }) => {
     if (!config.resolve.fallback) config.resolve.fallback = {}
     config.resolve.fallback['@react-native-async-storage/async-storage'] = false
     config.resolve.fallback['pino-pretty'] = false
-    
+
     // Отключаем source maps для чистоты
     config.devtool = false
-    
+
     // Подавляем warnings
     config.ignoreWarnings = [
       { module: /node_modules/ },
       { message: /deprecated/ },
       { message: /Critical dependency/ },
     ]
-    
+
+    // Tree shaking for lodash
+    if (!isServer) {
+      config.optimization.sideEffects = true
+    }
+
     return config
   },
-  
+
   // Подавляем логи
   logging: {
     fetches: {
@@ -39,4 +53,4 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+module.exports = withBundleAnalyzer(nextConfig)

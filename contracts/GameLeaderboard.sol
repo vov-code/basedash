@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+
 /**
  * @title GameLeaderboard
  * @dev Смарт-контракт для хранения лидерборда игры BASE Dash
@@ -52,7 +55,7 @@ contract GameLeaderboard {
         require(score > 0, "Score must be positive");
         _;
     }
-    
+
     constructor() {
         owner = msg.sender;
         scoreSigner = msg.sender;
@@ -62,27 +65,6 @@ contract GameLeaderboard {
         require(newSigner != address(0), "Signer cannot be zero");
         scoreSigner = newSigner;
         emit ScoreSignerUpdated(newSigner);
-    }
-
-    function _toEthSignedMessageHash(bytes32 hash) internal pure returns (bytes32) {
-        // EIP-191
-        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
-    }
-
-    function _recoverSigner(bytes32 digest, bytes memory signature) internal pure returns (address) {
-        if (signature.length != 65) return address(0);
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            r := mload(add(signature, 0x20))
-            s := mload(add(signature, 0x40))
-            v := byte(0, mload(add(signature, 0x60)))
-        }
-        if (v < 27) v += 27;
-        if (v != 27 && v != 28) return address(0);
-        return ecrecover(digest, v, r, s);
     }
     
     /**
@@ -130,6 +112,8 @@ contract GameLeaderboard {
     /**
      * @dev Отправка счёта (только если есть активный check-in)
      * @param score Счёт игрока
+     * @param nonce Уникальный номер для предотвращения replay атак
+     * @param signature Подпись от доверенного signer
      */
     function submitScore(uint256 score, uint256 nonce, bytes calldata signature) external validScore(score) {
         require(score <= MAX_SCORE, "Score exceeds maximum");
@@ -142,6 +126,7 @@ contract GameLeaderboard {
 
         require(nonce == scoreNonces[msg.sender], "Invalid nonce");
 
+        // Верификация подписи с использованием OpenZeppelin
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 address(this),
@@ -151,17 +136,17 @@ contract GameLeaderboard {
                 nonce
             )
         );
-        bytes32 digest = _toEthSignedMessageHash(msgHash);
-        address recovered = _recoverSigner(digest, signature);
-        require(recovered == scoreSigner, "Invalid score signature");
+        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(msgHash);
+        address signer = ECDSA.recover(digest, signature);
+        require(signer == scoreSigner, "Invalid score signature");
 
         scoreNonces[msg.sender] = nonce + 1;
-        
+
         playerBestScore[msg.sender] = score;
-        
+
         // Добавление в лидерборд
         _updateLeaderboard(msg.sender, score, streakForScore);
-        
+
         emit ScoreSubmitted(msg.sender, score, streakForScore);
     }
     

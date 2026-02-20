@@ -23,10 +23,13 @@ import {
   type EngineState,
   type Particle,
   type ParticleType,
+  type TrailType,
   type TrailPoint,
   CFG,
   WORLDS,
   IS_MOBILE,
+  POWERUP_CONFIG,
+  TRAIL_UNLOCKS,
   clamp, lerp, rand, easeOut,
   getWorld, getWorldIndex, getSpeed, getJumps,
   createEngine, spawnPattern,
@@ -171,46 +174,226 @@ interface GameEngineProps {
 // ============================================================================
 
 let audioCtx: AudioContext | null = null
+let audioInitialized = false
+let musicOscillators: OscillatorNode[] = []
+let musicGain: GainNode | null = null
+let isMusicPlaying = false
 
 function getAudioCtx(): AudioContext | null {
   if (typeof window === 'undefined') return null
   if (!audioCtx) {
-    try { audioCtx = new AudioContext() } catch { return null }
+    try {
+      audioCtx = new AudioContext()
+      audioInitialized = true
+    } catch (error) {
+      console.warn('Audio context not supported:', error)
+      return null
+    }
   }
   return audioCtx
+}
+
+/** Initialize audio context on user interaction */
+function initAudio(): boolean {
+  const ctx = getAudioCtx()
+  if (!ctx) return false
+
+  try {
+    // Resume audio context if suspended (browser policy)
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => { /* ignore resume errors */ })
+    }
+    return true
+  } catch (error) {
+    console.warn('Failed to initialize audio:', error)
+    return false
+  }
 }
 
 function playTone(freq: number, duration: number, type: OscillatorType = 'square', volume = 0.12) {
   const ctx = getAudioCtx()
   if (!ctx) return
+
   try {
+    // Check if context is in a playable state
+    if (ctx.state === 'closed') return
+
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
+
     osc.type = type
     osc.frequency.setValueAtTime(freq, ctx.currentTime)
+
     gain.gain.setValueAtTime(volume, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration)
+
     osc.connect(gain)
     gain.connect(ctx.destination)
+
     osc.start(ctx.currentTime)
     osc.stop(ctx.currentTime + duration)
-  } catch { /* audio not available */ }
+  } catch (error) {
+    // Silently fail - audio is not critical
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Tone playback error:', error)
+    }
+  }
 }
 
+/**
+ * Relaxing background music — pentatonic arpeggio with pad
+ * Calming lo-fi vibe: C pentatonic (C-D-E-G-A) arpeggiated over warm pad
+ */
+let musicIntervalId: ReturnType<typeof setInterval> | null = null
+
+function startBackgroundMusic(): void {
+  if (!initAudio() || isMusicPlaying) return
+
+  const ctx = getAudioCtx()
+  if (!ctx) return
+
+  try {
+    musicGain = ctx.createGain()
+    musicGain.gain.value = 0.025
+    musicGain.connect(ctx.destination)
+
+    // Warm pad layer — C3 + G3 sine with slight detune
+    const padFreqs = [130.81, 196.00]
+    musicOscillators = padFreqs.map((freq, i) => {
+      const osc = ctx.createOscillator()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, ctx.currentTime)
+      osc.detune.setValueAtTime(i * 4 - 2, ctx.currentTime)
+      const oscGain = ctx.createGain()
+      oscGain.gain.value = 0.15
+      osc.connect(oscGain)
+      oscGain.connect(musicGain!)
+      osc.start()
+      return osc
+    })
+
+    // Pentatonic arpeggio — C4, D4, E4, G4, A4, G4, E4, D4
+    const arpeggioNotes = [261.63, 293.66, 329.63, 392.00, 440.00, 392.00, 329.63, 293.66]
+    let noteIdx = 0
+
+    const playArpeggioNote = () => {
+      if (!ctx || ctx.state === 'closed' || !musicGain) return
+      try {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(arpeggioNotes[noteIdx], ctx.currentTime)
+        osc.detune.setValueAtTime(Math.random() * 6 - 3, ctx.currentTime) // slight humanize
+        gain.gain.setValueAtTime(0, ctx.currentTime)
+        gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.05)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8)
+        osc.connect(gain)
+        gain.connect(musicGain!)
+        osc.start(ctx.currentTime)
+        osc.stop(ctx.currentTime + 0.9)
+        noteIdx = (noteIdx + 1) % arpeggioNotes.length
+      } catch { /* ignore */ }
+    }
+
+    // Play note every 400ms for relaxing pace
+    musicIntervalId = setInterval(playArpeggioNote, 400)
+    playArpeggioNote() // play first note immediately
+
+    isMusicPlaying = true
+  } catch (error) {
+    console.warn('Failed to start background music:', error)
+  }
+}
+
+function stopBackgroundMusic(): void {
+  if (!musicGain || !isMusicPlaying) return
+
+  try {
+    // Clear arpeggio interval
+    if (musicIntervalId) {
+      clearInterval(musicIntervalId)
+      musicIntervalId = null
+    }
+
+    // Fade out
+    const ctx = getAudioCtx()
+    if (ctx && musicGain) {
+      musicGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1)
+    }
+
+    // Stop oscillators
+    musicOscillators.forEach((osc) => {
+      try {
+        osc.stop(ctx?.currentTime ? ctx.currentTime + 0.5 : 0)
+      } catch { /* ignore */ }
+    })
+    musicOscillators = []
+
+    isMusicPlaying = false
+  } catch (error) {
+    console.warn('Failed to stop background music:', error)
+  }
+}
+
+/** Play a celebratory fanfare for new record */
+function playNewRecordFanfare(): void {
+  const ctx = getAudioCtx()
+  if (!ctx) return
+
+  try {
+    const now = ctx.currentTime
+    const fanfare = [523.25, 659.25, 783.99, 1046.50] // C5 E5 G5 C6
+
+    fanfare.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(freq, now + i * 0.12)
+
+      gain.gain.setValueAtTime(0, now + i * 0.12)
+      gain.gain.linearRampToValueAtTime(0.15, now + i * 0.12 + 0.05)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.4)
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+
+      osc.start(now + i * 0.12)
+      osc.stop(now + i * 0.12 + 0.5)
+    })
+  } catch (error) {
+    console.warn('Failed to play fanfare:', error)
+  }
+}
+
+// Global sound mute flag
+let globalSoundMuted = false
+
 function sfxJump() {
+  if (globalSoundMuted || !initAudio()) return
   playTone(520, 0.10, 'square', 0.08)
   setTimeout(() => playTone(680, 0.08, 'square', 0.06), 30)
 }
 
 function sfxDeath() {
+  if (globalSoundMuted || !initAudio()) return
   playTone(220, 0.25, 'sawtooth', 0.10)
   setTimeout(() => playTone(140, 0.35, 'sawtooth', 0.08), 80)
 }
 
 function sfxCollect() {
+  if (globalSoundMuted || !initAudio()) return
   playTone(880, 0.08, 'sine', 0.10)
   setTimeout(() => playTone(1100, 0.10, 'sine', 0.08), 50)
   setTimeout(() => playTone(1320, 0.12, 'sine', 0.06), 100)
+}
+
+function sfxPowerUp() {
+  if (globalSoundMuted || !initAudio()) return
+  playTone(660, 0.08, 'sine', 0.12)
+  setTimeout(() => playTone(880, 0.08, 'sine', 0.10), 60)
+  setTimeout(() => playTone(1100, 0.10, 'sine', 0.08), 120)
+  setTimeout(() => playTone(1320, 0.12, 'triangle', 0.06), 180)
 }
 
 // ============================================================================
@@ -241,6 +424,22 @@ interface GameStats {
   maxCombo: number
 }
 
+// Degen death messages
+const DEATH_MESSAGES = [
+  'rekt!',
+  'liquidated!',
+  'wasted!',
+  'cooked!',
+  'bag holder!',
+  'rug pulled!',
+  'gm rekt',
+  'send it!',
+]
+
+function getRandomDeathMessage(): string {
+  return DEATH_MESSAGES[Math.floor(Math.random() * DEATH_MESSAGES.length)]
+}
+
 export default function GameEngine({
   onScoreSubmit,
   storageKey = 'basedash_highscore_v2',
@@ -265,6 +464,11 @@ export default function GameEngine({
   const [logoLoaded, setLogoLoaded] = useState(false)
   const [gameStats, setGameStats] = useState<GameStats | null>(null)
   const [connectingWallet, setConnectingWallet] = useState(false)
+  const [isNewRecord, setIsNewRecord] = useState(false)
+  const [musicEnabled, setMusicEnabled] = useState(false)
+  const [deathMessage, setDeathMessage] = useState('rekt!')
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [activeTrail, setActiveTrail] = useState<TrailType>('default')
 
   // --- Refs ---
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -427,7 +631,8 @@ export default function GameEngine({
       if (!c.passed && c.x + c.width < CFG.PLAYER_X) {
         c.passed = true
         if (c.kind === 'red' && !c.collected) {
-          e.score += CFG.RED_SCORE * Math.max(1, e.combo)
+          const pts = CFG.RED_SCORE * Math.max(1, e.combo) * e.scoreMultiplier
+          e.score += Math.round(pts)
           e.scorePulse = 1
         }
       }
@@ -461,6 +666,24 @@ export default function GameEngine({
       if (hit) {
         if (c.kind === 'red') {
           if (p.invincible <= 0) {
+            // Shield check (diamond hands power-up)
+            if (e.shieldActive) {
+              e.shieldActive = false
+              p.invincible = 0.8
+              p.flash = 0.8
+              e.shakeTimer = 0.2
+              sfxCollect()
+              hapticCollect()
+              // Shield break particles
+              for (let i = 0; i < 8; i++) {
+                e.particles.push(mkParticle(
+                  CFG.PLAYER_X + CFG.PLAYER_SIZE / 2, p.y + CFG.PLAYER_SIZE / 2,
+                  'powerup', '#00D4FF',
+                  { vx: rand(-150, 150), vy: rand(-200, -50), life: rand(0.5, 0.8), size: rand(4, 8) }
+                ))
+              }
+              continue
+            }
             // DEATH
             e.alive = false
             e.shakeTimer = 0.4
@@ -475,13 +698,16 @@ export default function GameEngine({
               maxCombo: e.maxCombo,
             })
             setMode('gameover')
+            setDeathMessage(getRandomDeathMessage())
             // Sound + haptic
             sfxDeath()
             hapticDeath()
-            // Save high score
+            // Save high score & new record celebration
             if (e.score > highScoreRef.current) {
               highScoreRef.current = e.score
               setBest(e.score)
+              setIsNewRecord(true)
+              playNewRecordFanfare()
               try { localStorage.setItem(storageKey, String(e.score)) } catch { }
             }
             // Death particles
@@ -491,7 +717,8 @@ export default function GameEngine({
         } else if (c.kind === 'green' && !c.collected) {
           // COLLECT green candle
           c.collected = true
-          e.score += CFG.GREEN_SCORE
+          const greenPts = CFG.GREEN_SCORE * e.scoreMultiplier
+          e.score += Math.round(greenPts)
           e.combo += 1
           e.maxCombo = Math.max(e.maxCombo, e.combo)
           e.totalCollected += 1
@@ -507,6 +734,67 @@ export default function GameEngine({
           spawnCollectSparkle(e, c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, IS_MOBILE ? 6 : 12)
         }
       }
+    }
+
+    // --- Update power-ups ---
+    for (const pu of e.powerUps) {
+      pu.x -= e.speed * dt
+      pu.phase += dt * pu.bobSpeed
+      pu.glowPhase += dt * 2
+      if (pu.collected) {
+        pu.collectProgress = Math.min(1, pu.collectProgress + dt * 3)
+        continue
+      }
+
+      // Power-up collision (AABB)
+      const puCx = pu.x + pu.size / 2
+      const puCy = pu.y + Math.sin(pu.phase) * POWERUP_CONFIG.BOB_AMPLITUDE
+      const puHalf = pu.size / 2
+      if (px1 < puCx + puHalf && px2 > puCx - puHalf && py1 < puCy + puHalf && py2 > puCy - puHalf) {
+        pu.collected = true
+        sfxPowerUp()
+        hapticCollect()
+
+        // Apply power-up effect
+        switch (pu.kind) {
+          case 'diamond_hands':
+            e.shieldActive = true
+            break
+          case 'moon_boost':
+            e.moonBoostTimer = POWERUP_CONFIG.TYPES.moon_boost.duration
+            e.scoreMultiplier = 2
+            break
+          case 'whale_mode':
+            e.whaleTimer = POWERUP_CONFIG.TYPES.whale_mode.duration
+            e.slowdownTimer = Math.max(e.slowdownTimer, POWERUP_CONFIG.TYPES.whale_mode.duration)
+            break
+        }
+
+        // Spawn celebration particles
+        const config = POWERUP_CONFIG.TYPES[pu.kind]
+        for (let i = 0; i < 10; i++) {
+          e.particles.push(mkParticle(
+            puCx, puCy,
+            'powerup', config.color1,
+            { vx: rand(-120, 120), vy: rand(-180, -30), life: rand(0.5, 1), size: rand(3, 7) }
+          ))
+        }
+      }
+    }
+
+    // Remove off-screen power-ups and fully collected ones
+    e.powerUps = e.powerUps.filter(pu => pu.x + pu.size > -50 && !(pu.collected && pu.collectProgress >= 1))
+
+    // --- Power-up timers ---
+    if (e.moonBoostTimer > 0) {
+      e.moonBoostTimer -= dt
+      if (e.moonBoostTimer <= 0) {
+        e.moonBoostTimer = 0
+        e.scoreMultiplier = 1
+      }
+    }
+    if (e.whaleTimer > 0) {
+      e.whaleTimer -= dt
     }
 
     // --- World transitions ---
@@ -651,7 +939,9 @@ export default function GameEngine({
   // ========================================================================
 
   const startGame = useCallback(() => {
-    engineRef.current = createEngine()
+    const engine = createEngine()
+    engine.activeTrail = activeTrail
+    engineRef.current = engine
     setScore(0)
     setCombo(0)
     setError(null)
@@ -660,8 +950,16 @@ export default function GameEngine({
     setGameStats(null)
     setWorldName(WORLDS[0].name)
     setSpeedName('easy')
+    setIsNewRecord(false)
+    setDeathMessage('rekt!')
     setMode('playing')
-  }, [])
+
+    // Start background music on first game start
+    if (!musicEnabled && soundEnabled) {
+      startBackgroundMusic()
+      setMusicEnabled(true)
+    }
+  }, [musicEnabled, activeTrail, soundEnabled])
 
   // Wallet connect wrapper with loading state (Improvement #2)
   const handleConnectWallet = useCallback(async () => {
@@ -729,12 +1027,31 @@ export default function GameEngine({
     img.onerror = () => setLogoLoaded(false)
   }, [])
 
+  // Sync sound mute state
+  useEffect(() => {
+    globalSoundMuted = !soundEnabled
+    if (!soundEnabled && isMusicPlaying) {
+      stopBackgroundMusic()
+      setMusicEnabled(false)
+    } else if (soundEnabled && mode === 'playing' && !isMusicPlaying) {
+      startBackgroundMusic()
+      setMusicEnabled(true)
+    }
+  }, [soundEnabled, mode])
+
   // Load high score
   useEffect(() => {
     const saved = Number(localStorage.getItem(storageKey) || 0)
     highScoreRef.current = isFinite(saved) ? saved : 0
     setBest(highScoreRef.current)
   }, [storageKey])
+
+  // Cleanup background music on unmount
+  useEffect(() => {
+    return () => {
+      stopBackgroundMusic()
+    }
+  }, [])
 
   // Keyboard controls
   useEffect(() => {
@@ -828,58 +1145,67 @@ export default function GameEngine({
 
   return (
     <div className="relative w-full max-w-5xl mx-auto">
-      <div className="relative overflow-hidden border border-slate-200 shadow-[0_18px_42px_rgba(15,23,42,0.12)] game-container" onTouchStart={(ev) => { ev.preventDefault(); handleAction() }} onTouchEnd={(ev) => { ev.preventDefault(); releaseJump() }}>
+      <div className="relative overflow-hidden border border-slate-200 shadow-[0_18px_42px_rgba(15,23,42,0.12)] game-container bg-gradient-to-br from-white via-[#f5f8ff] to-[#e8f0fe]" onTouchStart={(ev) => { ev.preventDefault(); handleAction() }} onTouchEnd={(ev) => { ev.preventDefault(); releaseJump() }}>
         <canvas
           ref={canvasRef}
           width={CFG.WIDTH}
           height={CFG.HEIGHT}
-          className="w-full bg-white cursor-pointer game-canvas"
+          className="w-full h-auto aspect-video bg-white cursor-pointer game-canvas"
           onClick={handleAction}
           tabIndex={0}
           role="application"
           aria-label="Base Dash Game Canvas"
+          style={{ imageRendering: 'optimizeQuality' }}
         />
 
         {/* ===================== MENU OVERLAY ===================== */}
         {mode === 'menu' && (
-          <div className="game-overlay bg-gradient-to-br from-white/84 via-[#edf4ff]/90 to-[#f7fbff]/88 backdrop-blur-lg">
-            <div className="mx-auto w-full max-w-sm px-3 py-4 text-center overflow-y-auto max-h-full">
-              <div className="border border-slate-200/90 bg-white/95 px-4 py-4 shadow-[0_22px_44px_rgba(15,23,42,0.12)]">
-                <div className="mb-3 flex items-center gap-3 text-left">
-                  <div className="relative h-12 w-12 flex-shrink-0 border border-[#0052FF]/25 bg-[#0052FF]">
-                    <div className="absolute inset-[4px] overflow-hidden border border-white/35">
+          <div className="game-overlay bg-gradient-to-br from-white/90 via-[#edf4ff]/92 to-[#f7fbff]/90 backdrop-blur-xl">
+            <div className="mx-auto w-full max-w-lg px-3 py-2 text-center overflow-y-auto max-h-full">
+              <div className="border border-slate-200/90 bg-white/95 px-5 py-3 shadow-[0_22px_44px_rgba(15,23,42,0.12)]">
+                <div className="mb-2 flex items-center gap-3 text-left">
+                  <div className="relative h-10 w-10 flex-shrink-0 border border-[#0052FF]/25 bg-[#0052FF]">
+                    <div className="absolute inset-[3px] overflow-hidden border border-white/35">
                       <img src="/base-logo.png" alt="base dash logo" className="w-full h-full object-cover" />
                     </div>
                   </div>
-                  <div>
-                    <h2 className="mb-0.5 text-xl sm:text-2xl text-slate-900" style={{ fontFamily: 'var(--font-brand), var(--font-sans)' }}>base dash</h2>
-                    <p className="text-xs text-slate-500">built on base — endless runner</p>
+                  <div className="flex-1">
+                    <h2 className="mb-0 text-lg sm:text-xl text-slate-900" style={{ fontFamily: 'var(--font-brand), var(--font-sans)' }}>base dash</h2>
+                    <p className="text-[10px] text-slate-500">built on base — endless runner</p>
                   </div>
+                  {/* Sound toggle */}
+                  <button onClick={() => setSoundEnabled(prev => !prev)} className="h-8 w-8 flex items-center justify-center border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 transition-colors" title={soundEnabled ? 'mute' : 'unmute'}>
+                    {soundEnabled ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072M12 6l-4 4H4v4h4l4 4V6z" /></svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707A1 1 0 0112 5v14a1 1 0 01-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                    )}
+                  </button>
                 </div>
 
-                <button onClick={startGame} className="mb-3 inline-flex w-full items-center justify-center gap-2 bg-[#0052FF] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0040CC]">
+                <button onClick={startGame} className="mb-2 inline-flex w-full items-center justify-center gap-2 bg-[#0052FF] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0040CC]">
                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M8 6v12l10-6-10-6z" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   start run
                 </button>
 
-                <div className="mb-4 grid grid-cols-2 gap-2 text-left text-xs">
-                  <div className="border border-slate-200 bg-slate-50 px-3 py-2.5"><p className="mb-1 text-[10px] text-slate-500">controls</p><p className="font-medium text-slate-800">space / click / tap</p></div>
-                  <div className="border border-slate-200 bg-slate-50 px-3 py-2.5"><p className="mb-1 text-[10px] text-slate-500">best</p><p className="font-mono text-base font-bold text-slate-900">{best}</p></div>
+                <div className="mb-2 grid grid-cols-3 gap-1.5 text-left text-xs">
+                  <div className="border border-slate-200 bg-slate-50 px-2 py-1.5"><p className="text-[9px] text-slate-500">controls</p><p className="font-medium text-slate-800 text-[11px]">space / tap</p></div>
+                  <div className="border border-slate-200 bg-slate-50 px-2 py-1.5"><p className="text-[9px] text-slate-500">best</p><p className="font-mono text-sm font-bold text-slate-900">{best}</p></div>
+                  <div className="border border-slate-200 bg-slate-50 px-2 py-1.5"><p className="text-[9px] text-slate-500">worlds</p><p className="font-medium text-slate-800 text-[11px]">10 to explore</p></div>
                 </div>
 
-                <div className="mb-3 border border-slate-200 bg-slate-50/90 px-3 py-2.5 text-left">
-                  <p className="mb-2 text-[10px] font-semibold text-slate-500">how to play</p>
-                  <ul className="space-y-1.5 text-xs text-slate-700">
-                    <li>avoid red candles (trading red = danger)</li>
-                    <li>collect green candles for slowdown</li>
-                    <li>double jump unlocks at 150 score</li>
-                    <li>10 worlds to discover</li>
-                    <li>survive to reach god mode</li>
-                  </ul>
+                <div className="mb-2 border border-slate-200 bg-slate-50/90 px-3 py-2 text-left">
+                  <p className="mb-1 text-[9px] font-semibold text-slate-500">how to play</p>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] text-slate-700">
+                    <span>🔴 avoid red candles</span>
+                    <span>🟢 green = +25 pts + slow</span>
+                    <span>🦘 double jump at 150</span>
+                    <span>💎🌕📊 catch power-ups</span>
+                  </div>
                 </div>
 
                 {!isConnected && (
-                  <button onClick={handleConnectWallet} disabled={connectingWallet} className="w-full border border-[#0052FF]/30 bg-[#eef4ff] px-4 py-2.5 text-xs font-semibold text-[#0040CC] transition-colors hover:bg-[#e1ecff] disabled:opacity-50">
+                  <button onClick={handleConnectWallet} disabled={connectingWallet} className="w-full border border-[#0052FF]/30 bg-[#eef4ff] px-3 py-2 text-xs font-semibold text-[#0040CC] transition-colors hover:bg-[#e1ecff] disabled:opacity-50">
                     {connectingWallet ? (
                       <span className="flex items-center justify-center gap-2">
                         <span className="inline-block w-3 h-3 border-2 border-[#0052FF]/30 border-t-[#0052FF] rounded-full animate-spin" />
@@ -913,47 +1239,43 @@ export default function GameEngine({
         {/* ===================== GAME OVER OVERLAY ===================== */}
         {mode === 'gameover' && (
           <div className="game-overlay bg-gradient-to-br from-white/84 via-[#edf4ff]/90 to-[#f7fbff]/88 backdrop-blur-lg">
-            <div className="mx-auto w-full max-w-sm px-3 py-4 text-center overflow-y-auto max-h-full">
-              <div className="border border-slate-200/90 bg-white/95 px-4 py-4 shadow-[0_22px_44px_rgba(15,23,42,0.12)]">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center border border-[#F6465D]/30 bg-[#FFF0F2]">
-                  <svg className="w-6 h-6 text-[#F6465D]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                </div>
-                <h2 className="text-xl sm:text-2xl font-black text-[#F6465D] mb-0.5 tracking-tight" style={{ fontFamily: 'var(--font-brand), var(--font-sans)' }}>rekt!</h2>
-                <p className="text-slate-500 text-[11px] mb-3">hit a red candle</p>
+            <div className="mx-auto w-full max-w-lg px-3 py-2 text-center overflow-y-auto max-h-full">
+              <div className="border border-slate-200/90 bg-white/95 px-5 py-3 shadow-[0_22px_44px_rgba(15,23,42,0.12)]">
 
-                {/* Score + best */}
-                <div className="grid grid-cols-2 gap-1.5 mb-2 text-left text-xs">
-                  <div className="border border-slate-200 bg-slate-50 px-2.5 py-2"><p className="mb-0.5 text-[10px] text-slate-500">score</p><p className="text-xl font-black text-slate-900 font-mono">{deathScore}</p></div>
-                  <div className="border border-[#0052FF]/20 bg-[#eef4ff] px-2.5 py-2"><p className="mb-0.5 text-[10px] text-[#0052FF]">best</p><p className="text-xl font-black text-[#0052FF] font-mono">{best}</p></div>
-                  <div className="border border-slate-200 bg-slate-50 px-2.5 py-2"><p className="mb-0.5 text-[10px] text-slate-500">world</p><p className="text-sm font-bold text-slate-900">{worldName}</p></div>
-                  <div className="border border-slate-200 bg-slate-50 px-2.5 py-2"><p className="mb-0.5 text-[10px] text-slate-500">speed</p><p className="text-xs font-bold" style={{ color: getSpeed(score).color }}>{speedName}</p></div>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <div className={`flex h-8 w-8 items-center justify-center border ${isNewRecord ? 'border-[#F0B90B]/30 bg-[#FFFBEB]' : 'border-[#F6465D]/30 bg-[#FFF0F2]'}`}>
+                    {isNewRecord ? (
+                      <svg className="w-4 h-4 text-[#F0B90B]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    ) : (
+                      <span className="text-xl">💀</span>
+                    )}
+                  </div>
+                  <h2 className={`text-lg sm:text-xl font-black ${isNewRecord ? 'text-[#B78905]' : 'text-[#F6465D]'} tracking-tight`} style={{ fontFamily: 'var(--font-brand), var(--font-sans)' }}>
+                    {isNewRecord ? 'new record!' : deathMessage}
+                  </h2>
                 </div>
 
-                {/* Game stats (Improvement #6) */}
+                {/* Score + best + world + speed in one row */}
+                <div className="grid grid-cols-4 gap-1 mb-1.5 text-left text-xs">
+                  <div className="border border-slate-200 bg-slate-50 px-2 py-1.5"><p className="text-[9px] text-slate-500">score</p><p className="text-base font-black text-slate-900 font-mono">{deathScore}</p></div>
+                  <div className="border border-[#0052FF]/20 bg-[#eef4ff] px-2 py-1.5"><p className="text-[9px] text-[#0052FF]">best</p><p className="text-base font-black text-[#0052FF] font-mono">{best}</p></div>
+                  <div className="border border-slate-200 bg-slate-50 px-2 py-1.5"><p className="text-[9px] text-slate-500">world</p><p className="text-[11px] font-bold text-slate-900">{worldName}</p></div>
+                  <div className="border border-slate-200 bg-slate-50 px-2 py-1.5"><p className="text-[9px] text-slate-500">diff</p><p className="text-[11px] font-bold" style={{ color: getSpeed(score).color }}>{speedName}</p></div>
+                </div>
+
+                {/* Game stats */}
                 {gameStats && (
-                  <div className="grid grid-cols-4 gap-1 mb-3 text-center text-[10px]">
-                    <div className="border border-slate-200 bg-slate-50 px-1 py-1.5">
-                      <p className="text-slate-400">time</p>
-                      <p className="font-bold text-slate-700 font-mono">{Math.floor(gameStats.timeSurvived)}s</p>
-                    </div>
-                    <div className="border border-slate-200 bg-slate-50 px-1 py-1.5">
-                      <p className="text-slate-400">dodged</p>
-                      <p className="font-bold text-slate-700 font-mono">{gameStats.candlesDodged}</p>
-                    </div>
-                    <div className="border border-[#0ECB81]/20 bg-[#f0fdf4] px-1 py-1.5">
-                      <p className="text-[#0ECB81]">greens</p>
-                      <p className="font-bold text-[#0ECB81] font-mono">{gameStats.greensCollected}</p>
-                    </div>
-                    <div className="border border-slate-200 bg-slate-50 px-1 py-1.5">
-                      <p className="text-slate-400">jumps</p>
-                      <p className="font-bold text-slate-700 font-mono">{gameStats.totalJumps}</p>
-                    </div>
+                  <div className="grid grid-cols-4 gap-1 mb-2 text-center text-[9px]">
+                    <div className="border border-slate-200 bg-slate-50 px-1 py-1"><p className="text-slate-400">time</p><p className="font-bold text-slate-700 font-mono">{Math.floor(gameStats.timeSurvived)}s</p></div>
+                    <div className="border border-slate-200 bg-slate-50 px-1 py-1"><p className="text-slate-400">dodged</p><p className="font-bold text-slate-700 font-mono">{gameStats.candlesDodged}</p></div>
+                    <div className="border border-[#0ECB81]/20 bg-[#f0fdf4] px-1 py-1"><p className="text-[#0ECB81]">greens</p><p className="font-bold text-[#0ECB81] font-mono">{gameStats.greensCollected}</p></div>
+                    <div className="border border-slate-200 bg-slate-50 px-1 py-1"><p className="text-slate-400">jumps</p><p className="font-bold text-slate-700 font-mono">{gameStats.totalJumps}</p></div>
                   </div>
                 )}
 
                 {/* Score submit / success / wallet connect */}
                 {submitted || isScoreConfirmed ? (
-                  <div className="mb-2 border border-[#0ECB81]/30 bg-[#f0fdf4] px-3 py-2.5">
+                  <div className="mb-1.5 border border-[#0ECB81]/30 bg-[#f0fdf4] px-3 py-2">
                     <div className="flex items-center justify-center gap-2">
                       <svg className="w-4 h-4 text-[#0ECB81]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                       <span className="text-sm font-semibold text-[#0ECB81]">score saved on-chain!</span>
@@ -963,14 +1285,14 @@ export default function GameEngine({
                         href={`https://${process.env.NEXT_PUBLIC_USE_TESTNET === 'true' ? 'sepolia.' : ''}basescan.org/tx/${submitTxHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1.5 inline-block text-[10px] font-mono text-[#0052FF] hover:underline"
+                        className="mt-1 inline-block text-[10px] font-mono text-[#0052FF] hover:underline"
                       >
                         {submitTxHash.slice(0, 10)}...{submitTxHash.slice(-8)} ↗
                       </a>
                     )}
                   </div>
                 ) : isConnected && canSubmitScore && deathScore > 0 ? (
-                  <button onClick={submitScore} disabled={submitting} className="mb-2 w-full bg-[#0052FF] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0040CC] disabled:opacity-50 disabled:cursor-not-allowed">
+                  <button onClick={submitScore} disabled={submitting} className="mb-1.5 w-full bg-[#0052FF] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0040CC] disabled:opacity-50 disabled:cursor-not-allowed">
                     {submitting ? (
                       <span className="flex items-center justify-center gap-2">
                         <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -979,7 +1301,7 @@ export default function GameEngine({
                     ) : 'send score on-chain'}
                   </button>
                 ) : !isConnected ? (
-                  <button onClick={handleConnectWallet} disabled={connectingWallet} className="mb-2 w-full bg-[#0052FF] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0040CC] disabled:opacity-50 disabled:cursor-not-allowed">
+                  <button onClick={handleConnectWallet} disabled={connectingWallet} className="mb-1.5 w-full bg-[#0052FF] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0040CC] disabled:opacity-50 disabled:cursor-not-allowed">
                     {connectingWallet ? (
                       <span className="flex items-center justify-center gap-2">
                         <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -988,10 +1310,11 @@ export default function GameEngine({
                     ) : 'connect wallet to save'}
                   </button>
                 ) : (
-                  <p className="mb-2 border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600">{canSubmitScore ? 'wallet connected — submit.' : 'contract not configured.'}</p>
+                  <p className="mb-1.5 border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600">{canSubmitScore ? 'wallet connected — submit.' : 'contract not configured.'}</p>
                 )}
-                {error && <p className="text-[#F6465D] text-xs mb-2 bg-[#FFF0F2] px-3 py-1.5 border border-[#F6465D]/20">{error}</p>}
-                <button onClick={startGame} className="w-full border border-slate-200 bg-slate-50 px-5 py-2.5 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-100">run it back</button>
+                {error && <p className="text-[#F6465D] text-xs mb-1.5 bg-[#FFF0F2] px-3 py-1 border border-[#F6465D]/20">{error}</p>}
+
+                <button onClick={startGame} className="w-full border border-slate-200 bg-slate-50 px-5 py-2 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-100">run it back</button>
               </div>
             </div>
           </div>
@@ -1001,33 +1324,56 @@ export default function GameEngine({
         {mode === 'playing' && (
           <>
             {/* Score */}
-            <div className="absolute top-2 left-2 sm:top-4 sm:left-4 flex items-center gap-1.5 sm:gap-3">
-              <div className="border border-slate-300/80 bg-white/90 px-2 py-1.5 sm:px-4 sm:py-3 shadow-[0_8px_20px_rgba(15,23,42,0.15)]">
-                <p className="text-slate-500 text-[8px] sm:text-[9px] mb-0.5 font-bold">score</p>
-                <p className="text-lg sm:text-2xl font-black text-slate-900 font-mono tracking-tight">{score}</p>
+            <div className="absolute top-1 left-1 sm:top-2 sm:left-2 flex items-center gap-1 sm:gap-2">
+              <div className="border border-slate-300/80 bg-white/90 px-1.5 py-1 sm:px-3 sm:py-2 rounded-md shadow-[0_4px_12px_rgba(15,23,42,0.12)]">
+                <p className="text-slate-500 text-[6px] sm:text-[8px] font-bold mb-0.5">score</p>
+                <p className="text-base sm:text-xl font-black text-slate-900 font-mono tracking-tight leading-none">{score}</p>
               </div>
               {combo > 1 && (
-                <div className="border border-[#0052FF]/30 bg-[#eef4ff] px-2 py-1 sm:px-3 sm:py-2">
-                  <p className="text-[#0052FF] text-xs sm:text-sm font-black">x{combo}</p>
+                <div className="hidden sm:block border border-[#0052FF]/30 bg-[#eef4ff] px-2 py-1 rounded-md">
+                  <p className="text-[#0052FF] text-xs font-black">x{combo}</p>
+                </div>
+              )}
+              {/* Score multiplier indicator */}
+              {engineRef.current.scoreMultiplier > 1 && (
+                <div className="hidden sm:block border border-[#FFD700]/40 bg-[#FFFBEB] px-2 py-1 rounded-md">
+                  <p className="text-[#B78905] text-xs font-black">🌕 x{engineRef.current.scoreMultiplier}</p>
                 </div>
               )}
             </div>
 
             {/* World / Speed */}
-            <div className="absolute top-2 right-2 sm:top-4 sm:right-4">
-              <div className="border border-slate-300/80 bg-white/90 px-2 py-1.5 sm:px-4 sm:py-3 text-right shadow-[0_8px_20px_rgba(15,23,42,0.15)]">
-                <p className="hidden sm:block text-slate-500 text-[9px] font-bold mb-0.5">world</p>
-                <p className="text-xs sm:text-sm font-black text-slate-900 mb-0.5 sm:mb-1">{worldName}</p>
-                <p className="text-[8px] sm:text-xs font-bold" style={{ color: getSpeed(score).color }}>{speedName}</p>
+            <div className="absolute top-1 right-1 sm:top-2 sm:right-2">
+              <div className="flex items-center gap-1.5 sm:gap-2.5 border border-slate-200/90 bg-white/95 px-2 py-1 sm:px-3.5 sm:py-2 rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+                <div className="flex flex-col leading-tight">
+                  <span className="text-[5px] sm:text-[7px] text-slate-400 font-semibold uppercase tracking-wider">World</span>
+                  <span className="text-[10px] sm:text-[13px] font-bold text-slate-800 leading-none">{worldName}</span>
+                </div>
+                <div className="w-px h-5 sm:h-7 bg-slate-200" />
+                <div className="flex flex-col leading-tight">
+                  <span className="text-[5px] sm:text-[7px] text-slate-400 font-semibold uppercase tracking-wider">Diff</span>
+                  <span className="text-[10px] sm:text-[13px] font-bold leading-none" style={{ color: getSpeed(score).color }}>{speedName}</span>
+                </div>
               </div>
             </div>
 
-            {/* Chill mode indicator */}
+            {/* Chill / whale mode indicator */}
             {engineRef.current.slowdownTimer > 0 && (
-              <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 border border-[#0ECB81]/30 bg-[#efffee] px-3 py-1.5 sm:px-5 sm:py-2.5">
-                <p className="text-[#0ECB81] text-[10px] sm:text-xs font-bold">chill</p>
+              <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 border border-[#0ECB81]/30 bg-[#efffee] px-3 py-1.5 sm:px-5 sm:py-2">
+                <p className="text-[#0ECB81] text-[10px] sm:text-xs font-bold">
+                  {engineRef.current.whaleTimer > 0 ? '📊 whale alert' : '🟢 chill mode'}
+                </p>
               </div>
             )}
+
+            {/* Sound toggle */}
+            <button onClick={() => setSoundEnabled(prev => !prev)} className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 h-6 w-6 sm:h-7 sm:w-7 flex items-center justify-center border border-slate-300/60 bg-white/70 text-slate-500 hover:bg-white/90 transition-colors rounded-md" title={soundEnabled ? 'mute' : 'unmute'}>
+              {soundEnabled ? (
+                <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072M12 6l-4 4H4v4h4l4 4V6z" /></svg>
+              ) : (
+                <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707A1 1 0 0112 5v14a1 1 0 01-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+              )}
+            </button>
 
             {/* Jump indicators */}
             <div className="absolute bottom-3 right-3 flex gap-1">
