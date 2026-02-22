@@ -16,7 +16,8 @@
 // ============================================================================
 
 export const IS_MOBILE =
-    typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1
+    typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1 &&
+    (typeof window !== 'undefined' ? window.innerWidth < 768 : true)
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -42,6 +43,7 @@ export type ParticleType =
 
 export type PowerUpKind = 'diamond_hands' | 'moon_boost' | 'whale_mode'
 export type TrailType = 'default' | 'fire' | 'rainbow' | 'neon'
+export type MarketState = 'bull' | 'bear' | 'neutral'
 
 export type FloorPattern =
     | 'diagonal'
@@ -264,6 +266,22 @@ export const POWERUP_CONFIG = {
     BOB_AMPLITUDE: 12,
 } as const
 
+export const MARKET_CONFIG = {
+    /** Seconds between market cycles */
+    CYCLE_TIME: 25,
+    /** Bull = more greens, bear = more reds + faster */
+    BULL_GREEN_BONUS: 0.15,
+    BEAR_SPEED_MULT: 1.12,
+    /** Near-miss threshold in pixels (extremely tight for rarity) */
+    NEAR_MISS_DIST: 2,
+    /** Near-miss slow-mo duration */
+    NEAR_MISS_DURATION: 0.2,
+    /** Minimum cooldown between near-miss triggers (seconds) */
+    NEAR_MISS_COOLDOWN: 2.0,
+    /** Rug-pull duration */
+    RUG_PULL_DURATION: 3.5,
+} as const
+
 export interface EngineState {
     player: Player
     candles: Candle[]
@@ -312,29 +330,65 @@ export interface EngineState {
     scoreMultiplier: number
     /** Next power-up ID */
     nextPowerUpId: number
+    /** Timestamp of last jump for debounce */
+    lastJumpTime: number
+    /** Market cycle state */
+    marketState: MarketState
+    /** Time until next market cycle change */
+    marketTimer: number
+    /** Near-miss slow-mo timer */
+    nearMissTimer: number
+    /** Near-miss flash text */
+    nearMissText: string
+    /** Rug-pull event timer (ground disappearing) */
+    rugPullTimer: number
+    /** Rug-pull active flag */
+    rugPullActive: boolean
+    /** Speed-lines flash timer (on speed tier change) */
+    speedLinesTimer: number
+    /** Combo pulse border timer */
+    comboPulseTimer: number
+    /** Previous speed tier index for detecting change */
+    prevSpeedTierIdx: number
+    /** Tutorial hint visible */
+    showTutorial: boolean
+    /** Run count for rug-pull chance (every 5th run) */
+    runCount: number
+    /** Camera zoom level (1.0 = normal, <1 = zoomed out) */
+    cameraZoom: number
+    /** Timer for spawning running dust particles */
+    runDustTimer: number
+    /** Near-miss text position for rendering */
+    nearMissX: number
+    nearMissY: number
+    /** Rug-pull visual holes in ground (x positions) */
+    rugPullHoles: number[]
+    /** Candles spawned so far this run (for early-game guard) */
+    spawnCount: number
 }
 
 // ============================================================================
 // CONFIGURATION — Physics, Limits, Scoring
 // ============================================================================
 
+// Initial defaults (overridden on mount by updateGameConfig)
 export const CFG = {
-    // Canvas
     WIDTH: 960,
     HEIGHT: 540,
     GROUND: 430,
 
-    // Player
     PLAYER_X: 180,
     PLAYER_SIZE: 42,
-    HITBOX: 10,
+    HITBOX_FRAC: 0.14,  // 14% inset each side — scales with screen size (16)
+    HITBOX: 6,          // computed at runtime from HITBOX_FRAC × PLAYER_SIZE
 
-    // Physics — snappy Geometry Dash feel
     STEP: 1 / 60,
     MAX_DELTA: 0.033,
     UI_RATE: 1 / 10,
 
     GRAVITY: 2400,
+    GRAVITY_UP: 1900,   // Lighter going up — floaty, readable arc (item 1)
+    GRAVITY_DOWN: 3100, // Heavier falling — snappy, responsive (item 1)
     JUMP: -820,
     DOUBLE_JUMP: -680,
     MAX_FALL: 1200,
@@ -342,38 +396,35 @@ export const CFG = {
     BUFFER: 0.12,
     ROT_SPEED: 11.0,
     TILT_SPEED: 18,
+    SQUASH_LAND: -0.28,  // Strong squash on landing (item 6)
+    SQUASH_JUMP: 0.18,   // Stretch on jump takeoff (item 6)
 
-    // Dash
     DASH_SPEED: 200,
     DASH_DURATION: 0.15,
     DASH_COOLDOWN: 0.8,
 
-    // Speed
-    BASE_SPEED: 360,
-    MAX_SPEED: 680,
-    DOUBLE_JUMP_AT: 150,
+    BASE_SPEED: 440,
+    MAX_SPEED: 780,
+    DOUBLE_JUMP_AT: 120,
 
-    // Spawning — safe gaps, always beatable
-    BASE_SPAWN_GAP: 520,
-    MIN_SPAWN_GAP: 300,
+    BASE_SPAWN_GAP: 490,
+    MIN_SPAWN_GAP: 260,
     MAX_CANDLES_PATTERN: 5,
 
-    // Scoring
-    RED_SCORE: 10,
-    GREEN_SCORE: 25,  // +25 points per green candle
+    RED_SCORE: 7,
+    GREEN_SCORE: 33,
     COMBO_BONUS: 2,
     SLOW_MULT: 0.50,
     SLOW_TIME: 2.5,
 
-    // Effects — mobile-aware
-    PARTICLE_LIMIT: IS_MOBILE ? 60 : 140,
-    TRAIL_LIMIT: IS_MOBILE ? 3 : 7,
-    STAR_COUNT: IS_MOBILE ? 20 : 45,
-    CLOUD_COUNT: IS_MOBILE ? 3 : 6,
+    PARTICLE_LIMIT: 140,
+    TRAIL_LIMIT: 7,
+    STAR_COUNT: 45,
+    CLOUD_COUNT: 6,
     MAX_CANDLES: 14,
-    GROUND_PARTICLE_COUNT: IS_MOBILE ? 10 : 24,
+    GROUND_PARTICLE_COUNT: 24,
     MAX_POWERUPS: 3,
-} as const
+};
 
 // ============================================================================
 // 10 WORLD THEMES — Each with unique visual identity
@@ -381,7 +432,7 @@ export const CFG = {
 
 export const WORLDS: WorldTheme[] = [
     {
-        name: 'base camp',
+        name: 'I. ONCHAIN', // world 1
         startScore: 0,
         skyTop: '#FFFFFF',
         skyMid: '#F5F8FF',
@@ -399,7 +450,7 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.5,
     },
     {
-        name: 'turbo track',
+        name: 'II. DEGEN',
         startScore: 500,
         skyTop: '#F8FAFF',
         skyMid: '#EBF0FF',
@@ -417,7 +468,7 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.6,
     },
     {
-        name: 'diamond hands',
+        name: 'III. DIAMOND',
         startScore: 1200,
         skyTop: '#FAFBFF',
         skyMid: '#F0F2FF',
@@ -435,7 +486,7 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.65,
     },
     {
-        name: 'crystal caves',
+        name: 'IV. WHALE',
         startScore: 2000,
         skyTop: '#FAF8FF',
         skyMid: '#F2EBFF',
@@ -453,7 +504,7 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.7,
     },
     {
-        name: 'midnight run',
+        name: 'V. MOON',
         startScore: 3000,
         skyTop: '#F0F4FF',
         skyMid: '#E0EAFF',
@@ -471,7 +522,7 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.75,
     },
     {
-        name: 'bull market',
+        name: 'VI. FOMO',
         startScore: 4200,
         skyTop: '#F5FFF5',
         skyMid: '#E8FFE8',
@@ -489,7 +540,7 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.8,
     },
     {
-        name: 'digital core',
+        name: 'VII. DARKPOOL',
         startScore: 5600,
         skyTop: '#F8F8FA',
         skyMid: '#EBEBF0',
@@ -507,7 +558,7 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.85,
     },
     {
-        name: 'neon nights',
+        name: 'VIII. FLASHCRASH',
         startScore: 7200,
         skyTop: '#F0F5FF',
         skyMid: '#E0EAFF',
@@ -525,7 +576,7 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.9,
     },
     {
-        name: 'bear trap',
+        name: 'IX. REKT',
         startScore: 9000,
         skyTop: '#FFF8F8',
         skyMid: '#FFE8E8',
@@ -543,7 +594,7 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.95,
     },
     {
-        name: 'moon mission',
+        name: 'X. ASCENSION',
         startScore: 11000,
         skyTop: '#F0F0FF',
         skyMid: '#E0E0F8',
@@ -567,15 +618,15 @@ export const WORLDS: WorldTheme[] = [
 // ============================================================================
 
 export const SPEEDS: SpeedTier[] = [
-    { label: 'easy', startScore: 0, multiplier: 1.0, color: '#88CCFF', description: 'relaxed start', particleBoost: 0 },
-    { label: 'medium', startScore: 180, multiplier: 1.1, color: '#88FF88', description: 'warming up', particleBoost: 0.1 },
-    { label: 'fast', startScore: 400, multiplier: 1.24, color: '#CCFF66', description: 'getting faster', particleBoost: 0.2 },
-    { label: 'rapid', startScore: 700, multiplier: 1.40, color: '#FFFF88', description: 'hold on tight', particleBoost: 0.3 },
-    { label: 'intense', startScore: 1100, multiplier: 1.58, color: '#FFCC88', description: 'intense mode', particleBoost: 0.4 },
-    { label: 'extreme', startScore: 1600, multiplier: 1.78, color: '#FF8888', description: 'extreme speed', particleBoost: 0.55 },
-    { label: 'insane', startScore: 2200, multiplier: 2.0, color: '#FF88CC', description: 'insane pace', particleBoost: 0.7 },
-    { label: 'hardcore', startScore: 2900, multiplier: 2.25, color: '#CC88FF', description: 'hardcore mode', particleBoost: 0.85 },
-    { label: 'god mode', startScore: 3800, multiplier: 2.55, color: '#88FFFF', description: 'god mode', particleBoost: 1.0 },
+    { label: 'I. HODL', startScore: 0, multiplier: 1.05, color: '#A0B8F0', description: 'base speed', particleBoost: 0 },
+    { label: 'II. PUMP', startScore: 400, multiplier: 1.18, color: '#0ECB81', description: 'speed up', particleBoost: 0 },
+    { label: 'III. LEVERAGE', startScore: 1200, multiplier: 1.33, color: '#F0B90B', description: 'fast', particleBoost: 1 },
+    { label: 'IV. MARGIN CALL', startScore: 2600, multiplier: 1.48, color: '#FF7B90', description: 'very fast', particleBoost: 2 },
+    { label: 'V. LIQUIDATE', startScore: 4500, multiplier: 1.62, color: '#F6465D', description: 'danger', particleBoost: 3 },
+    { label: 'VI. FOMO', startScore: 7000, multiplier: 1.78, color: '#C080FF', description: 'insane', particleBoost: 4 },
+    { label: 'VII. 100X', startScore: 10000, multiplier: 1.88, color: '#FF00FF', description: 'lightspeed', particleBoost: 5 },
+    { label: 'VIII. HYPERDRIVE', startScore: 14000, multiplier: 1.98, color: '#00FFFF', description: 'terminal velocity', particleBoost: 6 },
+    { label: 'IX. SINGULARITY', startScore: 18000, multiplier: 2.15, color: '#FFFFFF', description: 'god mode', particleBoost: 8 },
 ]
 
 // ============================================================================
@@ -634,6 +685,10 @@ export const hexToRgba = (hex: string, alpha: number): string => {
     const b = parseInt(hex.slice(5, 7), 16)
     return `rgba(${r},${g},${b},${alpha})`
 }
+
+/** Format score as crypto market-cap style: "$12,450" */
+export const formatMarketCap = (score: number): string =>
+    '$' + score.toLocaleString('en-US')
 
 // ============================================================================
 // CREATION FUNCTIONS
@@ -749,7 +804,7 @@ export const createEngine = (): EngineState => ({
     combo: 0,
     maxCombo: 0,
     slowdownTimer: 0,
-    nextSpawnDistance: CFG.BASE_SPAWN_GAP,
+    nextSpawnDistance: IS_MOBILE ? 220 : 300,
     nextCandleId: 1,
     shakeX: 0, shakeY: 0, shakeTimer: 0,
     worldName: WORLDS[0].name,
@@ -774,6 +829,24 @@ export const createEngine = (): EngineState => ({
     whaleTimer: 0,
     scoreMultiplier: 1,
     nextPowerUpId: 1,
+    lastJumpTime: 0,
+    marketState: 'neutral' as MarketState,
+    marketTimer: 15,
+    nearMissTimer: 0,
+    nearMissText: '',
+    rugPullTimer: 0,
+    rugPullActive: false,
+    speedLinesTimer: 0,
+    comboPulseTimer: 0,
+    prevSpeedTierIdx: 0,
+    showTutorial: false,
+    runCount: 0,
+    cameraZoom: 1,
+    runDustTimer: 0,
+    nearMissX: 0,
+    nearMissY: 0,
+    rugPullHoles: [],
+    spawnCount: 0,
 })
 
 // ============================================================================
@@ -784,14 +857,16 @@ export const createEngine = (): EngineState => ({
  * Spawn a pattern of candles at the right edge of the screen.
  * Patterns scale with difficulty (complexity 0-5).
  * All patterns are designed to be beatable with single or double jump.
- * Green candles ~12% frequency — they are valuable rewards.
+ * Green candles ~25% frequency — they are valuable rewards.
  */
 export const spawnPattern = (e: EngineState): void => {
-    const diff = clamp(e.score / 4000, 0, 1)
-    const complexity = Math.min(5, Math.floor(e.score / 500))
+    e.spawnCount++
+    const diff = clamp(e.score / 3500, 0, 1)
+    // First 4 candles guaranteed simple — brief safe window, then difficulty ramps FAST
+    const complexity = e.spawnCount <= 4 ? 0 : Math.min(5, Math.floor(e.score / 450))
     const startX = CFG.WIDTH + 140
-    const baseH = lerp(65, 100, diff)
-    const baseW = lerp(24, 36, diff)
+    const baseH = lerp(62, 105, diff)
+    const baseW = lerp(22, 38, diff)
     const maxHM = 1.4 // always jumpable
 
     const push = (
@@ -809,46 +884,47 @@ export const spawnPattern = (e: EngineState): void => {
             baseH * rand(0.85, 1.1) * h,
             baseW * rand(0.9, 1.08) * clamp(wM, 0.6, 1.4)
         )
-        if (moving || (e.score >= 900 && Math.random() < 0.10 * diff)) {
+        // Moving candles earlier — from score 600 (was 900)
+        if (moving || (e.score >= 600 && Math.random() < 0.12 * diff)) {
             candle.isMoving = true
-            candle.moveAmplitude = rand(12, 28)
+            candle.moveAmplitude = rand(10, 24)
         }
-        // Air candles after score 800+
-        if (e.score >= 800 && Math.random() < 0.08 * diff) {
-            const lift = rand(25, 60)
+        // Air candles earlier — from score 300 (was 500), higher chance
+        if (e.score >= 300 && Math.random() < 0.20 * diff) {
+            const lift = rand(20, 55)
             candle.bodyY -= lift; candle.y -= lift; candle.bodyTop -= lift
             candle.wickTop -= lift; candle.wickBottom -= lift
             candle.isMoving = true
-            candle.moveAmplitude = rand(12, 25)
+            candle.moveAmplitude = rand(10, 22)
         }
         e.candles.push(candle)
     }
 
-    // Pattern selection using weighted random
+    // Pattern selection using weighted random — MORE GREEN CANDLES
     const roll = Math.random()
 
     // --- COMPLEXITY 0: Single candles with varied sizes from the start ---
     if (complexity === 0) {
-        if (roll < 0.25) push(0, 'red', 0.7, 1.3)  // short wide
-        else if (roll < 0.40) push(0, 'red', 0.6, 1.4)  // very short wide
-        else if (roll < 0.55) push(0, 'red', 1.2, 0.7)  // tall narrow
-        else if (roll < 0.68) push(0, 'red', 1.3, 0.6)  // very tall narrow
-        else if (roll < 0.78) push(0, 'red', 0.85)  // normal short
-        else if (roll < 0.88) push(0, 'red', 1.1)  // normal tall
-        else if (roll < 0.95) push(0, 'red')  // normal
-        else push(0, 'green')  // green reward
+        if (roll < 0.18) push(0, 'red', 0.7, 1.3)  // short wide
+        else if (roll < 0.32) push(0, 'red', 0.6, 1.4)  // very short wide
+        else if (roll < 0.46) push(0, 'red', 1.2, 0.7)  // tall narrow
+        else if (roll < 0.58) push(0, 'red', 1.3, 0.6)  // very tall narrow
+        else if (roll < 0.70) push(0, 'red', 0.85)  // normal short
+        else if (roll < 0.82) push(0, 'red', 1.1)  // normal tall
+        else if (roll < 0.90) push(0, 'red')  // normal
+        else push(0, 'green')  // green reward (10%)
 
         // --- COMPLEXITY 1: Pairs with size variety ---
     } else if (complexity === 1) {
-        if (roll < 0.14) { push(0, 'red', 0.7, 1.3); push(160, 'red', 1.2, 0.7) }  // wide + tall
-        else if (roll < 0.26) { push(0, 'red', 0.85); push(145, 'red', 1.1) }
-        else if (roll < 0.38) { push(0, 'red', 1.1); push(155, 'red', 0.8) }
-        else if (roll < 0.48) { push(0, 'red', 0.6, 1.4); push(140, 'red', 1.3, 0.6) }  // extreme sizes
-        else if (roll < 0.58) { push(0, 'red', 1.3, 0.6); push(130, 'red', 0.7, 1.3) }  // tall + short
-        else if (roll < 0.68) { push(0, 'red'); push(130, 'red', 0.9) }
-        else if (roll < 0.76) { push(0, 'green', 0.8, 1.2); push(145, 'red', 1.1) }  // wide green
-        else if (roll < 0.84) { push(0, 'red', 1.05); push(150, 'red', 1.0) }
-        else if (roll < 0.92) { push(0, 'green'); push(145, 'red', 1.1) }
+        if (roll < 0.10) { push(0, 'red', 0.7, 1.3); push(160, 'red', 1.2, 0.7) }  // wide + tall
+        else if (roll < 0.20) { push(0, 'red', 0.85); push(145, 'red', 1.1) }
+        else if (roll < 0.30) { push(0, 'red', 1.1); push(155, 'red', 0.8) }
+        else if (roll < 0.40) { push(0, 'red', 0.6, 1.4); push(140, 'red', 1.3, 0.6) }  // extreme sizes
+        else if (roll < 0.50) { push(0, 'red', 1.3, 0.6); push(130, 'red', 0.7, 1.3) }  // tall + short
+        else if (roll < 0.60) { push(0, 'red'); push(130, 'red', 0.9) }
+        else if (roll < 0.70) { push(0, 'green', 0.8, 1.2); push(145, 'red', 1.1) }  // wide green
+        else if (roll < 0.78) { push(0, 'red', 1.05); push(150, 'red', 1.0) }
+        else if (roll < 0.86) { push(0, 'green'); push(145, 'red', 1.1) }
         else { push(0, 'red'); push(130, 'green') }
 
         // --- COMPLEXITY 2: Triples, first mixed patterns ---
@@ -914,9 +990,9 @@ export const spawnPattern = (e: EngineState): void => {
         spawnPowerUp(e)
     }
 
-    // Calculate gap based on difficulty
-    const gap = lerp(CFG.BASE_SPAWN_GAP, CFG.MIN_SPAWN_GAP, diff)
-    e.nextSpawnDistance = e.distance + gap * rand(0.90, 1.10)
+    // Calculate gap based on difficulty — generous early spacing for fun factor
+    const baseGap = e.spawnCount <= 5 ? CFG.BASE_SPAWN_GAP * 1.1 : lerp(CFG.BASE_SPAWN_GAP, CFG.MIN_SPAWN_GAP, diff)
+    e.nextSpawnDistance = e.distance + baseGap * rand(0.92, 1.12)
 
     // Cleanup off-screen candles
     if (e.candles.length > CFG.MAX_CANDLES) {
@@ -958,3 +1034,83 @@ export const spawnPowerUp = (e: EngineState): void => {
         collectProgress: 0,
     })
 }
+
+// ============================================================================
+// ADAPTIVE PHYSICS SYSTEM
+// ============================================================================
+
+export function updateGameConfig(width: number, height: number) {
+    const isPortrait = height > width;
+
+    CFG.WIDTH = width;
+    CFG.HEIGHT = height;
+
+    if (isPortrait) {
+        // --- PORTRAIT MODE (e.g. Base App / Mobile Vertical) ---
+        // Push ground to bottom safely (leaving room for UI)
+        CFG.GROUND = height * 0.83;
+
+        // Push player far left for max reaction time
+        CFG.PLAYER_X = width * 0.18;
+
+        // Player size — slightly smaller for cleaner mobile feel
+        CFG.PLAYER_SIZE = clamp(width * 0.07, 24, 36);
+        CFG.HITBOX = CFG.PLAYER_SIZE * 0.22;
+
+        // Physics logic requires lower speed on narrow screens
+        const speedScale = clamp(width / 960, 0.45, 0.7);
+        CFG.BASE_SPEED = clamp(360 * speedScale * 1.6, 220, 320);
+        CFG.MAX_SPEED = clamp(680 * speedScale * 1.6, 400, 580);
+
+        // Floatier gravity and jumps to compensate for lower speed
+        const physicsScale = clamp(height / 540, 0.8, 1.4);
+        CFG.GRAVITY = 2400 * physicsScale * 0.9;
+        CFG.JUMP = -820 * Math.sqrt(physicsScale) * 0.95;
+        CFG.DOUBLE_JUMP = -680 * Math.sqrt(physicsScale) * 0.95;
+        CFG.MAX_FALL = 1200 * physicsScale;
+
+        // Spawning needs to be tighter, but less dense for fun factor
+        CFG.BASE_SPAWN_GAP = CFG.BASE_SPEED * 1.55;
+        CFG.MIN_SPAWN_GAP = CFG.BASE_SPEED * 0.95;
+        CFG.MAX_CANDLES_PATTERN = 2;
+
+        // Visuals optimized for battery & narrow viewport
+        CFG.PARTICLE_LIMIT = 40;
+        CFG.TRAIL_LIMIT = 2;
+        CFG.STAR_COUNT = 15;
+        CFG.CLOUD_COUNT = 3;
+        CFG.MAX_CANDLES = 6;
+        CFG.GROUND_PARTICLE_COUNT = 8;
+
+    } else {
+        // --- LANDSCAPE MODE (Desktop / Tablet Horizontal) ---
+        CFG.GROUND = height * 0.82;
+        CFG.PLAYER_X = clamp(width * 0.2, 120, 220);
+        CFG.PLAYER_SIZE = clamp(width * 0.045, 34, 46);
+        CFG.HITBOX = CFG.PLAYER_SIZE * 0.25;
+
+        // Scales natively by width
+        const scale = clamp(width / 960, 0.6, 1.2);
+        CFG.BASE_SPEED = 360 * scale;
+        CFG.MAX_SPEED = 680 * scale;
+
+        const physicsScale = clamp(height / 540, 0.8, 1.2);
+        CFG.GRAVITY = 2400 * physicsScale;
+        CFG.JUMP = -820 * Math.sqrt(physicsScale);
+        CFG.DOUBLE_JUMP = -680 * Math.sqrt(physicsScale);
+        CFG.MAX_FALL = 1200 * physicsScale;
+
+        CFG.BASE_SPAWN_GAP = CFG.BASE_SPEED * 1.4;
+        CFG.MIN_SPAWN_GAP = CFG.BASE_SPEED * 0.9;
+
+        CFG.MAX_CANDLES_PATTERN = width < 768 ? 4 : 5;
+
+        CFG.PARTICLE_LIMIT = width < 768 ? 60 : 140;
+        CFG.TRAIL_LIMIT = width < 768 ? 4 : 7;
+        CFG.STAR_COUNT = width < 768 ? 20 : 45;
+        CFG.CLOUD_COUNT = width < 768 ? 4 : 6;
+        CFG.MAX_CANDLES = width < 768 ? 10 : 16;
+        CFG.GROUND_PARTICLE_COUNT = width < 768 ? 12 : 24;
+    }
+}
+

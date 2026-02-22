@@ -4,6 +4,12 @@ const config: Config = {
   content: ['./app/**/*.{js,ts,jsx,tsx,mdx}', './components/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {
+      fontFamily: {
+        outfit: ['var(--font-outfit)', 'Outfit', 'system-ui', 'sans-serif'],
+        space: ['var(--font-space)', 'Space Grotesk', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'JetBrains Mono', 'monospace'],
+        sans: ['var(--font-outfit)', 'Outfit', 'system-ui', 'sans-serif'],
+      },
       colors: {
         base: {
           blue: '#0052FF',

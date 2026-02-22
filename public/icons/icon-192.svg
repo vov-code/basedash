@@ -4,12 +4,20 @@
       <stop offset="0%" style="stop-color:#0052FF"/>
       <stop offset="100%" style="stop-color:#0033AA"/>
     </linearGradient>
-    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.3"/>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.25"/>
     </filter>
   </defs>
-  <circle cx="256" cy="256" r="256" fill="url(#bg)"/>
-  <rect x="156" y="156" width="200" height="200" rx="20" fill="#FFFFFF" filter="url(#shadow)"/>
-  <rect x="186" y="186" width="140" height="140" rx="12" fill="#0052FF"/>
-  <rect x="206" y="206" width="100" height="100" rx="8" fill="#FFFFFF" opacity="0.1"/>
+  <!-- Square background — no circle -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Inner square logo mark -->
+  <rect x="104" y="104" width="304" height="304" rx="0" fill="#FFFFFF" opacity="0.12"/>
+  <rect x="136" y="136" width="240" height="240" rx="0" fill="#FFFFFF"/>
+  <!-- Base B-like candle marks -->
+  <rect x="188" y="176" width="24" height="160" rx="0" fill="#0052FF"/>
+  <rect x="212" y="208" width="80" height="16" rx="0" fill="#0052FF"/>
+  <rect x="212" y="240" width="88" height="16" rx="0" fill="#0052FF"/>
+  <rect x="212" y="272" width="80" height="16" rx="0" fill="#0052FF"/>
+  <rect x="292" y="192" width="20" height="48" rx="0" fill="#0052FF"/>
+  <rect x="300" y="256" width="20" height="56" rx="0" fill="#0052FF"/>
 </svg>

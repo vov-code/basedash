@@ -1,19 +1,30 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, JetBrains_Mono, Space_Grotesk } from 'next/font/google'
+import { Outfit, Space_Grotesk, JetBrains_Mono } from 'next/font/google'
 import './styles/globals.css'
 import { Providers } from './components/Providers'
 
 // ============================================
-// FONT CONFIGURATION
+// FONT CONFIGURATION — Premium trio
 // ============================================
 
-const inter = Inter({
+/** Outfit: clean geometric, premium body font */
+const outfit = Outfit({
   subsets: ['latin'],
   display: 'swap',
   preload: true,
   fallback: ['system-ui', 'arial'],
-  variable: '--font-inter',
+  variable: '--font-outfit',
   weight: ['300', '400', '500', '600', '700', '800', '900'],
+})
+
+/** Space Grotesk: techy & distinctive for headings, HUD labels */
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  display: 'swap',
+  preload: true,
+  fallback: ['system-ui', 'arial'],
+  variable: '--font-space',
+  weight: ['300', '400', '500', '600', '700'],
 })
 
 const jetbrainsMono = JetBrains_Mono({
@@ -23,14 +34,6 @@ const jetbrainsMono = JetBrains_Mono({
   fallback: ['monospace'],
   variable: '--font-mono',
   weight: ['300', '400', '500', '600', '700'],
-})
-
-const brandFont = Space_Grotesk({
-  subsets: ['latin'],
-  display: 'swap',
-  preload: true,
-  variable: '--font-brand',
-  weight: ['500', '600', '700'],
 })
 
 const getMetadataBase = (): URL => {
@@ -108,10 +111,11 @@ export const metadata: Metadata = {
     siteName: 'Base Dash',
     images: [
       {
-        url: '/og-image.svg',
+        url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Base Dash Game',
+        alt: 'base dash — endless runner on base',
+        type: 'image/png',
       },
     ],
   },
@@ -132,20 +136,19 @@ export const metadata: Metadata = {
       { url: '/icons/icon-512.svg', sizes: '512x512', type: 'image/svg+xml' },
     ],
   },
-  manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'Base Dash',
-  },
-  // Farcaster Frame meta tags (Improvement #9)
+  // Farcaster Frame v2 metadata
   other: {
     'fc:frame': 'vNext',
-    'fc:frame:image': `${metadataBase.toString()}og-image.svg`,
+    'fc:frame:image': `${metadataBase.toString()}og-image.png`,
+    'fc:frame:image:aspect_ratio': '1.91:1',
     'fc:frame:button:1': 'Play Base Dash 🏃‍♂️',
     'fc:frame:button:1:action': 'link',
     'fc:frame:button:1:target': metadataBase.toString(),
-    'fc:frame:post_url': metadataBase.toString(),
+    'fc:frame:button:2': 'View Leaderboard 🏆',
+    'fc:frame:button:2:action': 'link',
+    'fc:frame:button:2:target': `${metadataBase.toString()}?tab=leaderboard`,
+    'fc:frame:post_url': `${metadataBase.toString()}api/webhook`,
+    'fc:frame:input:text': 'Enter your score...',
   },
 }
 
@@ -162,9 +165,40 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} ${jetbrainsMono.variable} ${brandFont.variable}`}
+      className={`${outfit.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
     >
-      <body className="font-sans antialiased bg-white text-gray-900">
+      <head>
+        <link rel="stylesheet" href="/onchainkit.css" />
+        {/* Preload critical fonts */}
+        <link
+          rel="preload"
+          href="/_next/static/media/inter-var-latin.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/_next/static/media/jetbrains-mono-var-latin.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+        {/* Preload critical images */}
+        <link
+          rel="preload"
+          as="image"
+          href="/base-logo.png"
+        />
+        {/* DNS prefetch for external resources */}
+        <link rel="dns-prefetch" href="https://mainnet.base.org" />
+        <link rel="dns-prefetch" href="https://sepolia.base.org" />
+        <link rel="dns-prefetch" href="https://vercel.com" />
+        {/* Preconnect to critical origins */}
+        <link rel="preconnect" href="https://mainnet.base.org" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://sepolia.base.org" crossOrigin="anonymous" />
+      </head>
+      <body className="font-outfit antialiased bg-white text-gray-900">
         <Providers>{children}</Providers>
       </body>
     </html>

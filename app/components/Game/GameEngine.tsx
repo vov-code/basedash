@@ -12,12 +12,10 @@
  * Geometry Dash-inspired endless runner built on Base blockchain.
  * ============================================================================
  */
-
 import {
   useState, useRef, useEffect, useCallback, useMemo,
 } from 'react'
 
-// --- Game modules ---
 import {
   type GameMode,
   type EngineState,
@@ -25,16 +23,29 @@ import {
   type ParticleType,
   type TrailType,
   type TrailPoint,
+  type MarketState,
   CFG,
   WORLDS,
+  SPEEDS,
   IS_MOBILE,
   POWERUP_CONFIG,
+  MARKET_CONFIG,
   TRAIL_UNLOCKS,
   clamp, lerp, rand, easeOut,
   getWorld, getWorldIndex, getSpeed, getJumps,
-  createEngine, spawnPattern,
+  createEngine, spawnPattern, formatMarketCap,
+  updateGameConfig,
 } from './gameConfig'
 import { drawFrame } from './gameRenderer'
+import { useWallet } from '@/app/hooks/useWallet'
+import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS } from '@/app/contracts'
+import {
+  Transaction,
+  TransactionButton,
+  TransactionStatus,
+  TransactionStatusAction,
+  TransactionStatusLabel,
+} from '@coinbase/onchainkit/transaction'
 
 // ============================================================================
 // PARTICLE SPAWNER HELPERS
@@ -241,10 +252,13 @@ function playTone(freq: number, duration: number, type: OscillatorType = 'square
 }
 
 /**
- * Relaxing background music — pentatonic arpeggio with pad
- * Calming lo-fi vibe: C pentatonic (C-D-E-G-A) arpeggiated over warm pad
+ * 8-bit chiptune background music — 4 channel sequencer
+ * Channels: kick (noise), bass (square), lead (square), hi-hat (noise)
+ * 16-step pattern at ~140 BPM, pentatonic scale
  */
 let musicIntervalId: ReturnType<typeof setInterval> | null = null
+let musicStep = 0
+export let activeWorldIndex = 0 // Track globally for the audio sequencer
 
 function startBackgroundMusic(): void {
   if (!initAudio() || isMusicPlaying) return
@@ -252,52 +266,105 @@ function startBackgroundMusic(): void {
   const ctx = getAudioCtx()
   if (!ctx) return
 
+  // Stop any existing music first to prevent layering
+  stopBackgroundMusic()
+
   try {
     musicGain = ctx.createGain()
-    musicGain.gain.value = 0.025
+    musicGain.gain.value = 0.25 // Lowered volume per request
     musicGain.connect(ctx.destination)
 
-    // Warm pad layer — C3 + G3 sine with slight detune
-    const padFreqs = [130.81, 196.00]
-    musicOscillators = padFreqs.map((freq, i) => {
-      const osc = ctx.createOscillator()
-      osc.type = 'sine'
-      osc.frequency.setValueAtTime(freq, ctx.currentTime)
-      osc.detune.setValueAtTime(i * 4 - 2, ctx.currentTime)
-      const oscGain = ctx.createGain()
-      oscGain.gain.value = 0.15
-      osc.connect(oscGain)
-      oscGain.connect(musicGain!)
-      osc.start()
-      return osc
-    })
+    // Minimal percussion: soft tick on 0,4,8,12
+    const tickBeat = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
 
-    // Pentatonic arpeggio — C4, D4, E4, G4, A4, G4, E4, D4
-    const arpeggioNotes = [261.63, 293.66, 329.63, 392.00, 440.00, 392.00, 329.63, 293.66]
-    let noteIdx = 0
+    musicStep = 0
 
-    const playArpeggioNote = () => {
+    const playStep = () => {
+      // Stop music when tab is hidden to prevent layering
+      if (document.hidden) return
       if (!ctx || ctx.state === 'closed' || !musicGain) return
       try {
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.type = 'sine'
-        osc.frequency.setValueAtTime(arpeggioNotes[noteIdx], ctx.currentTime)
-        osc.detune.setValueAtTime(Math.random() * 6 - 3, ctx.currentTime) // slight humanize
-        gain.gain.setValueAtTime(0, ctx.currentTime)
-        gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.05)
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8)
-        osc.connect(gain)
-        gain.connect(musicGain!)
-        osc.start(ctx.currentTime)
-        osc.stop(ctx.currentTime + 0.9)
-        noteIdx = (noteIdx + 1) % arpeggioNotes.length
+        const now = ctx.currentTime
+        const s = musicStep % 16
+
+        // Dynamically change music based on current world tracker
+        const currentWorld = activeWorldIndex
+
+        let melodyNotes = [220, 262, 294, 220, 330, 294, 262, 247, 220, 262, 330, 294, 262, 247, 220, 262]
+        let padNotes = [110, 110, 131, 131, 110, 110, 98, 98, 110, 110, 131, 131, 110, 110, 98, 98]
+        let waveType: OscillatorType = 'sine'
+        let padType: OscillatorType = 'sine'
+
+        // World-dependent music variations
+        if (currentWorld >= 8) {
+          // Intense alien synthesis
+          melodyNotes = [880, 0, 987, 880, 1046, 0, 987, 880, 1318, 0, 1174, 1046, 987, 0, 880, 783]
+          padNotes = [220, 220, 246, 246, 261, 261, 246, 246, 329, 329, 293, 293, 246, 246, 220, 220]
+          waveType = 'sawtooth'
+          padType = 'square'
+        } else if (currentWorld >= 5) {
+          // Upbeat techy 
+          melodyNotes = [329, 329, 392, 329, 440, 392, 329, 293, 261, 261, 329, 261, 293, 261, 220, 261]
+          padNotes = [164, 0, 196, 0, 220, 0, 196, 0, 130, 0, 164, 0, 146, 0, 110, 0]
+          waveType = 'square'
+          padType = 'triangle'
+        } else if (currentWorld >= 2) {
+          // Harmonic synth
+          melodyNotes = [261, 293, 329, 392, 440, 392, 329, 293, 261, 329, 392, 440, 523, 440, 392, 329]
+          padNotes = [130, 130, 164, 164, 196, 196, 164, 164, 130, 130, 164, 164, 196, 196, 164, 164]
+          waveType = 'triangle'
+          padType = 'sine'
+        }
+
+        // Lead melody
+        if (melodyNotes[s] > 0) {
+          const leadOsc = ctx.createOscillator()
+          const leadGain = ctx.createGain()
+          leadOsc.type = waveType
+          leadOsc.frequency.setValueAtTime(melodyNotes[s], now)
+          leadGain.gain.setValueAtTime(0.04, now)
+          leadGain.gain.exponentialRampToValueAtTime(0.001, now + (waveType === 'sine' ? 0.35 : 0.2))
+          leadOsc.connect(leadGain)
+          leadGain.connect(musicGain!)
+          leadOsc.start(now)
+          leadOsc.stop(now + 0.4)
+        }
+
+        // Pad bass
+        if (padNotes[s] > 0) {
+          const padOsc = ctx.createOscillator()
+          const padGain = ctx.createGain()
+          padOsc.type = padType
+          padOsc.frequency.setValueAtTime(padNotes[s], now)
+          padGain.gain.setValueAtTime(0.03, now)
+          padGain.gain.exponentialRampToValueAtTime(0.001, now + (padType === 'sine' ? 0.6 : 0.3))
+          padOsc.connect(padGain)
+          padGain.connect(musicGain!)
+          padOsc.start(now)
+          padOsc.stop(now + 0.7)
+        }
+
+        // Soft tick — gentle sine blip
+        if (tickBeat[s]) {
+          const tickOsc = ctx.createOscillator()
+          const tickG = ctx.createGain()
+          tickOsc.type = 'sine'
+          tickOsc.frequency.setValueAtTime(800, now)
+          tickG.gain.setValueAtTime(0.02, now)
+          tickG.gain.exponentialRampToValueAtTime(0.001, now + 0.05)
+          tickOsc.connect(tickG)
+          tickG.connect(musicGain!)
+          tickOsc.start(now)
+          tickOsc.stop(now + 0.06)
+        }
+
+        musicStep++
       } catch { /* ignore */ }
     }
 
-    // Play note every 400ms for relaxing pace
-    musicIntervalId = setInterval(playArpeggioNote, 400)
-    playArpeggioNote() // play first note immediately
+    // ~80 BPM = ~188ms per 16th note step (calm tempo)
+    musicIntervalId = setInterval(playStep, 188)
+    playStep()
 
     isMusicPlaying = true
   } catch (error) {
@@ -371,29 +438,85 @@ let globalSoundMuted = false
 
 function sfxJump() {
   if (globalSoundMuted || !initAudio()) return
-  playTone(520, 0.10, 'square', 0.08)
-  setTimeout(() => playTone(680, 0.08, 'square', 0.06), 30)
+  // Warm ascending arpeggio — like opening a long position
+  playTone(392, 0.04, 'sine', 0.04)
+  setTimeout(() => playTone(494, 0.05, 'sine', 0.035), 20)
+  setTimeout(() => playTone(587, 0.06, 'triangle', 0.025), 45)
+  setTimeout(() => playTone(784, 0.08, 'sine', 0.015), 70)
 }
 
 function sfxDeath() {
   if (globalSoundMuted || !initAudio()) return
-  playTone(220, 0.25, 'sawtooth', 0.10)
-  setTimeout(() => playTone(140, 0.35, 'sawtooth', 0.08), 80)
+  // Crystalline wind-chime descend — position closed gracefully
+  playTone(880, 0.08, 'sine', 0.05)
+  setTimeout(() => playTone(698, 0.10, 'sine', 0.04), 40)
+  setTimeout(() => playTone(523, 0.14, 'triangle', 0.035), 90)
+  setTimeout(() => playTone(392, 0.18, 'sine', 0.025), 150)
+  setTimeout(() => playTone(262, 0.25, 'sine', 0.015), 220)
 }
 
 function sfxCollect() {
   if (globalSoundMuted || !initAudio()) return
-  playTone(880, 0.08, 'sine', 0.10)
-  setTimeout(() => playTone(1100, 0.10, 'sine', 0.08), 50)
-  setTimeout(() => playTone(1320, 0.12, 'sine', 0.06), 100)
+  // Bubbly pop + sparkle tail — profit locked in
+  playTone(1047, 0.03, 'sine', 0.06)
+  playTone(1319, 0.04, 'triangle', 0.045)
+  setTimeout(() => playTone(1568, 0.06, 'sine', 0.03), 25)
+  setTimeout(() => playTone(2093, 0.08, 'sine', 0.015), 55)
+}
+
+/** 4.3 — Combo sound: pitch rises by semitone per level, capped at 1 octave */
+function sfxCombo(comboLevel: number) {
+  if (globalSoundMuted || !initAudio()) return
+  const semitone = Math.pow(2, 1 / 12)
+  const steps = Math.min(comboLevel, 12)
+  const baseFreq = 440 * Math.pow(semitone, steps)
+  playTone(baseFreq, 0.06, 'sine', 0.09)
+  setTimeout(() => playTone(baseFreq * 2, 0.04, 'triangle', 0.04), 30)  // overtone
+}
+
+/** Near-miss whoosh */
+function sfxNearMiss() {
+  if (globalSoundMuted || !initAudio()) return
+  playTone(200, 0.15, 'sawtooth', 0.04)
+  playTone(1200, 0.08, 'sine', 0.06)
+}
+
+/** Market cycle change fanfare */
+function sfxMarketChange(isBull: boolean) {
+  if (globalSoundMuted || !initAudio()) return
+  if (isBull) {
+    playTone(523, 0.08, 'sine', 0.06)
+    setTimeout(() => playTone(659, 0.08, 'sine', 0.06), 80)
+    setTimeout(() => playTone(784, 0.10, 'sine', 0.05), 160)
+  } else {
+    playTone(440, 0.08, 'sine', 0.06)
+    setTimeout(() => playTone(370, 0.10, 'sine', 0.06), 80)
+    setTimeout(() => playTone(330, 0.12, 'sawtooth', 0.04), 160)
+  }
+}
+
+/** Rug pull alarm */
+function sfxRugPull() {
+  if (globalSoundMuted || !initAudio()) return
+  playTone(800, 0.10, 'square', 0.08)
+  setTimeout(() => playTone(600, 0.10, 'square', 0.08), 120)
+  setTimeout(() => playTone(800, 0.10, 'square', 0.06), 240)
+}
+
+/** Open chime — played once on menu load */
+function sfxOpenChime() {
+  if (globalSoundMuted || !initAudio()) return
+  playTone(523, 0.12, 'sine', 0.06)
+  setTimeout(() => playTone(659, 0.10, 'sine', 0.05), 100)
+  setTimeout(() => playTone(784, 0.14, 'triangle', 0.04), 200)
 }
 
 function sfxPowerUp() {
   if (globalSoundMuted || !initAudio()) return
-  playTone(660, 0.08, 'sine', 0.12)
-  setTimeout(() => playTone(880, 0.08, 'sine', 0.10), 60)
-  setTimeout(() => playTone(1100, 0.10, 'sine', 0.08), 120)
-  setTimeout(() => playTone(1320, 0.12, 'triangle', 0.06), 180)
+  playTone(660, 0.08, 'sine', 0.10)
+  setTimeout(() => playTone(880, 0.08, 'sine', 0.08), 60)
+  setTimeout(() => playTone(1100, 0.10, 'sine', 0.06), 120)
+  setTimeout(() => playTone(1320, 0.12, 'triangle', 0.05), 180)
 }
 
 // ============================================================================
@@ -424,16 +547,17 @@ interface GameStats {
   maxCombo: number
 }
 
-// Degen death messages
+// Trading-themed death messages
 const DEATH_MESSAGES = [
-  'rekt!',
-  'liquidated!',
-  'wasted!',
-  'cooked!',
-  'bag holder!',
+  'position liquidated!',
+  'liquidated at',
+  'stop-loss triggered!',
+  'margin called!',
+  'position closed!',
   'rug pulled!',
-  'gm rekt',
-  'send it!',
+  'trade expired!',
+  'portfolio rekt!',
+  'leverage too high!',
 ]
 
 function getRandomDeathMessage(): string {
@@ -469,13 +593,45 @@ export default function GameEngine({
   const [deathMessage, setDeathMessage] = useState('rekt!')
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [activeTrail, setActiveTrail] = useState<TrailType>('default')
+  const { address } = useWallet()
+  const [txContracts, setTxContracts] = useState<any[] | null>(null)
+
+  // Fetch signature for OnchainKit Transaction when player dies with a new record
+  useEffect(() => {
+    if (mode === 'gameover' && isNewRecord && deathScore > 0 && address && !txContracts) {
+      fetch(`/api/score-sign?address=${address}&score=${deathScore}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.nonce && data.signature) {
+            setTxContracts([{
+              address: CONTRACT_ADDRESS,
+              abi: GAME_LEADERBOARD_ABI,
+              functionName: 'submitScore',
+              args: [BigInt(deathScore), BigInt(data.nonce), data.signature as `0x${string}`],
+            }])
+          }
+        })
+        .catch(console.error)
+    }
+    if (mode === 'playing') {
+      setTxContracts(null)
+    }
+  }, [mode, isNewRecord, deathScore, address, txContracts])
+
+  // --- Adaptive Screen State ---
+  const [dims, setDims] = useState({ w: CFG.WIDTH, h: CFG.HEIGHT, dpr: 1 })
 
   // --- Refs ---
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const engineRef = useRef<EngineState>(createEngine())
   const rafRef = useRef<number | null>(null)
   const highScoreRef = useRef(0)
   const logoRef = useRef<HTMLImageElement | null>(null)
+  const demoRafRef = useRef<number | null>(null)
+  const chimePlayedRef = useRef(false)
+  const [nearRecordDiff, setNearRecordDiff] = useState<number | null>(null)
+  const [retryVisible, setRetryVisible] = useState(false)
 
   // ========================================================================
   // PHYSICS UPDATE — Heart of the game
@@ -490,7 +646,9 @@ export default function GameEngine({
     const speedTier = getSpeed(e.score)
     const speedMult = speedTier.multiplier
     const slowMult = e.slowdownTimer > 0 ? CFG.SLOW_MULT : 1
-    const frameSpeed = CFG.BASE_SPEED * speedMult * slowMult
+    const nearMissMult = e.nearMissTimer > 0 ? 0.4 : 1 // near-miss slow-mo
+    const bearMult = 1 // Market mechanics disabled
+    const frameSpeed = CFG.BASE_SPEED * speedMult * slowMult * nearMissMult * bearMult
 
     e.speed = lerp(e.speed, frameSpeed, dt * 4)
     e.distance += e.speed * dt
@@ -499,16 +657,53 @@ export default function GameEngine({
     e.groundOffset += e.speed * dt
     e.cloudOffset += e.speed * dt
 
-    // --- Slowdown timer ---
+    // --- Timers ---
     if (e.slowdownTimer > 0) e.slowdownTimer -= dt
+    if (e.nearMissTimer > 0) e.nearMissTimer -= dt
+    if (e.speedLinesTimer > 0) e.speedLinesTimer -= dt
+    if (e.comboPulseTimer > 0) e.comboPulseTimer -= dt
+
+    // --- Tutorial: hide after first jump ---
+    if (e.showTutorial && e.totalJumps > 0) e.showTutorial = false
+
+    // --- Market cycle — DISABLED ---
+    // Market mechanics removed for cleaner gameplay
+
+    // --- Rug-pull event ---
+    if (e.rugPullActive) {
+      e.rugPullTimer -= dt
+      if (e.rugPullTimer <= 0) {
+        e.rugPullActive = false
+      }
+      // Player falls through ground during rug-pull if on ground
+      if (e.player.onGround && !e.player.isDashing) {
+        // Ground disappears — player must jump to survive
+        // They don't insta-die, just fall slightly with warning
+      }
+    } else if (e.score >= 1500 && Math.random() < 0.0002 * e.difficulty) {
+      e.rugPullActive = true
+      e.rugPullTimer = MARKET_CONFIG.RUG_PULL_DURATION
+      sfxRugPull()
+    }
+
+    // --- Speed tier change detection ---
+    const currentTierIdx = SPEEDS.findIndex((s, i) => {
+      const next = SPEEDS[i + 1]
+      return !next || e.score < next.startScore
+    })
+    if (currentTierIdx > e.prevSpeedTierIdx) {
+      e.prevSpeedTierIdx = currentTierIdx
+      e.speedLinesTimer = 1.5
+    }
 
     // --- Player physics ---
     const p = e.player
     p.maxJumps = getJumps(e.score)
 
-    // Gravity
+    // Gravity — asymmetric: lighter going up, heavier falling (item 1)
     if (!p.isDashing) {
-      p.velocityY += CFG.GRAVITY * dt
+      const grav = p.velocityY < 0 ? CFG.GRAVITY_UP : CFG.GRAVITY_DOWN
+      p.velocityY += grav * dt
       p.velocityY = Math.min(p.velocityY, CFG.MAX_FALL)
     }
 
@@ -517,17 +712,20 @@ export default function GameEngine({
 
     // Ground collision
     if (p.y >= CFG.GROUND - CFG.PLAYER_SIZE) {
-      p.y = CFG.GROUND - CFG.PLAYER_SIZE
-      if (p.velocityY > 200) {
-        // Landing squash effect
-        p.squash = clamp(p.velocityY / 1200, 0.05, 0.3)
-        // Landing dust
-        spawnJumpDust(e, IS_MOBILE ? 3 : 5)
+      if (p.velocityY > 0) {
+        p.y = CFG.GROUND - CFG.PLAYER_SIZE
+        if (p.velocityY > 150) {
+          // Strong landing squash (item 6)
+          p.squash = clamp(p.velocityY / 800, Math.abs(CFG.SQUASH_LAND) * 0.4, Math.abs(CFG.SQUASH_LAND))
+          spawnJumpDust(e, IS_MOBILE ? 4 : 7)
+        }
+        p.velocityY = 0
+        p.onGround = true
+        p.coyoteTimer = CFG.COYOTE
+        p.jumpCount = 0
+      } else {
+        p.onGround = false
       }
-      p.velocityY = 0
-      p.onGround = true
-      p.coyoteTimer = CFG.COYOTE
-      p.jumpCount = 0
     } else {
       p.onGround = false
     }
@@ -656,10 +854,10 @@ export default function GameEngine({
       if (c.collected || c.x + c.width < CFG.PLAYER_X - 10) continue
       if (c.x > CFG.PLAYER_X + CFG.PLAYER_SIZE + 10) continue
 
-      const cx1 = c.x + 4
-      const cy1 = c.bodyY + 4
-      const cx2 = c.x + c.width - 4
-      const cy2 = c.bodyY + c.bodyHeight - 4
+      const cx1 = c.x + 2
+      const cy1 = c.bodyY + 2
+      const cx2 = c.x + c.width - 2
+      const cy2 = c.bodyY + c.bodyHeight - 2
 
       const hit = px1 < cx2 && px2 > cx1 && py1 < cy2 && py2 > cy1
 
@@ -698,7 +896,9 @@ export default function GameEngine({
               maxCombo: e.maxCombo,
             })
             setMode('gameover')
-            setDeathMessage(getRandomDeathMessage())
+            // 8.3 — "LIQUIDATED at $X" death message
+            const msg = getRandomDeathMessage()
+            setDeathMessage(msg === 'liquidated at' ? `liquidated at ${formatMarketCap(e.score)}` : msg)
             // Sound + haptic
             sfxDeath()
             hapticDeath()
@@ -727,11 +927,32 @@ export default function GameEngine({
           e.comboPulse = 1
           p.flash = 0.6
           p.invincible = 0.3
+          // 7.3 — Combo pulse at x5 milestones
+          if (e.combo > 0 && e.combo % 5 === 0) {
+            e.comboPulseTimer = 0.5
+            sfxCombo(e.combo)
+          }
           // Sound + haptic
           sfxCollect()
           hapticCollect()
           // Collection particles
           spawnCollectSparkle(e, c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, IS_MOBILE ? 6 : 12)
+        }
+      } else if (c.kind === 'red' && !c.passed && c.x + c.width < CFG.PLAYER_X + 5 && c.x + c.width > CFG.PLAYER_X - 10 && e.nearMissTimer <= 0 && (e.gameTime - (e as any)._lastNearMissTime > MARKET_CONFIG.NEAR_MISS_COOLDOWN)) {
+        // Near-miss detection: only genuine close calls with cooldown
+        const vertDistTop = Math.abs((p.y + CFG.PLAYER_SIZE - CFG.HITBOX) - c.bodyY)
+        const vertDistBot = Math.abs((p.y + CFG.HITBOX) - (c.bodyY + c.bodyHeight))
+        const passedOver = p.y + CFG.PLAYER_SIZE - CFG.HITBOX < c.bodyY && vertDistTop < MARKET_CONFIG.NEAR_MISS_DIST
+        const passedUnder = p.y + CFG.HITBOX > c.bodyY + c.bodyHeight && vertDistBot < MARKET_CONFIG.NEAR_MISS_DIST
+
+        if (passedOver || passedUnder) {
+          e.nearMissTimer = MARKET_CONFIG.NEAR_MISS_DURATION;
+          (e as any)._lastNearMissTime = e.gameTime
+          e.nearMissText = 'CLOSE!'
+          e.nearMissX = c.x + c.width / 2
+          e.nearMissY = c.bodyY - 20
+          e.score += 15
+          sfxNearMiss()
         }
       }
     }
@@ -769,6 +990,9 @@ export default function GameEngine({
             e.slowdownTimer = Math.max(e.slowdownTimer, POWERUP_CONFIG.TYPES.whale_mode.duration)
             break
         }
+
+        // 7.4 — Camera zoom out on power-up
+        e.cameraZoom = 0.92
 
         // Spawn celebration particles
         const config = POWERUP_CONFIG.TYPES[pu.kind]
@@ -850,6 +1074,56 @@ export default function GameEngine({
     // --- World banner timer ---
     if (e.worldBannerTimer > 0) e.worldBannerTimer -= dt
 
+    // --- Camera zoom lerp back to 1.0 (7.4) ---
+    if (e.cameraZoom < 1) {
+      e.cameraZoom = Math.min(1, e.cameraZoom + dt * 0.5)
+    }
+
+    // 7.5 — Running dust particles (subtle ground trail)
+    if (p.onGround && e.alive) {
+      e.runDustTimer -= dt
+      if (e.runDustTimer <= 0) {
+        e.runDustTimer = IS_MOBILE ? 0.15 : 0.08
+        e.particles.push(mkParticle(
+          CFG.PLAYER_X + rand(-5, 5), CFG.GROUND - 2,
+          'dust', 'rgba(150,150,180,0.4)',
+          { vx: rand(-20, -5), vy: rand(-15, -5), life: rand(0.3, 0.5), size: rand(1, 2.5), gravity: 10 }
+        ))
+      }
+    }
+
+    // 8.4 — Rug-pull ground damage: force jump or take damage
+    if (e.rugPullActive) {
+      // Generate visual holes
+      if (e.rugPullHoles.length < 6) {
+        e.rugPullHoles.push(rand(0, CFG.WIDTH))
+      }
+      // Player on ground too long during rug-pull = death
+      if (p.onGround && e.rugPullTimer < MARKET_CONFIG.RUG_PULL_DURATION - 0.5) {
+        // Force player off ground—give them a chance first
+        if (e.rugPullTimer < MARKET_CONFIG.RUG_PULL_DURATION - 1.5) {
+          e.alive = false
+          e.shakeTimer = 0.4
+          setDeathScore(e.score)
+          setGameStats({
+            timeSurvived: e.gameTime,
+            candlesDodged: e.candles.filter(c => c.kind === 'red' && c.passed).length,
+            greensCollected: e.totalCollected,
+            totalJumps: e.totalJumps,
+            maxCombo: e.maxCombo,
+          })
+          setMode('gameover')
+          setDeathMessage('rug pulled!')
+          sfxDeath()
+          hapticDeath()
+          spawnDeathBurst(e, IS_MOBILE ? 16 : 28)
+          return
+        }
+      }
+    } else {
+      e.rugPullHoles = []
+    }
+
     // --- Animation timers ---
     if (e.scorePulse > 0) e.scorePulse -= dt * 3
     if (e.comboPulse > 0) e.comboPulse -= dt * 3
@@ -894,47 +1168,6 @@ export default function GameEngine({
   }, [])
 
   // ========================================================================
-  // INPUT HANDLERS
-  // ========================================================================
-
-  const handleAction = useCallback(() => {
-    if (mode === 'menu') {
-      startGame()
-      return
-    }
-    if (mode === 'gameover') {
-      startGame()
-      return
-    }
-    if (mode !== 'playing') return
-
-    const e = engineRef.current
-    const p = e.player
-
-    // Ground jump or coyote jump
-    if (p.onGround || p.coyoteTimer > 0) {
-      performJump(e, false)
-    }
-    // Double jump
-    else if (p.jumpCount < p.maxJumps) {
-      performJump(e, true)
-    }
-    // Buffer the jump
-    else {
-      p.jumpBufferTimer = CFG.BUFFER
-    }
-  }, [mode, performJump])
-
-  const releaseJump = useCallback(() => {
-    if (mode !== 'playing') return
-    const p = engineRef.current.player
-    // Variable jump height — release early = lower jump
-    if (p.velocityY < CFG.JUMP * 0.4) {
-      p.velocityY *= 0.5
-    }
-  }, [mode])
-
-  // ========================================================================
   // GAME START / RESET
   // ========================================================================
 
@@ -952,6 +1185,8 @@ export default function GameEngine({
     setSpeedName('easy')
     setIsNewRecord(false)
     setDeathMessage('rekt!')
+    setNearRecordDiff(null)
+    setRetryVisible(false)
     setMode('playing')
 
     // Start background music on first game start
@@ -960,6 +1195,48 @@ export default function GameEngine({
       setMusicEnabled(true)
     }
   }, [musicEnabled, activeTrail, soundEnabled])
+
+  // ========================================================================
+  // INPUT HANDLERS
+  // ========================================================================
+
+  const handleAction = useCallback(() => {
+    if (mode === 'menu') {
+      startGame()
+      return
+    }
+    if (mode === 'gameover') {
+      startGame()
+      return
+    }
+    if (mode !== 'playing') return
+
+    const e = engineRef.current
+    const p = e.player
+
+    // Prevent jump spam — require minimum time between jumps
+    const now = performance.now()
+    if (e.lastJumpTime && now - e.lastJumpTime < 80) return
+
+    // Ground jump or coyote jump
+    if (p.onGround || p.coyoteTimer > 0) {
+      performJump(e, false)
+      e.lastJumpTime = now
+    }
+    // Double jump
+    else if (p.jumpCount < p.maxJumps) {
+      performJump(e, true)
+      e.lastJumpTime = now
+    }
+    // Buffer the jump for better feel
+    else {
+      p.jumpBufferTimer = CFG.BUFFER
+    }
+  }, [mode, performJump, startGame])
+
+  const releaseJump = useCallback(() => {
+    if (mode !== 'playing') return
+  }, [mode])
 
   // Wallet connect wrapper with loading state (Improvement #2)
   const handleConnectWallet = useCallback(async () => {
@@ -994,7 +1271,8 @@ export default function GameEngine({
   }, [onScoreSubmit, deathScore, submitting, submitted])
 
   const shareScore = useCallback(() => {
-    const text = `I scored ${deathScore} on base dash 🏃‍♂️\nbuilt on @base — play at basedash-five.vercel.app`
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'basedash-five.vercel.app'
+    const text = `I scored ${deathScore} on base dash 🏃‍♂️\nbuilt on @base — play at ${appUrl}`
     if (navigator.share) {
       navigator.share({ text }).catch(() => { })
     } else {
@@ -1011,12 +1289,46 @@ export default function GameEngine({
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+
+    // Support high-DPI scaling
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.scale(dims.dpr, dims.dpr)
+
     drawFrame(ctx, engineRef.current, logoRef.current, logoLoaded)
-  }, [logoLoaded])
+  }, [logoLoaded, dims.dpr])
 
   // ========================================================================
   // EFFECTS — Initialization, keyboard, touch, game loop
   // ========================================================================
+
+  // Adaptive Resize Handling
+  useEffect(() => {
+    const handleResize = () => {
+      let w = window.innerWidth
+      let h = window.innerHeight
+
+      // If we have a container, we can read the actual flex-allocated space
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect()
+        w = rect.width
+        h = rect.height
+      }
+
+      // Constrain width on desktop
+      if (w > 1024) w = 1024
+      // Force roughly 16:9 on desktop
+      if (!IS_MOBILE && h > w * 0.6) h = w * 0.6
+
+      const dpr = window.devicePixelRatio || 1
+
+      updateGameConfig(w, h)
+      setDims({ w, h, dpr })
+    }
+
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Load logo image
   useEffect(() => {
@@ -1050,8 +1362,20 @@ export default function GameEngine({
   useEffect(() => {
     return () => {
       stopBackgroundMusic()
+      if (demoRafRef.current) cancelAnimationFrame(demoRafRef.current)
     }
   }, [])
+
+  // Auto-pause on visibility change (fix #6)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden && mode === 'playing') {
+        setMode('paused')
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [mode])
 
   // Keyboard controls
   useEffect(() => {
@@ -1072,37 +1396,59 @@ export default function GameEngine({
     }
   }, [handleAction, releaseJump, mode])
 
-  // Touch controls
+  // Touch controls — only preventDefault when playing (fix #8)
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ts = (ev: TouchEvent) => { ev.preventDefault(); handleAction() }
-    const te = (ev: TouchEvent) => { ev.preventDefault(); releaseJump() }
+    const ts = (ev: TouchEvent) => { if (mode === 'playing') ev.preventDefault(); handleAction() }
+    const te = (ev: TouchEvent) => { if (mode === 'playing') ev.preventDefault(); releaseJump() }
     canvas.addEventListener('touchstart', ts, { passive: false })
     canvas.addEventListener('touchend', te, { passive: false })
     return () => {
       canvas.removeEventListener('touchstart', ts)
       canvas.removeEventListener('touchend', te)
     }
-  }, [handleAction, releaseJump])
+  }, [handleAction, releaseJump, mode])
 
-  // Game loop — fixed timestep with accumulator
+  // Game loop — fixed timestep with accumulator (optimized for mobile)
   useEffect(() => {
     if (mode !== 'playing') return
     let prev = performance.now()
     let acc = 0
+    let frameCount = 0
+    let lastFpsUpdate = performance.now()
 
     const loop = (t: number) => {
       const dt = Math.min(CFG.MAX_DELTA, (t - prev) / 1000)
       prev = t
       acc += dt
 
-      while (acc >= CFG.STEP) {
+      // Limit physics updates to prevent spiral of death on slow devices
+      let updates = 0
+      const maxUpdates = IS_MOBILE ? 2 : 3
+      while (acc >= CFG.STEP && updates < maxUpdates) {
         update(CFG.STEP)
         acc -= CFG.STEP
+        updates++
       }
 
-      draw()
+      // Update global audio tracker
+      activeWorldIndex = engineRef.current.worldIndex
+
+      // Skip rendering if tab is hidden
+      if (document.visibilityState !== 'hidden') {
+        draw()
+      }
+
+      // FPS monitoring for debugging (dev only)
+      if (process.env.NODE_ENV === 'development') {
+        frameCount++
+        if (t - lastFpsUpdate >= 1000) {
+          // console.log(`FPS: ${frameCount}`)
+          frameCount = 0
+          lastFpsUpdate = t
+        }
+      }
 
       if (engineRef.current.alive && mode === 'playing') {
         rafRef.current = requestAnimationFrame(loop)
@@ -1115,24 +1461,194 @@ export default function GameEngine({
     }
   }, [mode, update, draw])
 
+  // 1.1 + 1.2 — Demo auto-play loop behind menu
+  useEffect(() => {
+    if (mode !== 'menu') {
+      if (demoRafRef.current) { cancelAnimationFrame(demoRafRef.current); demoRafRef.current = null }
+      return
+    }
+    // Create a disposable demo engine
+    const demoEngine = createEngine()
+    demoEngine.alive = true
+    demoEngine.showTutorial = false
+    let prev = performance.now()
+    let demoAcc = 0
+    let autoJumpCooldown = 0
+
+    const demoLoop = (t: number) => {
+      const dt = Math.min(0.033, (t - prev) / 1000)
+      prev = t
+      demoAcc += dt
+
+      // Simple physics tick
+      while (demoAcc >= CFG.STEP) {
+        const de = demoEngine
+        de.gameTime += CFG.STEP
+        de.difficulty = clamp(de.score / 4000, 0, 1)
+        const sMult = getSpeed(de.score).multiplier
+        de.speed = lerp(de.speed, CFG.BASE_SPEED * sMult, CFG.STEP * 4)
+        de.distance += de.speed * CFG.STEP
+        de.distanceTraveled += de.speed * CFG.STEP
+        de.backgroundOffset += de.speed * CFG.STEP * 0.5
+        de.groundOffset += de.speed * CFG.STEP
+        de.cloudOffset += de.speed * CFG.STEP
+
+        // Player physics
+        const dp = de.player
+        dp.velocityY += CFG.GRAVITY * CFG.STEP
+        dp.velocityY = Math.min(dp.velocityY, CFG.MAX_FALL)
+        dp.y += dp.velocityY * CFG.STEP
+        // Floor collision & exact snapping to prevent clipping
+        if (dp.y >= CFG.GROUND - CFG.PLAYER_SIZE) {
+          dp.y = CFG.GROUND - CFG.PLAYER_SIZE
+          dp.velocityY = 0 // Kill downward velocity stringently
+          dp.onGround = true
+          dp.jumpCount = 0
+        } else {
+          dp.onGround = false
+        }
+        if (!dp.onGround) dp.rotation += CFG.ROT_SPEED * CFG.STEP
+        dp.squash = lerp(dp.squash, 0, CFG.STEP * 12)
+        dp.scale = 1 + dp.squash * (dp.velocityY < 0 ? -0.3 : 0.4)
+        dp.tilt = lerp(dp.tilt, clamp(dp.velocityY / 800, -1, 1), CFG.STEP * CFG.TILT_SPEED)
+
+        // Move candles
+        for (const c of de.candles) {
+          c.x -= de.speed * CFG.STEP
+          c.phase += CFG.STEP * c.flickerSpeed
+        }
+        de.candles = de.candles.filter(c => c.x + c.width > -100)
+
+        // Spawn
+        if (de.distance >= de.nextSpawnDistance) spawnPattern(de)
+
+        // AI: auto-jump near obstacles
+        autoJumpCooldown -= CFG.STEP
+        if (dp.onGround && autoJumpCooldown <= 0) {
+          const nearest = de.candles.find(c => c.kind === 'red' && c.x > CFG.PLAYER_X - 20 && c.x < CFG.PLAYER_X + 200)
+          if (nearest && nearest.x < CFG.PLAYER_X + 120) {
+            dp.velocityY = CFG.JUMP
+            dp.onGround = false
+            dp.squash = -0.15
+            autoJumpCooldown = 0.3
+          }
+        }
+
+        // Auto-collect greens + pass reds for score
+        for (const c of de.candles) {
+          if (!c.passed && c.x + c.width < CFG.PLAYER_X) {
+            c.passed = true
+            if (c.kind === 'red') de.score += CFG.RED_SCORE
+          }
+          if (c.kind === 'green' && !c.collected) {
+            const gx = c.x + c.width / 2
+            const gy = c.bodyY + c.bodyHeight / 2
+            const px = CFG.PLAYER_X + CFG.PLAYER_SIZE / 2
+            const py = dp.y + CFG.PLAYER_SIZE / 2
+            if (Math.abs(gx - px) < 30 && Math.abs(gy - py) < 30) {
+              c.collected = true
+              de.score += CFG.GREEN_SCORE
+            }
+          }
+        }
+
+        // Stars
+        for (const s of de.stars) s.twinkle += CFG.STEP * s.twinkleSpeed
+        // Ground particles
+        for (const gp of de.groundParticles) {
+          gp.x -= de.speed * CFG.STEP * gp.speed
+          gp.phase += CFG.STEP * 2 * gp.speed
+          if (gp.x < -10) gp.x = CFG.WIDTH + rand(5, 30)
+        }
+
+        // Reset if score too high (loop demo)
+        if (de.score > 800) {
+          Object.assign(de, createEngine())
+          de.alive = true
+          de.showTutorial = false
+        }
+
+        demoAcc -= CFG.STEP
+      }
+
+      // Draw demo frame
+      const canvas = canvasRef.current
+      if (canvas) {
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          const currentDpr = window.devicePixelRatio || 1
+          ctx.setTransform(1, 0, 0, 1, 0, 0)
+          ctx.scale(currentDpr, currentDpr)
+          drawFrame(ctx, demoEngine, logoRef.current, logoLoaded)
+        }
+      }
+
+      demoRafRef.current = requestAnimationFrame(demoLoop)
+    }
+
+    demoRafRef.current = requestAnimationFrame(demoLoop)
+    return () => {
+      if (demoRafRef.current) cancelAnimationFrame(demoRafRef.current)
+    }
+  }, [mode, logoLoaded])
+
+  // 1.3 — Opening chime on first user interaction
+  useEffect(() => {
+    if (chimePlayedRef.current) return
+    const playChime = () => {
+      if (!chimePlayedRef.current) {
+        chimePlayedRef.current = true
+        sfxOpenChime()
+      }
+      window.removeEventListener('click', playChime)
+      window.removeEventListener('touchstart', playChime)
+    }
+    window.addEventListener('click', playChime, { once: true })
+    window.addEventListener('touchstart', playChime, { once: true })
+    return () => {
+      window.removeEventListener('click', playChime)
+      window.removeEventListener('touchstart', playChime)
+    }
+  }, [])
+
+  // 3.1 — Compute near-record diff & 3.4 delayed retry button
+  useEffect(() => {
+    if (mode === 'gameover') {
+      const diff = best - deathScore
+      if (diff > 0 && diff <= best * 0.25 && !isNewRecord) {
+        setNearRecordDiff(diff)
+      } else {
+        setNearRecordDiff(null)
+      }
+      // 3.4 — delayed retry button appearance
+      const timer = setTimeout(() => setRetryVisible(true), 150) // Reduced from 1200ms to 150ms for faster appearance
+      return () => clearTimeout(timer)
+    }
+  }, [mode, best, deathScore, isNewRecord])
+
+  // Track time in game
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout
+    if (mode === 'playing') {
+      intervalId = setInterval(() => {
+        const currentSeconds = parseInt(localStorage.getItem('base_dash_time') || '0', 10)
+        localStorage.setItem('base_dash_time', (currentSeconds + 1).toString())
+      }, 1000)
+    }
+    return () => clearInterval(intervalId)
+  }, [mode])
+
   // ========================================================================
   // LOADING SCREEN
   // ========================================================================
 
   if (loading) {
     return (
-      <div className="flex h-[58vh] items-center justify-center">
-        <div className="w-[min(90vw,420px)] border border-slate-200 bg-white/95 px-8 py-8 text-center shadow-[0_22px_46px_rgba(15,23,42,0.10)]">
-          <div className="relative mx-auto mb-5 h-20 w-20 border border-[#0052FF]/25 bg-[#0052FF]">
-            <div className="absolute inset-[-3px] border border-[#0052FF]/20 animate-pulse" />
-            <div className="absolute inset-[5px] overflow-hidden border border-white/40">
-              <img src="/base-logo.png" alt="base dash logo" className="w-full h-full object-cover" />
-            </div>
-          </div>
-          <h2 className="mb-1 text-xl text-slate-900" style={{ fontFamily: 'var(--font-brand), var(--font-sans)' }}>base dash</h2>
-          <p className="mb-4 text-xs text-slate-500">loading game</p>
-          <div className="mx-auto h-1.5 w-40 overflow-hidden bg-slate-100">
-            <span className="block h-full w-1/2 animate-pulse bg-gradient-to-r from-[#0052FF] to-[#4d8dff]" />
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="w-full text-center">
+          <p className="mb-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">loading</p>
+          <div className="mx-auto h-0.5 w-24 overflow-hidden bg-slate-100/50">
+            <span className="block h-full w-1/2 animate-pulse bg-[#0052FF]" />
           </div>
         </div>
       </div>
@@ -1144,93 +1660,76 @@ export default function GameEngine({
   // ========================================================================
 
   return (
-    <div className="relative w-full max-w-5xl mx-auto">
-      <div className="relative overflow-hidden border border-slate-200 shadow-[0_18px_42px_rgba(15,23,42,0.12)] game-container bg-gradient-to-br from-white via-[#f5f8ff] to-[#e8f0fe]" onTouchStart={(ev) => { ev.preventDefault(); handleAction() }} onTouchEnd={(ev) => { ev.preventDefault(); releaseJump() }}>
+    <div ref={containerRef} className="relative w-full h-full max-w-5xl mx-auto flex items-center justify-center border-none min-h-0" style={{ padding: 0 }}>
+      <div
+        className="relative overflow-hidden w-full h-full sm:border sm:border-slate-200 sm:shadow-[0_18px_42px_rgba(15,23,42,0.12)] game-container bg-gradient-to-br from-white via-[#f5f8ff] to-[#e8f0fe] sm:rounded-none"
+        style={{ width: `${dims.w}px`, height: `${dims.h}px` }}
+      >
         <canvas
           ref={canvasRef}
-          width={CFG.WIDTH}
-          height={CFG.HEIGHT}
-          className="w-full h-auto aspect-video bg-white cursor-pointer game-canvas"
+          width={dims.w * dims.dpr}
+          height={dims.h * dims.dpr}
+          className="w-full h-full cursor-pointer game-canvas"
           onClick={handleAction}
           tabIndex={0}
           role="application"
           aria-label="Base Dash Game Canvas"
-          style={{ imageRendering: 'pixelated' }}
+          style={{
+            display: 'block'
+          }}
         />
 
         {/* ===================== MENU OVERLAY ===================== */}
         {mode === 'menu' && (
-          <div className="game-overlay bg-gradient-to-br from-white/90 via-[#edf4ff]/92 to-[#f7fbff]/90 backdrop-blur-xl">
-            <div className="mx-auto w-full max-w-lg px-3 py-2 text-center overflow-y-auto max-h-full">
-              <div className="border border-slate-200/90 bg-white/95 px-5 py-3 shadow-[0_22px_44px_rgba(15,23,42,0.12)]">
-                <div className="mb-2 flex items-center gap-3 text-left">
-                  <div className="relative h-10 w-10 flex-shrink-0 border border-[#0052FF]/25 bg-[#0052FF]">
-                    <div className="absolute inset-[3px] overflow-hidden border border-white/35">
-                      <img src="/base-logo.png" alt="base dash logo" className="w-full h-full object-cover" />
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="mb-0 text-lg sm:text-xl text-slate-900" style={{ fontFamily: 'var(--font-brand), var(--font-sans)' }}>base dash</h2>
-                    <p className="text-[10px] text-slate-500">built on base — endless runner</p>
-                  </div>
-                  {/* Sound toggle */}
-                  <button onClick={() => setSoundEnabled(prev => !prev)} className="h-8 w-8 flex items-center justify-center border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 transition-colors" title={soundEnabled ? 'mute' : 'unmute'}>
-                    {soundEnabled ? (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072M12 6l-4 4H4v4h4l4 4V6z" /></svg>
-                    ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707A1 1 0 0112 5v14a1 1 0 01-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-                    )}
-                  </button>
-                </div>
+          <div className="game-overlay" style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(0px)' }}>
+            <div className="w-full max-w-[180px] border border-white/60 bg-white/40 backdrop-blur-3xl px-5 py-6 shadow-[0_24px_80px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.9)] mx-auto relative mt-[12%] flex flex-col items-center gap-4 rounded-[20px]"
+              style={{ animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
 
-                <button onClick={startGame} className="mb-2 inline-flex w-full items-center justify-center gap-2 bg-[#0052FF] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0040CC]">
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M8 6v12l10-6-10-6z" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  start run
-                </button>
-
-                <div className="mb-2 grid grid-cols-3 gap-1.5 text-left text-xs">
-                  <div className="border border-slate-200 bg-slate-50 px-2 py-1.5"><p className="text-[9px] text-slate-500">controls</p><p className="font-medium text-slate-800 text-[11px]">space / tap</p></div>
-                  <div className="border border-slate-200 bg-slate-50 px-2 py-1.5"><p className="text-[9px] text-slate-500">best</p><p className="font-mono text-sm font-bold text-slate-900">{best}</p></div>
-                  <div className="border border-slate-200 bg-slate-50 px-2 py-1.5"><p className="text-[9px] text-slate-500">worlds</p><p className="font-medium text-slate-800 text-[11px]">10 to explore</p></div>
-                </div>
-
-                <div className="mb-2 border border-slate-200 bg-slate-50/90 px-3 py-2 text-left">
-                  <p className="mb-1 text-[9px] font-semibold text-slate-500">how to play</p>
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] text-slate-700">
-                    <span>🔴 avoid red candles</span>
-                    <span>🟢 green = +25 pts + slow</span>
-                    <span>🦘 double jump at 150</span>
-                    <span>💎🌕📊 catch power-ups</span>
-                  </div>
-                </div>
-
-                {!isConnected && (
-                  <button onClick={handleConnectWallet} disabled={connectingWallet} className="w-full border border-[#0052FF]/30 bg-[#eef4ff] px-3 py-2 text-xs font-semibold text-[#0040CC] transition-colors hover:bg-[#e1ecff] disabled:opacity-50">
-                    {connectingWallet ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <span className="inline-block w-3 h-3 border-2 border-[#0052FF]/30 border-t-[#0052FF] rounded-full animate-spin" />
-                        connecting...
-                      </span>
-                    ) : 'connect wallet to save progress'}
-                  </button>
-                )}
+              {/* Best Score Display — Premium */}
+              <div className="w-full bg-gradient-to-br from-[#FFFBEB] to-[#FFF3CC] px-4 py-3 border border-[#F0B90B]/30 text-center rounded-2xl shadow-[0_4px_12px_rgba(240,185,11,0.15)]"
+                style={{ animation: 'menuFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both', animationDelay: '0.05s' }}>
+                <p className="text-[7px] font-black text-[#D4A002] uppercase tracking-[0.18em] mb-1" style={{ fontFamily: 'var(--font-space, Space Grotesk, system-ui)' }}>best pnl</p>
+                <p className="font-black text-[#B78905] leading-none text-lg tracking-tighter" style={{ fontFamily: 'var(--font-space, Space Grotesk, system-ui)' }}>{formatMarketCap(best)}</p>
               </div>
+
+              {/* Start Button — PREMIUM pulsing glow */}
+              <button
+                onClick={(e) => { e.stopPropagation(); startGame() }}
+                className="w-full relative overflow-hidden px-4 py-4 text-[12px] font-black tracking-[0.18em] text-white transition-all duration-300 active:scale-95 group rounded-2xl"
+                style={{
+                  background: 'linear-gradient(135deg, #0052FF 0%, #0040CC 100%)',
+                  boxShadow: '0 8px 32px rgba(0,82,255,0.45), 0 0 0 1px rgba(0,82,255,0.3)',
+                  animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both, startGlow 2.5s ease-in-out 0.5s infinite',
+                  animationDelay: '0.15s',
+                  fontFamily: 'var(--font-space, Space Grotesk, system-ui)',
+                }}
+              >
+                <span className="relative z-10">START TRADE</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 rounded-2xl" />
+              </button>
+
+              {/* Hint Text */}
+              <div className="text-center" style={{ animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both', animationDelay: '0.25s' }}>
+                <p className="text-[7px] font-bold text-slate-500 uppercase tracking-[0.22em]" style={{ fontFamily: 'var(--font-space, Space Grotesk, system-ui)' }}>tap or space to start</p>
+              </div>
+
             </div>
           </div>
         )}
 
         {/* ===================== PAUSED OVERLAY ===================== */}
         {mode === 'paused' && (
-          <div className="game-overlay bg-gradient-to-br from-white/84 via-[#edf4ff]/90 to-[#f7fbff]/88 backdrop-blur-lg">
-            <div className="mx-auto w-full max-w-sm px-3 py-4 text-center overflow-y-auto max-h-full">
-              <div className="border border-slate-200/90 bg-white/95 px-4 py-4 shadow-[0_22px_44px_rgba(15,23,42,0.12)]">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center border border-[#0052FF]/25 bg-[#eef4ff]">
-                  <svg className="w-8 h-8 text-[#0052FF]" fill="currentColor" viewBox="0 0 20 20"><path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" /></svg>
-                </div>
-                <h2 className="text-3xl font-black text-slate-900 mb-1" style={{ fontFamily: 'var(--font-brand), var(--font-sans)' }}>paused</h2>
-                <p className="text-slate-500 text-xs mb-5">take a breath</p>
-                <button onClick={() => setMode('playing')} className="mb-3 w-full bg-[#0052FF] px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(0,82,255,0.28)] transition-colors hover:bg-[#0040CC]">resume</button>
-                <p className="text-slate-500 text-xs">press p to resume</p>
+          <div className="game-overlay bg-black/20 backdrop-blur-[2px]">
+            <div className="w-full h-full flex items-center justify-center p-4">
+              <div className="w-full max-w-[240px] border-2 border-[#0A0B14] bg-white px-5 py-6 shadow-none mx-auto text-center rounded-2xl">
+                <h2 className="text-xl font-black text-[#0A0B14] mb-2 uppercase tracking-widest" style={{ fontFamily: 'var(--font-mono)' }}>paused</h2>
+                <p className="text-slate-500 text-[10px] mb-5 font-bold uppercase tracking-widest">take a breath</p>
+                <button
+                  onClick={() => setMode('playing')}
+                  className="w-full bg-[#0052FF] px-4 py-3 text-[11px] font-black text-white hover:bg-[#0040CC] border-2 border-[#0052FF] transition-colors rounded-xl uppercase tracking-widest"
+                >
+                  RESUME
+                </button>
               </div>
             </div>
           </div>
@@ -1238,83 +1737,96 @@ export default function GameEngine({
 
         {/* ===================== GAME OVER OVERLAY ===================== */}
         {mode === 'gameover' && (
-          <div className="game-overlay bg-gradient-to-br from-white/84 via-[#edf4ff]/90 to-[#f7fbff]/88 backdrop-blur-lg">
-            <div className="mx-auto w-full max-w-lg px-3 py-2 text-center overflow-y-auto max-h-full">
-              <div className="border border-slate-200/90 bg-white/95 px-5 py-3 shadow-[0_22px_44px_rgba(15,23,42,0.12)]">
+          <div className="game-overlay animate-[backdropFade_0.4s_ease-out_forwards] bg-black/20 backdrop-blur-[2px]">
+            <div className="w-full h-full flex items-center justify-center p-2">
+              <div className="w-full max-w-[300px] rounded-2xl bg-white border-2 border-[#0A0B14] shadow-none px-4 py-4 mx-auto relative overflow-hidden">
 
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <div className={`flex h-8 w-8 items-center justify-center border ${isNewRecord ? 'border-[#F0B90B]/30 bg-[#FFFBEB]' : 'border-[#F6465D]/30 bg-[#FFF0F2]'}`}>
-                    {isNewRecord ? (
-                      <svg className="w-4 h-4 text-[#F0B90B]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    ) : (
-                      <span className="text-xl">💀</span>
-                    )}
-                  </div>
-                  <h2 className={`text-lg sm:text-xl font-black ${isNewRecord ? 'text-[#B78905]' : 'text-[#F6465D]'} tracking-tight`} style={{ fontFamily: 'var(--font-brand), var(--font-sans)' }}>
-                    {isNewRecord ? 'new record!' : deathMessage}
+                <div className="flex items-center justify-center gap-1.5 mb-3">
+                  {isNewRecord && (
+                    <div className="flex h-5 w-5 items-center justify-center bg-[#F0B90B] border-2 border-[#B78905] rounded-full">
+                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    </div>
+                  )}
+                  <h2 className={`text-[16px] font-black uppercase ${isNewRecord ? 'text-[#F0B90B]' : 'text-[#F6465D]'} tracking-widest`} style={{ fontFamily: 'var(--font-mono)' }}>
+                    {isNewRecord ? 'NEW ALL-TIME HIGH!' : deathMessage}
                   </h2>
                 </div>
 
-                {/* Score + best + world + speed in one row */}
-                <div className="grid grid-cols-4 gap-1 mb-1.5 text-left text-xs">
-                  <div className="border border-slate-200 bg-slate-50 px-2 py-1.5"><p className="text-[9px] text-slate-500">score</p><p className="text-base font-black text-slate-900 font-mono">{deathScore}</p></div>
-                  <div className="border border-[#0052FF]/20 bg-[#eef4ff] px-2 py-1.5"><p className="text-[9px] text-[#0052FF]">best</p><p className="text-base font-black text-[#0052FF] font-mono">{best}</p></div>
-                  <div className="border border-slate-200 bg-slate-50 px-2 py-1.5"><p className="text-[9px] text-slate-500">world</p><p className="text-[11px] font-bold text-slate-900">{worldName}</p></div>
-                  <div className="border border-slate-200 bg-slate-50 px-2 py-1.5"><p className="text-[9px] text-slate-500">diff</p><p className="text-[11px] font-bold" style={{ color: getSpeed(score).color }}>{speedName}</p></div>
+                <div className="mb-3 grid grid-cols-2 gap-2">
+                  <div className="bg-slate-50 px-2 py-2 rounded-xl border-2 border-slate-200 text-center"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">portfolio</p><p className="text-[14px] font-black text-slate-900 leading-none">{formatMarketCap(deathScore)}</p></div>
+                  <div className="bg-[#eef4ff] px-2 py-2 rounded-xl border-2 border-[#0052FF]/20 text-center"><p className="text-[9px] font-black text-[#6CACFF] uppercase tracking-widest mb-1">mode</p><p className="text-[12px] font-black leading-none uppercase tracking-widest" style={{ color: getSpeed(score).color }}>{speedName}</p></div>
                 </div>
 
-                {/* Game stats */}
-                {gameStats && (
-                  <div className="grid grid-cols-4 gap-1 mb-2 text-center text-[9px]">
-                    <div className="border border-slate-200 bg-slate-50 px-1 py-1"><p className="text-slate-400">time</p><p className="font-bold text-slate-700 font-mono">{Math.floor(gameStats.timeSurvived)}s</p></div>
-                    <div className="border border-slate-200 bg-slate-50 px-1 py-1"><p className="text-slate-400">dodged</p><p className="font-bold text-slate-700 font-mono">{gameStats.candlesDodged}</p></div>
-                    <div className="border border-[#0ECB81]/20 bg-[#f0fdf4] px-1 py-1"><p className="text-[#0ECB81]">greens</p><p className="font-bold text-[#0ECB81] font-mono">{gameStats.greensCollected}</p></div>
-                    <div className="border border-slate-200 bg-slate-50 px-1 py-1"><p className="text-slate-400">jumps</p><p className="font-bold text-slate-700 font-mono">{gameStats.totalJumps}</p></div>
+                {/* Near-record motivational message — minimal */}
+                {nearRecordDiff !== null && (
+                  <div className="mb-3 bg-[#FFFBEB] px-2 py-2 rounded-xl border-2 border-[#F0B90B]/30 text-center flex items-center justify-center gap-1.5">
+                    <svg className="w-3.5 h-3.5 text-[#F0B90B]" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" /></svg>
+                    <p className="text-[9px] font-black text-[#B78905] uppercase tracking-widest">only {nearRecordDiff} pts from max!</p>
                   </div>
                 )}
 
-                {/* Score submit / success / wallet connect */}
-                {submitted || isScoreConfirmed ? (
-                  <div className="mb-1.5 border border-[#0ECB81]/30 bg-[#f0fdf4] px-3 py-2">
-                    <div className="flex items-center justify-center gap-2">
-                      <svg className="w-4 h-4 text-[#0ECB81]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                      <span className="text-sm font-semibold text-[#0ECB81]">score saved on-chain!</span>
+                {/* Stats — compact */}
+                {gameStats && (
+                  <div className="grid grid-cols-4 gap-1.5 mb-3 text-center text-[8px] font-bold mt-1">
+                    <div className="bg-slate-50 px-1 py-1.5 rounded-xl border-2 border-slate-200"><p className="text-slate-400 uppercase tracking-widest mb-1" style={{ fontSize: '7px' }}>session</p><p className="text-slate-700 font-black text-[10px]">{Math.floor(gameStats.timeSurvived)}s</p></div>
+                    <div className="bg-slate-50 px-1 py-1.5 rounded-xl border-2 border-slate-200"><p className="text-slate-400 uppercase tracking-widest mb-1" style={{ fontSize: '7px' }}>survived</p><p className="text-slate-700 font-black text-[10px]">{gameStats.candlesDodged}</p></div>
+                    <div className="bg-[#e8f8f0] px-1 py-1.5 rounded-xl border-2 border-[#0ECB81]/40"><p className="text-[#0ECB81] uppercase tracking-widest mb-1" style={{ fontSize: '7px' }}>buys</p><p className="text-[#0ECB81] font-black text-[10px]">{gameStats.greensCollected}</p></div>
+                    <div className="bg-slate-50 px-1 py-1.5 rounded-xl border-2 border-slate-200"><p className="text-slate-400 uppercase tracking-widest mb-1" style={{ fontSize: '7px' }}>entries</p><p className="text-slate-700 font-black text-[10px]">{gameStats.totalJumps}</p></div>
+                  </div>
+                )}
+
+                {/* Score submit / success / wallet connect — ONLY ON NEW RECORD OR IF ALREADY SUBMITTED */}
+                {(submitted || isScoreConfirmed) ? (
+                  <div className="mb-3 bg-[#e8f8f0] border-2 border-[#0ECB81] px-3 py-2 rounded-xl flex flex-col items-center justify-center">
+                    <div className="flex items-center gap-1.5">
+                      <svg className="w-4 h-4 text-[#0ECB81]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      <span className="text-[11px] font-black text-[#0ECB81] uppercase tracking-widest">saved on-chain!</span>
                     </div>
                     {submitTxHash && (
-                      <a
-                        href={`https://${process.env.NEXT_PUBLIC_USE_TESTNET === 'true' ? 'sepolia.' : ''}basescan.org/tx/${submitTxHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-1 inline-block text-[10px] font-mono text-[#0052FF] hover:underline"
-                      >
-                        {submitTxHash.slice(0, 10)}...{submitTxHash.slice(-8)} ↗
+                      <a href={`https://${process.env.NEXT_PUBLIC_USE_TESTNET === 'true' ? 'sepolia.' : ''}basescan.org/tx/${submitTxHash}`} target="_blank" rel="noopener noreferrer" className="mt-1 text-[9px] font-black font-mono text-[#0A0B14] hover:text-[#0052FF] underline opacity-90 transition-colors uppercase tracking-widest">
+                        view tx ↗
                       </a>
                     )}
                   </div>
-                ) : isConnected && canSubmitScore && deathScore > 0 ? (
-                  <button onClick={submitScore} disabled={submitting} className="mb-1.5 w-full bg-[#0052FF] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0040CC] disabled:opacity-50 disabled:cursor-not-allowed">
-                    {submitting ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        submitting...
-                      </span>
-                    ) : 'send score on-chain'}
-                  </button>
-                ) : !isConnected ? (
-                  <button onClick={handleConnectWallet} disabled={connectingWallet} className="mb-1.5 w-full bg-[#0052FF] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0040CC] disabled:opacity-50 disabled:cursor-not-allowed">
-                    {connectingWallet ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        connecting...
-                      </span>
-                    ) : 'connect wallet to save'}
-                  </button>
-                ) : (
-                  <p className="mb-1.5 border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600">{canSubmitScore ? 'wallet connected — submit.' : 'contract not configured.'}</p>
-                )}
-                {error && <p className="text-[#F6465D] text-xs mb-1.5 bg-[#FFF0F2] px-3 py-1 border border-[#F6465D]/20">{error}</p>}
+                ) : isNewRecord ? (
+                  isConnected && canSubmitScore && deathScore > 0 ? (
+                    txContracts ? (
+                      <Transaction
+                        calls={txContracts as any}
+                        capabilities={process.env.NEXT_PUBLIC_PAYMASTER_URL ? { paymasterService: { url: process.env.NEXT_PUBLIC_PAYMASTER_URL } } : undefined}
+                        onSuccess={() => setSubmitted(true)}
+                        onError={(e) => setError(e.message)}
+                        className="w-full flex flex-col items-center"
+                      >
+                        {/* @ts-expect-error React 18 Server Component type mismatch in OnchainKit */}
+                        <TransactionButton
+                          className="mb-3 w-full bg-[#0052FF] text-white py-3 text-[11px] font-black uppercase tracking-widest hover:bg-[#0A0B14] active:scale-[0.98] rounded-none border-2 border-[#0052FF] hover:border-[#0A0B14] transition-colors"
+                          text="SAVE RECORD GASLESS"
+                        />
+                        <TransactionStatus>
+                          <TransactionStatusLabel />
+                          <TransactionStatusAction />
+                        </TransactionStatus>
+                      </Transaction>
+                    ) : (
+                      <button disabled className="mb-3 w-full bg-slate-200 text-slate-500 py-3 text-[11px] font-black uppercase tracking-widest rounded-none border-2 border-slate-300">
+                        PREPARING TX...
+                      </button>
+                    )
+                  ) : !isConnected ? (
+                    <button onClick={handleConnectWallet} disabled={connectingWallet} className="mb-3 w-full bg-[#0052FF] text-white py-3 text-[11px] font-black uppercase tracking-widest hover:bg-[#0A0B14] active:scale-[0.98] rounded-none border-2 border-[#0052FF] hover:border-[#0A0B14] transition-colors disabled:opacity-50">
+                      {connectingWallet ? 'CONNECTING...' : 'CONNECT TO SAVE RECORD'}
+                    </button>
+                  ) : (
+                    <p className="mb-3 px-2 py-2 text-[9px] font-black text-slate-500 uppercase tracking-widest bg-slate-100/80 rounded-none border-2 border-slate-200 text-center">contract not configured.</p>
+                  )
+                ) : null}
 
-                <button onClick={startGame} className="w-full border border-slate-200 bg-slate-50 px-5 py-2 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-100">run it back</button>
+                {error && <p className="text-[#F6465D] text-[9px] font-black mb-3 bg-[#FFF0F2] px-2 py-2 rounded-none text-center border-2 border-[#F6465D]/30 uppercase tracking-widest">{error}</p>}
+
+                <button onClick={startGame} className={`w-full border-2 border-[#0A0B14] bg-white px-3 py-3 text-[12px] font-black text-[#0A0B14] uppercase tracking-widest hover:bg-[#0A0B14] hover:text-white active:scale-[0.98] transition-all rounded-none ${retryVisible ? 'opacity-100' : 'opacity-0 scale-95 pointer-events-none'}`} style={retryVisible ? { animation: 'retryPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards' } : undefined}>
+                  RUN IT BACK
+                </button>
               </div>
             </div>
           </div>
@@ -1323,68 +1835,85 @@ export default function GameEngine({
         {/* ===================== PLAYING HUD ===================== */}
         {mode === 'playing' && (
           <>
-            {/* Score */}
-            <div className="absolute top-1 left-1 sm:top-2 sm:left-2 flex items-center gap-1 sm:gap-2">
-              <div className="border border-slate-300/80 bg-white/90 px-1.5 py-1 sm:px-3 sm:py-2 rounded-md shadow-[0_4px_12px_rgba(15,23,42,0.12)]">
-                <p className="text-slate-500 text-[6px] sm:text-[8px] font-bold mb-0.5">score</p>
-                <p className="text-base sm:text-xl font-black text-slate-900 font-mono tracking-tight leading-none">{score}</p>
-              </div>
-              {combo > 1 && (
-                <div className="hidden sm:block border border-[#0052FF]/30 bg-[#eef4ff] px-2 py-1 rounded-md">
-                  <p className="text-[#0052FF] text-xs font-black">x{combo}</p>
+            {/* Minimalist Premium HUD — Left */}
+            <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5 z-10">
+              <div className="flex items-center gap-2.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-xl border border-white/80 shadow-sm pointer-events-none"
+                style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+                <span className="text-[15px] font-black text-slate-900 leading-none tracking-tighter"
+                  style={{ fontFamily: 'var(--font-space, Space Grotesk, system-ui)', textShadow: 'none' }}>
+                  {formatMarketCap(score)}
+                </span>
+                <div className="w-px h-3.5 bg-slate-300" />
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-[#0ECB81] rounded-sm shadow-[0_0_4px_#0ECB81]" />
+                  <span className="text-[11px] font-bold text-slate-700"
+                    style={{ fontFamily: 'var(--font-space, Space Grotesk, system-ui)' }}>
+                    {engineRef.current.totalCollected}
+                  </span>
                 </div>
-              )}
-              {/* Score multiplier indicator */}
-              {engineRef.current.scoreMultiplier > 1 && (
-                <div className="hidden sm:block border border-[#FFD700]/40 bg-[#FFFBEB] px-2 py-1 rounded-md">
-                  <p className="text-[#B78905] text-xs font-black">🌕 x{engineRef.current.scoreMultiplier}</p>
+              </div>
+
+              {/* Combo badge */}
+              {engineRef.current.combo > 1 && (
+                <div className="flex items-center px-2 py-1 bg-[#FFF8DC]/90 backdrop-blur border border-[#F0B90B]/40 rounded-lg shadow-sm">
+                  <span className="text-[10px] font-black text-[#D4A002] drop-shadow-[0_0_4px_rgba(240,185,11,0.4)]"
+                    style={{ fontFamily: 'var(--font-space, Space Grotesk, system-ui)' }}>
+                    {engineRef.current.combo}× COMBO
+                  </span>
                 </div>
               )}
             </div>
 
-            {/* World / Speed */}
-            <div className="absolute top-1 right-1 sm:top-2 sm:right-2">
-              <div className="flex items-center gap-1.5 sm:gap-2.5 border border-slate-200/90 bg-white/95 px-2 py-1 sm:px-3.5 sm:py-2 rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm">
-                <div className="flex flex-col leading-tight">
-                  <span className="text-[5px] sm:text-[7px] text-slate-400 font-semibold uppercase tracking-wider">World</span>
-                  <span className="text-[10px] sm:text-[13px] font-bold text-slate-800 leading-none">{worldName}</span>
-                </div>
-                <div className="w-px h-5 sm:h-7 bg-slate-200" />
-                <div className="flex flex-col leading-tight">
-                  <span className="text-[5px] sm:text-[7px] text-slate-400 font-semibold uppercase tracking-wider">Diff</span>
-                  <span className="text-[10px] sm:text-[13px] font-bold leading-none" style={{ color: getSpeed(score).color }}>{speedName}</span>
-                </div>
+            {/* Premium HUD — Right: World + Speed + Sound */}
+            <div className="absolute top-3 right-3 flex flex-col items-end gap-2 z-10">
+              <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-xl border border-white/80 shadow-sm pointer-events-none"
+                style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+                <span className="text-[9px] font-bold text-slate-600 uppercase leading-none tracking-[0.14em]"
+                  style={{ fontFamily: 'var(--font-space, Space Grotesk, system-ui)' }}>
+                  {worldName}
+                </span>
+                <div className="w-px h-2.5 bg-slate-300" />
+                <span className="text-[9px] font-black leading-none uppercase tracking-[0.1em]"
+                  style={{ color: getSpeed(score).color, fontFamily: 'var(--font-space, Space Grotesk, system-ui)', textShadow: `0 0 8px ${getSpeed(score).color}80` }}>
+                  {speedName.split('.').pop()?.trim() || speedName}
+                </span>
               </div>
+
+              {/* Sound toggle — clean, premium */}
+              <button
+                onClick={() => setSoundEnabled(prev => !prev)}
+                className="h-[30px] w-[30px] flex items-center justify-center bg-white/80 backdrop-blur border border-slate-200/80 rounded-lg text-slate-500 hover:text-[#0052FF] hover:border-[#0052FF]/30 active:scale-95 transition-all shadow-sm z-20 touch-manipulation"
+                title={soundEnabled ? 'mute' : 'unmute'}
+              >
+                {soundEnabled ? (
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072M12 6l-4 4H4v4h4l4 4V6z" /></svg>
+                ) : (
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707A1 1 0 0112 5v14a1 1 0 01-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                )}
+              </button>
             </div>
 
-            {/* Chill / whale mode indicator */}
+            {/* Chill / whale mode — glowing banner */}
             {engineRef.current.slowdownTimer > 0 && (
-              <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 border border-[#0ECB81]/30 bg-[#efffee] px-3 py-1.5 sm:px-5 sm:py-2">
-                <p className="text-[#0ECB81] text-[10px] sm:text-xs font-bold">
-                  {engineRef.current.whaleTimer > 0 ? '📊 whale alert' : '🟢 chill mode'}
+              <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-[#0ECB81]/15 backdrop-blur-md border border-[#0ECB81]/30 px-3 py-1 rounded-full z-10 shadow-[0_0_10px_rgba(14,203,129,0.2)] pointer-events-none">
+                <p className="text-[#0ECB81] text-[9px] font-bold text-center drop-shadow-[0_0_4px_rgba(14,203,129,0.5)] tracking-wide uppercase">
+                  {engineRef.current.whaleTimer > 0 ? 'whale alert' : 'chill mode'}
                 </p>
               </div>
             )}
 
-            {/* Sound toggle */}
-            <button onClick={() => setSoundEnabled(prev => !prev)} className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 h-6 w-6 sm:h-7 sm:w-7 flex items-center justify-center border border-slate-300/60 bg-white/70 text-slate-500 hover:bg-white/90 transition-colors rounded-md" title={soundEnabled ? 'mute' : 'unmute'}>
-              {soundEnabled ? (
-                <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072M12 6l-4 4H4v4h4l4 4V6z" /></svg>
-              ) : (
-                <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707A1 1 0 0112 5v14a1 1 0 01-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-              )}
-            </button>
+            {/* Sound toggle moved to top right - previous location removed */}
 
-            {/* Jump indicators */}
-            <div className="absolute bottom-3 right-3 flex gap-1">
+            {/* Jump indicators — glowing dots */}
+            <div className="absolute bottom-2 right-2 flex gap-1.5 z-10">
               {Array.from({ length: getJumps(score) }).map((_, i) => (
-                <div key={i} className={`w-3.5 h-3.5 border transition-all duration-300 ${i < engineRef.current.player.maxJumps - engineRef.current.player.jumpCount ? 'border-[#60a5fa] bg-gradient-to-br from-[#0052FF] to-[#0033AA] shadow-lg shadow-blue-500/50 scale-100' : 'border-slate-300 bg-slate-200/60 scale-90'}`} />
+                <div key={i} className={`w-3 h-3 border transition-all duration-300 rounded-sm ${i < engineRef.current.player.maxJumps - engineRef.current.player.jumpCount ? 'border-[#4d8dff]/60 bg-[#0052FF] shadow-[0_0_6px_rgba(0,82,255,0.6)] scale-100' : 'border-white/10 bg-white/10 scale-90'}`} />
               ))}
             </div>
           </>
         )}
       </div>
-      <div className="mt-3 text-center hidden sm:block"><p className="text-slate-500 text-[10px] font-medium">space / w / up / tap to jump</p></div>
-    </div>
+      <div className="mt-1 text-center hidden sm:block lg:hidden"><p className="text-slate-400 text-[10px] font-medium">tap to jump</p></div>
+    </div >
   )
 }

@@ -1,10 +1,12 @@
-import GameLeaderboardABI from './GameLeaderboardABI.json'
+import { Abi } from 'viem'
+import GameLeaderboardArtifact from './GameLeaderboardABI.json'
 
-export const GAME_LEADERBOARD_ABI = GameLeaderboardABI
+// Extract only the ABI array from the artifact
+export const GAME_LEADERBOARD_ABI = (GameLeaderboardArtifact.abi || GameLeaderboardArtifact) as Abi
 
 // Environment-specific contract addresses
 export const CONTRACT_ADDRESS = (
-  process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || 
+  process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ||
   process.env.NEXT_PUBLIC_CONTRACT_ADDRESS_MAINNET ||
   '0x0000000000000000000000000000000000000000'
 ) as `0x${string}`

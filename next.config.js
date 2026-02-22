@@ -19,7 +19,9 @@ const nextConfig = {
 
   // Code splitting optimization
   experimental: {
-    optimizePackageImports: ['wagmi', 'viem', '@tanstack/react-query'],
+    optimizePackageImports: ['wagmi', 'viem', '@tanstack/react-query', '@coinbase/onchainkit'],
+    // Tree shaking improvements - disabled due to critters dependency issue
+    // optimizeCss: true,
   },
 
   webpack: (config, { isServer }) => {
@@ -27,8 +29,10 @@ const nextConfig = {
     config.resolve.fallback['@react-native-async-storage/async-storage'] = false
     config.resolve.fallback['pino-pretty'] = false
 
-    // Отключаем source maps для чистоты
-    config.devtool = false
+    // Disable source maps in production only
+    if (!isServer && process.env.NODE_ENV === 'production') {
+      config.devtool = false
+    }
 
     // Подавляем warnings
     config.ignoreWarnings = [

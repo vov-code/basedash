@@ -5,6 +5,7 @@ import { useReadContract } from 'wagmi'
 import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS, PlayerScore } from '@/app/contracts'
 import { formatAddress, bigIntToNumber } from '@/app/lib/utils'
 import { useWallet } from '@/app/hooks/useWallet'
+import { Identity, Avatar, Name } from '@coinbase/onchainkit/identity'
 
 interface RankMeta {
   label: string
@@ -42,28 +43,33 @@ function Entry({ entry, rank, isSelf, selfRef }: { entry: PlayerScore; rank: num
   return (
     <div
       ref={isSelf ? selfRef : undefined}
-      className={`flex items-center justify-between border p-4 transition-colors ${isSelf
-          ? 'border-[#4f92ff] bg-[#edf4ff] shadow-[0_10px_20px_rgba(0,82,255,0.08)]'
-          : rank <= 3
-            ? `${meta.tone} ${meta.border}`
-            : 'border-slate-200 bg-white hover:border-slate-300'
+      className={`flex items-center justify-between p-3 sm:p-4 mb-2 rounded-2xl transition-all border ${isSelf
+        ? 'border-[#0052FF]/30 bg-[#0052FF]/5 shadow-[0_8px_16px_rgba(0,82,255,0.08)]'
+        : rank <= 3
+          ? `${meta.tone} ${meta.border} shadow-sm`
+          : 'border-slate-200/60 bg-white hover:border-slate-300 shadow-sm'
         }`}
     >
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
         <div
-          className={`flex h-10 w-10 items-center justify-center border text-sm font-semibold ${rank <= 3 ? `${meta.tone} ${meta.border} ${meta.text}` : 'border-slate-200 bg-slate-50 text-slate-500'
+          className={`flex h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 items-center justify-center rounded-xl border text-xs sm:text-sm font-black shadow-inner ${rank <= 3 ? `${meta.tone} ${meta.border} ${meta.text}` : 'border-slate-200 bg-slate-50 text-slate-500'
             }`}
         >
           {rank <= 3 ? meta.label : `#${rank}`}
         </div>
 
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="inline-block border border-slate-200 bg-white px-2.5 py-1.5 font-mono text-xs text-slate-700">
-              {formatAddress(entry.player)}
-            </span>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <Identity
+              address={entry.player as `0x${string}`}
+              className="inline-flex items-center gap-1.5 border border-slate-200/60 bg-white/50 px-2 py-1 rounded-lg shadow-sm"
+              hasCopyAddressOnClick
+            >
+              <Avatar className="w-4 h-4 sm:w-5 sm:h-5 bg-blue-100" />
+              <Name className="font-mono text-[10px] sm:text-xs font-bold text-slate-700 truncate min-w-0" />
+            </Identity>
             {isSelf && (
-              <span className="border border-[#4f92ff] bg-white px-2 py-1 text-[10px] font-semibold text-[#0052FF]">
+              <span className="border border-[#0052FF]/20 bg-[#0052FF]/10 px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] uppercase tracking-wider font-black text-[#0052FF]">
                 you
               </span>
             )}
@@ -81,9 +87,9 @@ function Entry({ entry, rank, isSelf, selfRef }: { entry: PlayerScore; rank: num
         </div>
       </div>
 
-      <div className="ml-4 flex-shrink-0 text-right">
-        <p className="font-mono text-xl font-bold text-slate-900">{score.toLocaleString()}</p>
-        <p className="text-[10px] text-slate-400">pts</p>
+      <div className="ml-3 sm:ml-4 flex-shrink-0 text-right">
+        <p className="font-mono text-lg sm:text-xl font-black text-slate-900 tracking-tight">{score.toLocaleString()}</p>
+        <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-[#0ECB81] mt-0.5">pnl</p>
       </div>
     </div>
   )
@@ -98,11 +104,11 @@ export default function Leaderboard() {
     address: CONTRACT_ADDRESS,
     abi: GAME_LEADERBOARD_ABI,
     functionName: 'getLeaderboard',
-    args: [BigInt(50)],
+    args: [BigInt(33)],
     query: {
       enabled: CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000',
-      refetchInterval: 7000,
-      refetchIntervalInBackground: true,
+      refetchInterval: 30000,
+      refetchIntervalInBackground: false,
     },
   })
 
@@ -176,45 +182,44 @@ export default function Leaderboard() {
   }
 
   return (
-    <div className="border border-slate-200 bg-white p-6 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-      <div className="mb-6 flex items-center justify-between gap-3">
+    <div className="border border-[#e5e7eb]/80 bg-white/80 backdrop-blur-xl p-3 sm:p-6 shadow-sm rounded-2xl sm:rounded-3xl mx-2 sm:mx-0 animate-[fadeInUp_0.4s_ease-out] mb-6">
+      <div className="mb-5 sm:mb-6 flex flex-row items-center justify-between gap-3">
         <div>
-          <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-900">
-            <svg className="h-5 w-5 text-[#0052FF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M8 21h8" strokeLinecap="round" />
-              <path d="M12 17v4" strokeLinecap="round" />
-              <path d="M7 4h10v4a5 5 0 0 1-10 0z" />
+          <h2 className="flex items-center gap-2 text-xl font-black text-slate-900 tracking-tight">
+            <svg className="h-5 w-5 text-[#F0B90B]" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7.4-6.3-4.8-6.3 4.8 2.3-7.4-6-4.6h7.6z" />
             </svg>
-            global leaderboard
+            leaderboard
           </h2>
-          <p className="mt-1 text-xs text-slate-500">auto refresh every 7 seconds</p>
+          <p className="mt-1 text-[11px] font-medium text-slate-500">auto refresh every 30s</p>
         </div>
 
         <button
           onClick={() => void handleRefresh()}
-          className="inline-flex items-center gap-2 border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100"
+          className="inline-flex flex-shrink-0 items-center justify-center gap-1.5 border border-slate-200 bg-white px-3 py-2 rounded-xl text-[10px] sm:text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50 shadow-sm active:scale-95"
         >
-          <svg className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <svg className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${isRefreshing ? 'animate-spin text-[#0052FF]' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          refresh
+          <span className="hidden sm:inline">refresh</span>
         </button>
       </div>
 
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        <div className="border border-slate-200 bg-slate-50 p-3 text-center">
-          <p className="text-2xl font-semibold text-slate-900">{scores.length}</p>
-          <p className="mt-0.5 text-[10px] tracking-wide text-slate-500">players</p>
+      {/* Top Stats Cards */}
+      <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="border border-slate-200/60 bg-white p-2.5 sm:p-3 text-center rounded-2xl shadow-sm">
+          <p className="text-lg sm:text-2xl font-black text-slate-900">{scores.length}</p>
+          <p className="mt-0.5 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-400">players</p>
         </div>
 
-        <div className="border border-[#bcd4ff] bg-[#edf4ff] p-3 text-center">
-          <p className="text-2xl font-semibold text-[#0052FF]">{topScore.toLocaleString()}</p>
-          <p className="mt-0.5 text-[10px] tracking-wide text-slate-500">top score</p>
+        <div className="border border-[#0052FF]/20 bg-[#0052FF]/5 p-2.5 sm:p-3 text-center rounded-2xl shadow-sm">
+          <p className="text-lg sm:text-2xl font-black text-[#0052FF] font-mono">{topScore.toLocaleString()}</p>
+          <p className="mt-0.5 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-[#0052FF]/70">top score</p>
         </div>
 
-        <div className="border border-orange-200 bg-orange-50 p-3 text-center">
-          <p className="text-2xl font-semibold text-orange-600">{maxStreak}</p>
-          <p className="mt-0.5 text-[10px] tracking-wide text-slate-500">best streak</p>
+        <div className="border border-[#F0B90B]/20 bg-[#F0B90B]/5 p-2.5 sm:p-3 text-center rounded-2xl shadow-sm">
+          <p className="text-lg sm:text-2xl font-black text-[#D4A002]">{maxStreak}</p>
+          <p className="mt-0.5 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-[#D4A002]/70">best streak</p>
         </div>
       </div>
 
@@ -232,11 +237,11 @@ export default function Leaderboard() {
 
       {/* User rank indicator (Improvement #3) */}
       {userRank && (
-        <div className="mt-4 flex items-center justify-center gap-2 border border-[#0052FF]/20 bg-[#edf4ff] px-4 py-2.5">
-          <svg className="w-4 h-4 text-[#0052FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+        <div className="mt-4 flex items-center justify-center gap-2 border border-[#0052FF]/20 bg-[#0052FF]/5 px-4 py-3 rounded-xl shadow-sm">
+          <svg className="w-4 h-4 text-[#0052FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
-          <span className="text-sm font-semibold text-[#0052FF]">your rank: #{userRank}</span>
+          <span className="text-sm font-black text-[#0052FF] uppercase tracking-wide">your rank: #{userRank}</span>
         </div>
       )}
 

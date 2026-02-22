@@ -25,7 +25,9 @@ import {
     getWorld,
     getSpeed,
     POWERUP_CONFIG,
+    MARKET_CONFIG,
     IS_MOBILE,
+    formatMarketCap,
 } from './gameConfig'
 
 // ============================================================================
@@ -40,10 +42,9 @@ const PLAYER_HALF = CFG.PLAYER_SIZE / 2
 /** Gradient cache to avoid recreating every frame */
 let cachedSkyGrad: CanvasGradient | null = null
 let cachedSkyWorldIdx = -1
+let cachedGroundGrad: CanvasGradient | null = null
+let cachedGroundWorldIdx = -1
 
-/**
- * Create or return cached sky gradient for current world.
- */
 const getSkyGradient = (
     ctx: CanvasRenderingContext2D,
     w: WorldTheme,
@@ -56,6 +57,20 @@ const getSkyGradient = (
     g.addColorStop(1, w.skyBottom)
     cachedSkyGrad = g
     cachedSkyWorldIdx = worldIdx
+    return g
+}
+
+const getGroundGradient = (
+    ctx: CanvasRenderingContext2D,
+    w: WorldTheme,
+    worldIdx: number
+): CanvasGradient => {
+    if (cachedGroundGrad && cachedGroundWorldIdx === worldIdx) return cachedGroundGrad
+    const g = ctx.createLinearGradient(0, CFG.GROUND, 0, CFG.HEIGHT)
+    g.addColorStop(0, w.groundTop)
+    g.addColorStop(1, w.groundBottom)
+    cachedGroundGrad = g
+    cachedGroundWorldIdx = worldIdx
     return g
 }
 
@@ -174,10 +189,8 @@ export const drawGround = (
     e: EngineState,
     w: WorldTheme
 ): void => {
-    // Ground fill
-    const gGrad = ctx.createLinearGradient(0, CFG.GROUND, 0, CFG.HEIGHT)
-    gGrad.addColorStop(0, w.groundTop); gGrad.addColorStop(1, w.groundBottom)
-    ctx.fillStyle = gGrad
+    // Ground fill — cached gradient
+    ctx.fillStyle = getGroundGradient(ctx, w, e.worldIndex)
     ctx.fillRect(0, CFG.GROUND, CFG.WIDTH, CFG.HEIGHT - CFG.GROUND)
 
     // Accent ground line — clean 2px, no blur
@@ -472,7 +485,7 @@ const drawSingleCandle = (
 
             // --- Small "+" text near arrow ---
             ctx.globalAlpha = 0.4 + Math.sin(t * 3) * 0.2
-            ctx.font = '600 9px Inter, sans-serif'
+            ctx.font = `600 ${CFG.WIDTH < 600 ? 14 : 9}px Inter, sans-serif`
             ctx.textAlign = 'center'
             ctx.fillText('+', cx + 8, ay)
         }
@@ -501,7 +514,7 @@ const drawSingleCandle = (
         // Floating "+5" score text
         ctx.globalAlpha = (1 - prog) * 0.85
         ctx.fillStyle = w.greenA
-        ctx.font = '700 14px Inter, sans-serif'
+        ctx.font = `700 ${CFG.WIDTH < 600 ? 20 : 14}px Inter, sans-serif`
         ctx.textAlign = 'center'
         ctx.fillText('+' + CFG.GREEN_SCORE, cx, c.bodyY - prog * 35)
     }
@@ -550,7 +563,7 @@ const drawSinglePowerUp = (
         ctx.stroke()
         // Float label
         ctx.fillStyle = config.color1
-        ctx.font = '700 11px Inter, sans-serif'
+        ctx.font = `700 ${CFG.WIDTH < 600 ? 16 : 11}px Inter, sans-serif`
         ctx.textAlign = 'center'
         ctx.fillText(config.label, cx, cy - prog * 30 - 10)
         ctx.restore()
@@ -565,39 +578,68 @@ const drawSinglePowerUp = (
     ctx.arc(cx, cy, pu.size * 0.8 + Math.sin(gameTime * 4) * 3, 0, TWO_PI)
     ctx.stroke()
 
-    // Inner diamond shape
-    ctx.globalAlpha = 0.9
-    const grad = ctx.createLinearGradient(cx - pu.size / 2, cy - pu.size / 2, cx + pu.size / 2, cy + pu.size / 2)
-    grad.addColorStop(0, config.color1)
-    grad.addColorStop(1, config.color2)
-    ctx.fillStyle = grad
-
-    // Diamond/hexagon shape
+    // Inner base shape with neon glass effect
+    ctx.globalAlpha = Math.min(1, glowAlpha + 0.6)
     const r = pu.size * 0.45
+    const baseGrad = ctx.createLinearGradient(cx, cy - r, cx, cy + r)
+    baseGrad.addColorStop(0, config.color1)
+    baseGrad.addColorStop(1, `${config.color2}40`) // translucent bottom
+    ctx.fillStyle = baseGrad
+
+    // Unique shape based on PowerUp Kind
     ctx.beginPath()
-    for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 3) * i - Math.PI / 2
-        const hx = cx + r * Math.cos(angle)
-        const hy = cy + r * Math.sin(angle)
-        if (i === 0) ctx.moveTo(hx, hy)
-        else ctx.lineTo(hx, hy)
+    if (pu.kind === 'diamond_hands') {
+        // Precise Diamond
+        ctx.moveTo(cx, cy - r)
+        ctx.lineTo(cx + r * 0.8, cy)
+        ctx.lineTo(cx, cy + r)
+        ctx.lineTo(cx - r * 0.8, cy)
+        ctx.closePath()
+    } else if (pu.kind === 'moon_boost') {
+        // Upward Chevron / Rocket Tip
+        ctx.moveTo(cx, cy - r)
+        ctx.lineTo(cx + r, cy + r * 0.6)
+        ctx.lineTo(cx + r * 0.5, cy + r)
+        ctx.lineTo(cx, cy + r * 0.2)
+        ctx.lineTo(cx - r * 0.5, cy + r)
+        ctx.lineTo(cx - r, cy + r * 0.6)
+        ctx.closePath()
+    } else {
+        // Whale / Crest Shape
+        ctx.moveTo(cx, cy - r)
+        ctx.bezierCurveTo(cx + r, cy - r, cx + r, cy + r, cx, cy + r)
+        ctx.bezierCurveTo(cx - r, cy + r, cx - r, cy - r, cx, cy - r)
+        ctx.closePath()
     }
-    ctx.closePath()
     ctx.fill()
+    ctx.lineWidth = 1.5
+    ctx.strokeStyle = '#FFFFFF'
+    ctx.stroke()
 
     // White shimmer
-    ctx.globalAlpha = 0.4 + Math.sin(gameTime * 5) * 0.2
+    ctx.globalAlpha = 0.5 + Math.sin(gameTime * 5) * 0.3
     ctx.fillStyle = '#FFFFFF'
     ctx.beginPath()
-    ctx.arc(cx - r * 0.2, cy - r * 0.2, r * 0.25, 0, TWO_PI)
+    if (pu.kind === 'moon_boost') {
+        ctx.arc(cx, cy - r * 0.3, r * 0.2, 0, TWO_PI)
+    } else {
+        ctx.arc(cx, cy, r * 0.25, 0, TWO_PI)
+    }
     ctx.fill()
 
-    // Emoji symbol
+    // Emoji symbol — rendered slightly larger and rotated with bob
     ctx.globalAlpha = 1
-    ctx.font = `${Math.floor(pu.size * 0.6)}px sans-serif`
+    ctx.save()
+    ctx.translate(cx, cy + 1)
+    ctx.rotate(Math.sin(gameTime * 2 + pu.id) * 0.1)
+    ctx.font = `${Math.floor(pu.size * 0.65)}px sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(config.symbol, cx, cy + 1)
+    // Add subtle shadow to emoji for depth
+    ctx.shadowColor = config.color1
+    ctx.shadowBlur = 4
+    ctx.fillText(config.symbol, 0, 0)
+    ctx.restore()
 
     ctx.restore()
 }
@@ -646,13 +688,13 @@ export const drawPowerUpIndicators = (
         ctx.fillRect(offsetX + 2, y + 18, 48 * ratio, 3)
         // Emoji
         ctx.globalAlpha = 1
-        ctx.font = '14px sans-serif'
+        ctx.font = `${CFG.WIDTH < 600 ? 18 : 14}px sans-serif`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(ind.label, offsetX + 14, y + 11)
         // Timer text
         ctx.fillStyle = '#FFFFFF'
-        ctx.font = '600 10px Inter, sans-serif'
+        ctx.font = `600 ${CFG.WIDTH < 600 ? 14 : 10}px Inter, sans-serif`
         ctx.textAlign = 'left'
         if (ind.maxTime > 1) {
             ctx.fillText(`${ind.timer.toFixed(1)}s`, offsetX + 26, y + 12)
@@ -973,7 +1015,7 @@ export const drawWorldBanner = (
 
     // World name text
     ctx.fillStyle = w.accent
-    ctx.font = '600 16px Inter, sans-serif'
+    ctx.font = `600 ${CFG.WIDTH < 600 ? 24 : 16}px Inter, sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(w.name, CFG.WIDTH / 2, by + bh / 2)
@@ -996,6 +1038,180 @@ export const applyShake = (
 }
 
 // ============================================================================
+// NEAR-MISS TEXT (7.1)
+// ============================================================================
+
+/** Draw floating "CLOSE!" text when near-miss triggers */
+export const drawNearMissText = (
+    ctx: CanvasRenderingContext2D,
+    e: EngineState
+): void => {
+    if (e.nearMissTimer <= 0) return
+    const alpha = clamp(e.nearMissTimer / MARKET_CONFIG.NEAR_MISS_DURATION, 0, 1)
+    const floatY = e.nearMissY - (1 - alpha) * 30
+
+    ctx.save()
+    ctx.globalAlpha = alpha
+    ctx.fillStyle = '#FFD700'
+    ctx.font = `700 ${CFG.WIDTH < 600 ? 24 : 16}px Inter, sans-serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(e.nearMissText, e.nearMissX, floatY)
+    // Glow ring
+    ctx.strokeStyle = 'rgba(255,215,0,0.4)'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.arc(e.nearMissX, floatY, 20 + (1 - alpha) * 15, 0, TWO_PI)
+    ctx.stroke()
+    ctx.restore()
+}
+
+// ============================================================================
+// SPEED LINES (7.2)
+// ============================================================================
+
+/** Draw horizontal speed lines on tier change */
+export const drawSpeedLines = (
+    ctx: CanvasRenderingContext2D,
+    e: EngineState
+): void => {
+    if (e.speedLinesTimer <= 0) return
+    const alpha = clamp(e.speedLinesTimer / 1.5, 0, 1)
+    const lineCount = IS_MOBILE ? 6 : 10
+
+    ctx.save()
+    ctx.globalAlpha = alpha * 0.5
+    ctx.strokeStyle = '#FFFFFF'
+    ctx.lineWidth = 1.5
+
+    for (let i = 0; i < lineCount; i++) {
+        const y = (CFG.HEIGHT / (lineCount + 1)) * (i + 1)
+        const progress = (1 - alpha) * CFG.WIDTH
+        const startX = CFG.WIDTH / 2 - progress * 0.5
+        const endX = CFG.WIDTH / 2 + progress * 0.5
+        ctx.beginPath()
+        ctx.moveTo(startX, y + (Math.random() - 0.5) * 8)
+        ctx.lineTo(endX, y + (Math.random() - 0.5) * 8)
+        ctx.stroke()
+    }
+    ctx.restore()
+}
+
+// ============================================================================
+// COMBO PULSE BORDER (7.3)
+// ============================================================================
+
+/** Draw blue border glow when combo hits x5 milestones */
+export const drawComboPulse = (
+    ctx: CanvasRenderingContext2D,
+    e: EngineState
+): void => {
+    if (e.comboPulseTimer <= 0) return
+    const alpha = clamp(e.comboPulseTimer / 0.5, 0, 1)
+    const thickness = 3 + alpha * 4
+
+    ctx.save()
+    ctx.globalAlpha = alpha * 0.6
+    ctx.strokeStyle = '#0052FF'
+    ctx.lineWidth = thickness
+    ctx.strokeRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
+    // Inner glow
+    ctx.globalAlpha = alpha * 0.2
+    ctx.strokeStyle = '#88CCFF'
+    ctx.lineWidth = thickness * 2
+    ctx.strokeRect(2, 2, CFG.WIDTH - 4, CFG.HEIGHT - 4)
+    ctx.restore()
+}
+
+// ============================================================================
+// TUTORIAL HINT (6.3)
+// ============================================================================
+
+/** Draw pulsing "TAP!" hint during tutorial phase */
+export const drawTutorialHint = (
+    ctx: CanvasRenderingContext2D,
+    e: EngineState
+): void => {
+    if (!e.showTutorial) return
+    const pulse = 0.6 + Math.sin(e.gameTime * 4) * 0.4
+
+    ctx.save()
+    ctx.globalAlpha = pulse
+
+    // Hand icon area
+    const hx = CFG.PLAYER_X + CFG.PLAYER_SIZE + 30
+    const hy = CFG.GROUND - 60
+
+    // Arrow pointing down (tap gesture)
+    ctx.fillStyle = '#FFFFFF'
+    ctx.font = `700 ${CFG.WIDTH < 600 ? 28 : 18}px Inter, sans-serif`
+    ctx.textAlign = 'center'
+    ctx.fillText('TAP!', hx, hy - 10)
+
+    // Finger icon
+    ctx.font = `${CFG.WIDTH < 600 ? 36 : 24}px sans-serif`
+    ctx.fillText('👆', hx, hy + 18)
+
+    // Subtle background pill
+    ctx.globalAlpha = pulse * 0.2
+    ctx.fillStyle = '#0052FF'
+    ctx.beginPath()
+    ctx.roundRect(hx - 32, hy - 28, 64, 60, 12)
+    ctx.fill()
+
+    ctx.restore()
+}
+
+// ============================================================================
+// MARKET INDICATOR — REMOVED (bull/bear mechanics disabled)
+// ============================================================================
+
+/** Draw market state indicator pill — DISABLED */
+export const drawMarketIndicator = (
+    ctx: CanvasRenderingContext2D,
+    e: EngineState
+): void => {
+    // Market mechanics disabled for cleaner gameplay
+    return
+}
+
+// ============================================================================
+// RUG PULL WARNING (8.4)
+// ============================================================================
+
+/** Draw rug pull visual: flashing warning + ground cracks */
+export const drawRugPullWarning = (
+    ctx: CanvasRenderingContext2D,
+    e: EngineState
+): void => {
+    if (!e.rugPullActive) return
+
+    // Flashing "RUG PULL" banner
+    const flash = Math.sin(e.gameTime * 8) > 0 ? 1 : 0.5
+    ctx.save()
+    ctx.globalAlpha = flash * 0.9
+    ctx.fillStyle = '#FF3050'
+    ctx.font = `700 ${CFG.WIDTH < 600 ? 20 : 14}px Inter, sans-serif`
+    ctx.textAlign = 'center'
+    ctx.fillText('⚠️ RUG PULL!', CFG.WIDTH / 2, 25)
+
+    // Ground cracks/holes
+    ctx.globalAlpha = 0.6
+    ctx.fillStyle = '#1a1a2e'
+    for (const hx of e.rugPullHoles) {
+        const hw = 30 + Math.sin(hx * 0.1) * 15
+        ctx.fillRect(hx - hw / 2, CFG.GROUND, hw, CFG.HEIGHT - CFG.GROUND)
+    }
+
+    // Red tint overlay
+    ctx.globalAlpha = 0.08 * flash
+    ctx.fillStyle = '#FF0000'
+    ctx.fillRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
+
+    ctx.restore()
+}
+
+// ============================================================================
 // MAIN DRAW COMPOSITE
 // ============================================================================
 
@@ -1011,17 +1227,20 @@ export const drawFrame = (
 ): void => {
     const w = getWorld(e.score)
 
-    // Clear with world sky gradient (prevents black background)
-    const skyGradient = ctx.createLinearGradient(0, 0, 0, CFG.GROUND)
-    skyGradient.addColorStop(0, w.skyTop)
-    skyGradient.addColorStop(0.45, w.skyMid)
-    skyGradient.addColorStop(1, w.skyBottom)
-    ctx.fillStyle = skyGradient
+    // Clear with cached world sky gradient (prevents black background)
+    ctx.fillStyle = getSkyGradient(ctx, w, e.worldIndex)
     ctx.fillRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
 
-    // Camera shake
+    // Camera shake + zoom (7.4)
     ctx.save()
     applyShake(ctx, e)
+    if (e.cameraZoom < 1) {
+        const cx = CFG.WIDTH / 2
+        const cy = CFG.HEIGHT / 2
+        ctx.translate(cx, cy)
+        ctx.scale(e.cameraZoom, e.cameraZoom)
+        ctx.translate(-cx, -cy)
+    }
 
     // Background layers
     drawSky(ctx, e, w)
@@ -1031,6 +1250,9 @@ export const drawFrame = (
     // Ground
     drawGround(ctx, e, w)
     drawGroundParticles(ctx, e, w)
+
+    // Rug pull ground damage (8.4)
+    drawRugPullWarning(ctx, e)
 
     // Game objects
     drawCandles(ctx, e, w)
@@ -1043,10 +1265,23 @@ export const drawFrame = (
     // Effects
     drawParticles(ctx, e)
 
+    // Near-miss text (7.1)
+    drawNearMissText(ctx, e)
+
+    // Speed lines (7.2)
+    drawSpeedLines(ctx, e)
+
+    // Combo pulse border (7.3)
+    drawComboPulse(ctx, e)
+
+    // Tutorial hint (6.3)
+    drawTutorialHint(ctx, e)
+
     // UI (canvas-rendered)
     drawWorldBanner(ctx, e, w)
     drawPowerUpIndicators(ctx, e)
+    drawMarketIndicator(ctx, e)
 
-    // End shake transform
+    // End shake + zoom transform
     ctx.restore()
 }
