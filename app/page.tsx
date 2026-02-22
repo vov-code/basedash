@@ -228,15 +228,15 @@ export default function Home() {
   // Auto-enter after timeout (20s first visit, 10s subsequent)
   useEffect(() => {
     if (hasEntered) return
-    
+
     const isFirstVisit = entryVisitCount === 0
     const timeout = isFirstVisit ? 20000 : 10000
-    
+
     const t = setTimeout(() => {
       handleEnter()
     }, timeout)
-    setEntryTimer(t)
-    
+    setEntryTimer(Number(t))
+
     return () => clearTimeout(t)
   }, [hasEntered, entryVisitCount])
 
