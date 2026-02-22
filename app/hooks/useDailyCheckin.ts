@@ -7,7 +7,7 @@ import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS } from '@/app/contracts'
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 const SECONDS_IN_DAY = BigInt(86400)
 
-export function useDailyCheckin(address: `0x${string}` | undefined) {
+export function useDailyCheckin(address: `0x${string}` | undefined, enabled = true) {
   const [streak, setStreak] = useState(0)
   const [lastCheckIn, setLastCheckIn] = useState<bigint>(BigInt(0))
 
@@ -19,7 +19,7 @@ export function useDailyCheckin(address: `0x${string}` | undefined) {
     functionName: 'addressToFid',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address && isContractReady,
+      enabled: !!address && isContractReady && enabled,
       refetchInterval: 60000,
     },
   })
@@ -30,7 +30,7 @@ export function useDailyCheckin(address: `0x${string}` | undefined) {
     functionName: 'getCheckInStatus',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address && isContractReady,
+      enabled: !!address && isContractReady && enabled,
       refetchInterval: 60000,
     },
   })

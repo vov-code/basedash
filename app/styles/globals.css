@@ -1446,6 +1446,31 @@ body.game-active {
   }
 }
 
+/* Game-over overlay fade in — smooth death transition (item 9) */
+@keyframes deathFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+
+  to {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+}
+
+/* Retry button pop in animation */
+@keyframes retryPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
 
 /* ============================================================================
    REDUCED MOTION — Accessibility

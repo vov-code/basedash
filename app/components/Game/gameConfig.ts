@@ -365,6 +365,10 @@ export interface EngineState {
     rugPullHoles: number[]
     /** Candles spawned so far this run (for early-game guard) */
     spawnCount: number
+    /** Shield flash overlay timer (item 4) */
+    shieldFlashTimer: number
+    /** Moon boost golden HUD pulse active (item 4) */
+    moonBoostPulseActive: boolean
 }
 
 // ============================================================================
@@ -396,8 +400,10 @@ export const CFG = {
     BUFFER: 0.12,
     ROT_SPEED: 11.0,
     TILT_SPEED: 18,
-    SQUASH_LAND: -0.28,  // Strong squash on landing (item 6)
-    SQUASH_JUMP: 0.18,   // Stretch on jump takeoff (item 6)
+    SQUASH_LAND: -0.35,  // Strong squash on landing (item 6)
+    SQUASH_JUMP: 0.22,   // Stretch on jump takeoff (item 6)
+    BREATHE_SPEED: 1.5,  // Idle breathing oscillation speed
+    BREATHE_AMP: 0.025,  // Idle breathing amplitude
 
     DASH_SPEED: 200,
     DASH_DURATION: 0.15,
@@ -847,6 +853,8 @@ export const createEngine = (): EngineState => ({
     nearMissY: 0,
     rugPullHoles: [],
     spawnCount: 0,
+    shieldFlashTimer: 0,
+    moonBoostPulseActive: false,
 })
 
 // ============================================================================
@@ -861,9 +869,13 @@ export const createEngine = (): EngineState => ({
  */
 export const spawnPattern = (e: EngineState): void => {
     e.spawnCount++
-    const diff = clamp(e.score / 3500, 0, 1)
-    // First 4 candles guaranteed simple — brief safe window, then difficulty ramps FAST
-    const complexity = e.spawnCount <= 4 ? 0 : Math.min(5, Math.floor(e.score / 450))
+    // Smooth exponential difficulty — no abrupt safe zone (item 1)
+    const diff = 1 - Math.exp(-e.score / 2500)
+    // Time-based warmup: first 8s is gentler
+    const timeFactor = clamp(e.gameTime / 8, 0.4, 1.0)
+    const effectiveDiff = diff * timeFactor
+    // Smooth complexity ramp instead of hard 4-candle cutoff
+    const complexity = Math.min(5, Math.floor(effectiveDiff * 6))
     const startX = CFG.WIDTH + 140
     const baseH = lerp(62, 105, diff)
     const baseW = lerp(22, 38, diff)
@@ -990,8 +1002,10 @@ export const spawnPattern = (e: EngineState): void => {
         spawnPowerUp(e)
     }
 
-    // Calculate gap based on difficulty — generous early spacing for fun factor
-    const baseGap = e.spawnCount <= 5 ? CFG.BASE_SPAWN_GAP * 1.1 : lerp(CFG.BASE_SPAWN_GAP, CFG.MIN_SPAWN_GAP, diff)
+    // Calculate gap — smooth ramp from generous to tight (item 1)
+    const gapDiff = 1 - Math.exp(-e.score / 2500)
+    const timeFac = clamp(e.gameTime / 8, 0.5, 1.0)
+    const baseGap = lerp(CFG.BASE_SPAWN_GAP * 1.15, CFG.MIN_SPAWN_GAP, gapDiff * timeFac)
     e.nextSpawnDistance = e.distance + baseGap * rand(0.92, 1.12)
 
     // Cleanup off-screen candles

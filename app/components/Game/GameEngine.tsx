@@ -642,13 +642,16 @@ export default function GameEngine({
     if (!e.alive) return
 
     e.gameTime += dt
-    e.difficulty = clamp(e.score / 4000, 0, 1)
+    // Smooth exponential difficulty (item 1)
+    e.difficulty = 1 - Math.exp(-e.score / 2500)
+    // Time-based warmup: first 8s gentler
+    const warmup = clamp(e.gameTime / 8, 0.5, 1.0)
     const speedTier = getSpeed(e.score)
     const speedMult = speedTier.multiplier
     const slowMult = e.slowdownTimer > 0 ? CFG.SLOW_MULT : 1
     const nearMissMult = e.nearMissTimer > 0 ? 0.4 : 1 // near-miss slow-mo
     const bearMult = 1 // Market mechanics disabled
-    const frameSpeed = CFG.BASE_SPEED * speedMult * slowMult * nearMissMult * bearMult
+    const frameSpeed = CFG.BASE_SPEED * speedMult * slowMult * nearMissMult * bearMult * warmup
 
     e.speed = lerp(e.speed, frameSpeed, dt * 4)
     e.distance += e.speed * dt
@@ -769,6 +772,10 @@ export default function GameEngine({
     }
 
     // Squash/stretch animation
+    // Breathe idle animation when on ground (item 6)
+    if (p.onGround && e.alive && Math.abs(p.squash) < 0.01) {
+      p.squash = Math.sin(e.gameTime * CFG.BREATHE_SPEED) * CFG.BREATHE_AMP
+    }
     p.squash = lerp(p.squash, 0, dt * 12)
     p.scale = 1 + p.squash * (p.velocityY < 0 ? -0.3 : 0.4)
 
@@ -867,6 +874,7 @@ export default function GameEngine({
             // Shield check (diamond hands power-up)
             if (e.shieldActive) {
               e.shieldActive = false
+              e.shieldFlashTimer = 0.3  // White screen flash (item 4)
               p.invincible = 0.8
               p.flash = 0.8
               e.shakeTimer = 0.2
@@ -984,10 +992,19 @@ export default function GameEngine({
           case 'moon_boost':
             e.moonBoostTimer = POWERUP_CONFIG.TYPES.moon_boost.duration
             e.scoreMultiplier = 2
+            e.moonBoostPulseActive = true  // Golden HUD pulse (item 4)
             break
           case 'whale_mode':
             e.whaleTimer = POWERUP_CONFIG.TYPES.whale_mode.duration
             e.slowdownTimer = Math.max(e.slowdownTimer, POWERUP_CONFIG.TYPES.whale_mode.duration)
+            // Whale mode: pitch-shift music down (item 4/5)
+            try {
+              const ctx = getAudioCtx()
+              if (ctx && musicGain) {
+                // We can't change playbackRate of setInterval, but we can slow the gain envelope
+                musicGain.gain.setValueAtTime(0.18, ctx.currentTime)
+              }
+            } catch { /* ignore */ }
             break
         }
 
@@ -1015,11 +1032,24 @@ export default function GameEngine({
       if (e.moonBoostTimer <= 0) {
         e.moonBoostTimer = 0
         e.scoreMultiplier = 1
+        e.moonBoostPulseActive = false  // End golden HUD pulse (item 4)
       }
     }
     if (e.whaleTimer > 0) {
       e.whaleTimer -= dt
+      if (e.whaleTimer <= 0) {
+        // Restore music volume after whale mode (item 4)
+        try {
+          const ctx = getAudioCtx()
+          if (ctx && musicGain) {
+            musicGain.gain.setValueAtTime(0.25, ctx.currentTime)
+          }
+        } catch { /* ignore */ }
+      }
     }
+
+    // Shield flash timer (item 4)
+    if (e.shieldFlashTimer > 0) e.shieldFlashTimer -= dt
 
     // --- World transitions ---
     const newWorldIdx = getWorldIndex(e.score)
@@ -1660,7 +1690,7 @@ export default function GameEngine({
   // ========================================================================
 
   return (
-    <div ref={containerRef} className="relative w-full h-full max-w-5xl mx-auto flex items-center justify-center border-none min-h-0" style={{ padding: 0 }}>
+    <div ref={containerRef} className="relative w-full h-full mx-auto flex items-center justify-center border-none min-h-0" style={{ padding: 0 }}>
       <div
         className="relative overflow-hidden w-full h-full sm:border sm:border-slate-200 sm:shadow-[0_18px_42px_rgba(15,23,42,0.12)] game-container bg-gradient-to-br from-white via-[#f5f8ff] to-[#e8f0fe] sm:rounded-none"
         style={{ width: `${dims.w}px`, height: `${dims.h}px` }}
@@ -1681,7 +1711,7 @@ export default function GameEngine({
 
         {/* ===================== MENU OVERLAY ===================== */}
         {mode === 'menu' && (
-          <div className="game-overlay" style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(0px)' }}>
+          <div className="game-overlay" style={{ background: 'rgba(255,255,255,0.45)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
             <div className="w-full max-w-[180px] border border-white/60 bg-white/40 backdrop-blur-3xl px-5 py-6 shadow-[0_24px_80px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.9)] mx-auto relative mt-[12%] flex flex-col items-center gap-4 rounded-[20px]"
               style={{ animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
 
@@ -1737,7 +1767,7 @@ export default function GameEngine({
 
         {/* ===================== GAME OVER OVERLAY ===================== */}
         {mode === 'gameover' && (
-          <div className="game-overlay animate-[backdropFade_0.4s_ease-out_forwards] bg-black/20 backdrop-blur-[2px]">
+          <div className="game-overlay" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', animation: 'deathFadeIn 0.6s ease-out forwards' }}>
             <div className="w-full h-full flex items-center justify-center p-2">
               <div className="w-full max-w-[300px] rounded-2xl bg-white border-2 border-[#0A0B14] shadow-none px-4 py-4 mx-auto relative overflow-hidden">
 
@@ -1827,6 +1857,25 @@ export default function GameEngine({
                 <button onClick={startGame} className={`w-full border-2 border-[#0A0B14] bg-white px-3 py-3 text-[12px] font-black text-[#0A0B14] uppercase tracking-widest hover:bg-[#0A0B14] hover:text-white active:scale-[0.98] transition-all rounded-none ${retryVisible ? 'opacity-100' : 'opacity-0 scale-95 pointer-events-none'}`} style={retryVisible ? { animation: 'retryPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards' } : undefined}>
                   RUN IT BACK
                 </button>
+
+                {/* Share button — Farcaster Frame (item 10) */}
+                {retryVisible && (
+                  <button
+                    onClick={() => {
+                      const shareUrl = `${window.location.origin}/api/frames/result?score=${deathScore}&address=${address || ''}`
+                      const shareText = `I scored ${formatMarketCap(deathScore)} PNL in Base Dash! 🎮\n\nCan you beat my score?`
+                      if (navigator.share) {
+                        navigator.share({ title: 'Base Dash Score', text: shareText, url: shareUrl }).catch(() => { })
+                      } else {
+                        navigator.clipboard.writeText(`${shareText}\n${shareUrl}`).catch(() => { })
+                      }
+                    }}
+                    className="w-full mt-2 border-2 border-[#8B5CF6] bg-[#8B5CF6]/10 px-3 py-2.5 text-[10px] font-black text-[#8B5CF6] uppercase tracking-widest hover:bg-[#8B5CF6] hover:text-white active:scale-[0.98] transition-all rounded-none flex items-center justify-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" /></svg>
+                    SHARE SCORE
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1913,7 +1962,6 @@ export default function GameEngine({
           </>
         )}
       </div>
-      <div className="mt-1 text-center hidden sm:block lg:hidden"><p className="text-slate-400 text-[10px] font-medium">tap to jump</p></div>
     </div >
   )
 }

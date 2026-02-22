@@ -78,7 +78,7 @@ function ParticleChaos() {
       pulseSpeed: number
     }
 
-    const COUNT = Math.min(IS_MOBILE_PAGE ? 40 : 120, Math.floor(w * h / 8000))
+    const COUNT = Math.min(IS_MOBILE_PAGE ? 25 : 50, Math.floor(w * h / 12000))
     const CONNECTION_DIST = w < 600 ? 100 : 140
     const CONNECTION_DIST_SQ = CONNECTION_DIST * CONNECTION_DIST
     const SHOW_CONNECTIONS = COUNT <= 80 && !IS_MOBILE_PAGE
@@ -195,7 +195,7 @@ export default function Home() {
   const [desktopBypass, setDesktopBypass] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('game')
   const { address, isConnected, connectWallet, disconnectWallet } = useWallet()
-  const { checkInStatus, canSubmitScore } = useDailyCheckin(address)
+  const { checkInStatus, canSubmitScore } = useDailyCheckin(address, activeTab === 'profile')
   const networkLabel = process.env.NEXT_PUBLIC_USE_TESTNET === 'true' ? 'base sepolia' : 'base mainnet'
 
   // ========================================================================
@@ -502,51 +502,7 @@ export default function Home() {
                   </p>
                 </div>
 
-                {/* How to play — compact degen trading cards for mobile */}
-                <div className="mt-3 px-3 grid grid-cols-3 gap-2">
-                  <div className="p-5 border border-[#e5e7eb] bg-white">
-                    <div className="w-8 h-8 bg-[#FFF0F2] flex items-center justify-center mb-3">
-                      <svg className="w-4 h-4 text-[#F6465D]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </div>
-                    <p className="text-[11px] font-semibold text-[#1a2030] mb-0.5">dodge reds</p>
-                    <p className="text-[9px] text-[#9ca3af]">bearish candles = rekt</p>
-                  </div>
-                  <div className="p-5 border border-[#e5e7eb] bg-white">
-                    <div className="w-8 h-8 bg-[#e8f8f0] flex items-center justify-center mb-3">
-                      <svg className="w-4 h-4 text-[#0ECB81]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <p className="text-[11px] font-semibold text-[#1a2030] mb-0.5">grab greens</p>
-                    <p className="text-[9px] text-[#9ca3af]">bullish candles = profit</p>
-                  </div>
-                  <div className="p-5 border border-[#e5e7eb] bg-white">
-                    <div className="w-8 h-8 bg-[#eef4ff] flex items-center justify-center mb-3">
-                      <svg className="w-4 h-4 text-[#0052FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                      </svg>
-                    </div>
-                    <p className="text-[11px] font-semibold text-[#1a2030] mb-0.5">send on-chain</p>
-                    <p className="text-[9px] text-[#9ca3af]">save your high score to base</p>
-                  </div>
-                </div>
 
-                {/* Features — compact pills */}
-                <div className="mt-3 px-3 grid grid-cols-4 gap-2">
-                  {[
-                    { label: '10 markets', value: 'explore' },
-                    { label: '9 tiers', value: 'survive' },
-                    { label: 'on-chain', value: 'compete' },
-                    { label: 'daily', value: 'streak' },
-                  ].map((f) => (
-                    <div key={f.label} className="p-2 border border-[#e5e7eb] bg-[#f8f9fc] text-center rounded-lg">
-                      <p className="text-[8px] text-[#9ca3af] mb-0">{f.value}</p>
-                      <p className="text-[10px] font-semibold text-[#1a2030]">{f.label}</p>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
 

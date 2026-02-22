@@ -112,6 +112,18 @@ export default function Leaderboard() {
     },
   })
 
+  // Get player's on-chain rank (works even outside top 33) — item 18
+  const { data: playerRankData } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: GAME_LEADERBOARD_ABI,
+    functionName: 'getPlayerRank',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address && CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000',
+      refetchInterval: 30000,
+    },
+  })
+
   const scores = useMemo(() => {
     const data = (leaderboard as unknown as PlayerScore[]) || []
     return data.filter((s) => s.player !== '0x0000000000000000000000000000000000000000')
@@ -235,13 +247,19 @@ export default function Leaderboard() {
         ))}
       </div>
 
-      {/* User rank indicator (Improvement #3) */}
-      {userRank && (
+      {/* User rank indicator — shows for all connected wallets (item 18) */}
+      {address && (
         <div className="mt-4 flex items-center justify-center gap-2 border border-[#0052FF]/20 bg-[#0052FF]/5 px-4 py-3 rounded-xl shadow-sm">
           <svg className="w-4 h-4 text-[#0052FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
-          <span className="text-sm font-black text-[#0052FF] uppercase tracking-wide">your rank: #{userRank}</span>
+          <span className="text-sm font-black text-[#0052FF] uppercase tracking-wide">
+            {userRank
+              ? `your rank: #${userRank} of ${scores.length}`
+              : playerRankData
+                ? `your position: #${bigIntToNumber(playerRankData as bigint)} of ${scores.length}+`
+                : 'play to rank'}
+          </span>
         </div>
       )}
 

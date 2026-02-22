@@ -118,7 +118,7 @@ export const drawClouds = (
 ): void => {
     ctx.save()
     for (const c of e.clouds) {
-        const x = ((c.x - e.cloudOffset * c.speed) % (CFG.WIDTH + c.width * 2)) - c.width
+        const x = ((c.x - e.cloudOffset * c.speed * 3) % (CFG.WIDTH + c.width * 2)) - c.width
         ctx.globalAlpha = c.alpha
         ctx.fillStyle = w.cloudColor
 
@@ -383,12 +383,14 @@ const drawSingleCandle = (
     ctx.save()
 
     // ===== WICK — clean thin trading line =====
+    // Varied wick heights based on body size (item 8)
+    const wickExtend = Math.max(8, c.bodyHeight * 0.15 + (c.id % 5) * 3)
     ctx.globalAlpha = 0.7
     ctx.strokeStyle = a
     ctx.lineWidth = 2
     ctx.beginPath()
-    ctx.moveTo(cx, c.wickTop)
-    ctx.lineTo(cx, c.wickBottom)
+    ctx.moveTo(cx, c.wickTop - (c.id % 3) * 2)
+    ctx.lineTo(cx, c.wickBottom + (c.id % 4) * 2)
     ctx.stroke()
 
     // Small wick caps (horizontal ticks)
@@ -467,6 +469,13 @@ const drawSingleCandle = (
             ctx.strokeStyle = w.greenA
             ctx.lineWidth = 2
             ctx.strokeRect(c.x - 3, drawY - 3, c.width + 6, c.bodyHeight + 6)
+
+            // Green glow effect (item 8)
+            ctx.globalAlpha = 0.08 + Math.sin(t * 2.5) * 0.04
+            ctx.fillStyle = w.greenA
+            ctx.beginPath()
+            ctx.arc(cx, drawY + c.bodyHeight / 2, c.width * 0.9, 0, TWO_PI)
+            ctx.fill()
 
             // Second outer ring pulse
             ctx.globalAlpha = 0.08 + Math.sin(t * 2 + 1) * 0.05
@@ -1284,4 +1293,57 @@ export const drawFrame = (
 
     // End shake + zoom transform
     ctx.restore()
+
+    // Shield flash overlay (item 4)
+    if (e.shieldFlashTimer > 0) {
+        const flashAlpha = clamp(e.shieldFlashTimer / 0.3, 0, 1) * 0.6
+        ctx.save()
+        ctx.globalAlpha = flashAlpha
+        ctx.fillStyle = '#FFFFFF'
+        ctx.fillRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
+        ctx.restore()
+    }
+
+    // Moon boost golden pulse border (item 4)
+    if (e.moonBoostPulseActive && e.moonBoostTimer > 0) {
+        const pulse = 0.3 + Math.sin(e.gameTime * 6) * 0.2
+        ctx.save()
+        ctx.globalAlpha = pulse
+        ctx.strokeStyle = '#FFD700'
+        ctx.lineWidth = 4 + Math.sin(e.gameTime * 8) * 2
+        ctx.strokeRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
+        // Inner golden glow
+        ctx.globalAlpha = pulse * 0.3
+        ctx.strokeStyle = '#FFA500'
+        ctx.lineWidth = 8
+        ctx.strokeRect(2, 2, CFG.WIDTH - 4, CFG.HEIGHT - 4)
+        ctx.restore()
+    }
+
+    // World-specific edge effects (item 7)
+    if (w.name.includes('FLASHCRASH') || e.worldIndex === 7) {
+        // Red static noise strips along edges
+        ctx.save()
+        ctx.globalAlpha = 0.06 + Math.sin(e.gameTime * 12) * 0.03
+        ctx.fillStyle = '#FF3050'
+        for (let y = 0; y < CFG.HEIGHT; y += 4) {
+            const w1 = 3 + Math.random() * 8
+            ctx.fillRect(0, y, w1, 2)
+            ctx.fillRect(CFG.WIDTH - w1, y, w1, 2)
+        }
+        ctx.restore()
+    }
+    if (w.name.includes('REKT') || e.worldIndex === 8) {
+        // Red vignette
+        ctx.save()
+        const vig = ctx.createRadialGradient(
+            CFG.WIDTH / 2, CFG.HEIGHT / 2, CFG.WIDTH * 0.3,
+            CFG.WIDTH / 2, CFG.HEIGHT / 2, CFG.WIDTH * 0.7
+        )
+        vig.addColorStop(0, 'rgba(255,0,0,0)')
+        vig.addColorStop(1, 'rgba(255,0,0,0.08)')
+        ctx.fillStyle = vig
+        ctx.fillRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
+        ctx.restore()
+    }
 }
