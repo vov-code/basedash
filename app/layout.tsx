@@ -111,11 +111,11 @@ export const metadata: Metadata = {
     siteName: 'Base Dash',
     images: [
       {
-        url: '/og-image.png',
+        url: '/og-image.svg',
         width: 1200,
         height: 630,
         alt: 'base dash — endless runner on base',
-        type: 'image/png',
+        type: 'image/svg+xml',
       },
     ],
   },
@@ -127,19 +127,13 @@ export const metadata: Metadata = {
     creator: '@base',
   },
   icons: {
-    icon: [
-      { url: '/icons/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
-      { url: '/icons/icon-512.svg', sizes: '512x512', type: 'image/svg+xml' },
-    ],
-    apple: [
-      { url: '/icons/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
-      { url: '/icons/icon-512.svg', sizes: '512x512', type: 'image/svg+xml' },
-    ],
+    icon: '/base-logo.png',
+    apple: '/base-logo.png',
   },
   // Farcaster Frame v2 metadata
   other: {
     'fc:frame': 'vNext',
-    'fc:frame:image': `${metadataBase.toString()}og-image.png`,
+    'fc:frame:image': `${metadataBase.toString()}og-image.svg`,
     'fc:frame:image:aspect_ratio': '1.91:1',
     'fc:frame:button:1': 'Play Base Dash 🏃‍♂️',
     'fc:frame:button:1:action': 'link',
@@ -169,21 +163,6 @@ export default function RootLayout({
     >
       <head>
         <link rel="stylesheet" href="/onchainkit.css" />
-        {/* Preload critical fonts */}
-        <link
-          rel="preload"
-          href="/_next/static/media/inter-var-latin.woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preload"
-          href="/_next/static/media/jetbrains-mono-var-latin.woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
         {/* Preload critical images */}
         <link
           rel="preload"

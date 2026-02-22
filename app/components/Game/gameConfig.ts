@@ -16,8 +16,8 @@
 // ============================================================================
 
 export const IS_MOBILE =
-    typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1 &&
-    (typeof window !== 'undefined' ? window.innerWidth < 768 : true)
+    typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0 &&
+    (typeof window !== 'undefined' ? window.innerWidth < 1100 : true)
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -383,7 +383,7 @@ export const CFG = {
 
     PLAYER_X: 180,
     PLAYER_SIZE: 42,
-    HITBOX_FRAC: 0.14,  // 14% inset each side — scales with screen size (16)
+    HITBOX_FRAC: 0.12,  // 12% inset each side — fairly tight for precision dodging
     HITBOX: 6,          // computed at runtime from HITBOX_FRAC × PLAYER_SIZE
 
     STEP: 1 / 60,
@@ -391,8 +391,8 @@ export const CFG = {
     UI_RATE: 1 / 10,
 
     GRAVITY: 2400,
-    GRAVITY_UP: 1900,   // Lighter going up — floaty, readable arc (item 1)
-    GRAVITY_DOWN: 3100, // Heavier falling — snappy, responsive (item 1)
+    GRAVITY_UP: 2100,   // Lighter going up — floaty, readable arc but fast enough
+    GRAVITY_DOWN: 3100, // Heavier falling — snappy, responsive
     JUMP: -820,
     DOUBLE_JUMP: -680,
     MAX_FALL: 1200,
@@ -457,7 +457,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'II. DEGEN',
-        startScore: 500,
+        startScore: 150,
         skyTop: '#F8FAFF',
         skyMid: '#EBF0FF',
         skyBottom: '#DCE4FF',
@@ -475,7 +475,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'III. DIAMOND',
-        startScore: 1200,
+        startScore: 350,
         skyTop: '#FAFBFF',
         skyMid: '#F0F2FF',
         skyBottom: '#E2E6FF',
@@ -493,7 +493,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'IV. WHALE',
-        startScore: 2000,
+        startScore: 600,
         skyTop: '#FAF8FF',
         skyMid: '#F2EBFF',
         skyBottom: '#E5D5FF',
@@ -511,7 +511,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'V. MOON',
-        startScore: 3000,
+        startScore: 900,
         skyTop: '#F0F4FF',
         skyMid: '#E0EAFF',
         skyBottom: '#C8D8FF',
@@ -529,7 +529,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'VI. FOMO',
-        startScore: 4200,
+        startScore: 1200,
         skyTop: '#F5FFF5',
         skyMid: '#E8FFE8',
         skyBottom: '#D0F8D0',
@@ -547,7 +547,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'VII. DARKPOOL',
-        startScore: 5600,
+        startScore: 1550,
         skyTop: '#F8F8FA',
         skyMid: '#EBEBF0',
         skyBottom: '#DCDCE8',
@@ -565,7 +565,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'VIII. FLASHCRASH',
-        startScore: 7200,
+        startScore: 1950,
         skyTop: '#F0F5FF',
         skyMid: '#E0EAFF',
         skyBottom: '#C8D8FF',
@@ -583,7 +583,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'IX. REKT',
-        startScore: 9000,
+        startScore: 2400,
         skyTop: '#FFF8F8',
         skyMid: '#FFE8E8',
         skyBottom: '#FFD0D0',
@@ -601,7 +601,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         name: 'X. ASCENSION',
-        startScore: 11000,
+        startScore: 3000,
         skyTop: '#F0F0FF',
         skyMid: '#E0E0F8',
         skyBottom: '#D0D0F0',
@@ -796,6 +796,12 @@ export const createCandle = (
     }
 }
 
+// ============================================================================
+// SPAWN LOGIC & PATTERNS
+// ============================================================================
+
+const FIRST_SPAWN_DIST = 180 // Spawns first obstacle very quickly (Item 9)
+
 export const createEngine = (): EngineState => ({
     player: createPlayer(),
     candles: [],
@@ -810,7 +816,7 @@ export const createEngine = (): EngineState => ({
     combo: 0,
     maxCombo: 0,
     slowdownTimer: 0,
-    nextSpawnDistance: IS_MOBILE ? 220 : 300,
+    nextSpawnDistance: FIRST_SPAWN_DIST,
     nextCandleId: 1,
     shakeX: 0, shakeY: 0, shakeTimer: 0,
     worldName: WORLDS[0].name,
@@ -865,7 +871,7 @@ export const createEngine = (): EngineState => ({
  * Spawn a pattern of candles at the right edge of the screen.
  * Patterns scale with difficulty (complexity 0-5).
  * All patterns are designed to be beatable with single or double jump.
- * Green candles ~25% frequency — they are valuable rewards.
+ * Green candles only spawn after 10 red candles — learn the basics first.
  */
 export const spawnPattern = (e: EngineState): void => {
     e.spawnCount++
@@ -881,63 +887,77 @@ export const spawnPattern = (e: EngineState): void => {
     const baseW = lerp(22, 38, diff)
     const maxHM = 1.4 // always jumpable
 
+    // Green candles only after 10 red candles have been spawned
+    const allowGreen = e.spawnCount >= 10
+
     const push = (
         offset: number,
         kind: CandleKind,
         hM = 1,
         wM = 1,
-        moving = false
+        moving = false,
+        isAir = false, // Explicitly spawn as air candle to run under
+        yOffset?: number // Explicit Y offset for precise air candle height
     ): void => {
         const h = clamp(hM, 0.4, maxHM)
+        // Force red if green not yet allowed
+        const actualKind = (kind === 'green' && !allowGreen) ? 'red' : kind
         const candle = createCandle(
             e.nextCandleId++,
-            kind,
+            actualKind,
             startX + offset,
             baseH * rand(0.85, 1.1) * h,
             baseW * rand(0.9, 1.08) * clamp(wM, 0.6, 1.4)
         )
-        // Moving candles earlier — from score 600 (was 900)
-        if (moving || (e.score >= 600 && Math.random() < 0.12 * diff)) {
+        // Moving candles earlier — from score 150 (was 600)
+        if (moving || (e.score >= 150 && Math.random() < 0.12 * diff)) {
             candle.isMoving = true
             candle.moveAmplitude = rand(10, 24)
         }
-        // Air candles earlier — from score 300 (was 500), higher chance
-        if (e.score >= 300 && Math.random() < 0.20 * diff) {
-            const lift = rand(20, 55)
+        // Air candles earlier — force if isAir=true, else random from score 0 (was 300)
+        if (isAir || Math.random() < 0.25 * diff) {
+            // Lift enough to guarantee the player can safely run under it without jumping
+            // Use explicit yOffset if provided, otherwise use isAir bonus or random
+            const lift = yOffset !== undefined ? yOffset : (isAir ? rand(55, 75) : rand(25, 55))
             candle.bodyY -= lift; candle.y -= lift; candle.bodyTop -= lift
             candle.wickTop -= lift; candle.wickBottom -= lift
-            candle.isMoving = true
-            candle.moveAmplitude = rand(10, 22)
+            // Sometimes they also move
+            if (Math.random() > 0.5) {
+                candle.isMoving = true
+                candle.moveAmplitude = rand(10, 22)
+            }
         }
         e.candles.push(candle)
     }
 
-    // Pattern selection using weighted random — MORE GREEN CANDLES
+    // Pattern selection using weighted random — MORE GREEN CANDLES AND EARLY VARIETY
     const roll = Math.random()
 
-    // --- COMPLEXITY 0: Single candles with varied sizes from the start ---
+    // --- COMPLEXITY 0: Single candles & Early floating ducks from the start ---
     if (complexity === 0) {
-        if (roll < 0.18) push(0, 'red', 0.7, 1.3)  // short wide
-        else if (roll < 0.32) push(0, 'red', 0.6, 1.4)  // very short wide
-        else if (roll < 0.46) push(0, 'red', 1.2, 0.7)  // tall narrow
-        else if (roll < 0.58) push(0, 'red', 1.3, 0.6)  // very tall narrow
-        else if (roll < 0.70) push(0, 'red', 0.85)  // normal short
+        if (roll < 0.10) push(0, 'red', 0.8, 1.2)  // wide
+        else if (roll < 0.22) push(0, 'red', 1.35, 0.65)  // tall narrow (force jump)
+        else if (roll < 0.38) push(0, 'red', 0.9, 1.0, false, true, 65)  // AIR CANDLE (run under!)
+        else if (roll < 0.50) push(0, 'red', 1.25, 0.6, false, true, 70)  // TALL AIR CANDLE (run under!)
+        else if (roll < 0.60) push(0, 'red', 0.75, 1.1, false, true, 60)  // SHORT WIDE AIR CANDLE
+        else if (roll < 0.72) push(0, 'red', 0.85)  // normal short
         else if (roll < 0.82) push(0, 'red', 1.1)  // normal tall
         else if (roll < 0.90) push(0, 'red')  // normal
-        else push(0, 'green')  // green reward (10%)
+        else push(0, 'green', 1.0, 1.0, false, Math.random() > 0.6)  // green (60% chance it's in air)
 
-        // --- COMPLEXITY 1: Pairs with size variety ---
+        // --- COMPLEXITY 1: Pairs bringing "Jump then Duck" variety instantly ---
     } else if (complexity === 1) {
-        if (roll < 0.10) { push(0, 'red', 0.7, 1.3); push(160, 'red', 1.2, 0.7) }  // wide + tall
-        else if (roll < 0.20) { push(0, 'red', 0.85); push(145, 'red', 1.1) }
-        else if (roll < 0.30) { push(0, 'red', 1.1); push(155, 'red', 0.8) }
-        else if (roll < 0.40) { push(0, 'red', 0.6, 1.4); push(140, 'red', 1.3, 0.6) }  // extreme sizes
-        else if (roll < 0.50) { push(0, 'red', 1.3, 0.6); push(130, 'red', 0.7, 1.3) }  // tall + short
-        else if (roll < 0.60) { push(0, 'red'); push(130, 'red', 0.9) }
-        else if (roll < 0.70) { push(0, 'green', 0.8, 1.2); push(145, 'red', 1.1) }  // wide green
-        else if (roll < 0.78) { push(0, 'red', 1.05); push(150, 'red', 1.0) }
-        else if (roll < 0.86) { push(0, 'green'); push(145, 'red', 1.1) }
-        else { push(0, 'red'); push(130, 'green') }
+        if (roll < 0.10) { push(0, 'red', 0.9); push(150, 'red', 0.8, 1.0, false, true, 65) } // Jump normal -> Duck air
+        else if (roll < 0.20) { push(0, 'red', 0.8, 1.0, false, true, 65); push(150, 'red', 1.25, 0.6) } // Duck air -> Jump tall
+        else if (roll < 0.30) { push(0, 'red', 1.3, 0.6); push(140, 'red', 0.7, 1.3) } // Tall jump -> short wide jump
+        else if (roll < 0.40) { push(0, 'red', 1.0, 1.0, false, true, 65); push(160, 'green', 1.0, 1.0, false, true, 65) } // Duck air -> Duck green!
+        else if (roll < 0.48) { push(0, 'red', 1.2, 0.6, false, true, 70); push(145, 'red', 0.9) } // Tall duck -> normal
+        else if (roll < 0.56) { push(0, 'red', 0.85); push(145, 'red', 1.1) }
+        else if (roll < 0.64) { push(0, 'red'); push(130, 'red', 0.9) }
+        else if (roll < 0.72) { push(0, 'green', 0.8, 1.2); push(145, 'red', 1.1) } // Wide green -> Tall jump
+        else if (roll < 0.80) { push(0, 'green', 1.0, 1.0, false, true, 65); push(145, 'red', 1.1) } // Duck green -> Tall jump
+        else if (roll < 0.88) { push(0, 'red', 0.75, 1.1, false, true, 60); push(140, 'green', 0.9) } // Duck short -> green
+        else { push(0, 'red'); push(130, 'green', 1.0, 1.0, false, Math.random() > 0.5) }
 
         // --- COMPLEXITY 2: Triples, first mixed patterns ---
     } else if (complexity === 2) {
@@ -1002,8 +1022,8 @@ export const spawnPattern = (e: EngineState): void => {
         spawnPowerUp(e)
     }
 
-    // Calculate gap — smooth ramp from generous to tight (item 1)
-    const gapDiff = 1 - Math.exp(-e.score / 2500)
+    // Calculate gap — steep curve early to get fast quickly
+    const gapDiff = 1 - Math.exp(-e.score / 1500)
     const timeFac = clamp(e.gameTime / 8, 0.5, 1.0)
     const baseGap = lerp(CFG.BASE_SPAWN_GAP * 1.15, CFG.MIN_SPAWN_GAP, gapDiff * timeFac)
     e.nextSpawnDistance = e.distance + baseGap * rand(0.92, 1.12)
@@ -1050,51 +1070,67 @@ export const spawnPowerUp = (e: EngineState): void => {
 }
 
 // ============================================================================
+// PERFORMANCE TIER DETECTION
+// ============================================================================
+
+export type PerformanceTier = 'high' | 'low'
+
+/** Detect device performance tier based on available signals */
+export function detectPerformanceTier(): PerformanceTier {
+    if (typeof navigator === 'undefined') return 'high'
+    // deviceMemory API (Chrome/Edge)
+    const mem = (navigator as unknown as { deviceMemory?: number }).deviceMemory
+    if (mem !== undefined && mem < 4) return 'low'
+    // hardwareConcurrency — low core count = low tier
+    if (navigator.hardwareConcurrency !== undefined && navigator.hardwareConcurrency <= 2) return 'low'
+    // Small viewport + touch = likely budget phone
+    if (typeof window !== 'undefined' && window.innerWidth < 400 && navigator.maxTouchPoints > 0) return 'low'
+    return 'high'
+}
+
+/** Current performance tier — computed once at load */
+export let PERF_TIER: PerformanceTier = 'high'
+
+// ============================================================================
 // ADAPTIVE PHYSICS SYSTEM
 // ============================================================================
 
 export function updateGameConfig(width: number, height: number) {
     const isPortrait = height > width;
+    PERF_TIER = detectPerformanceTier()
+    const isLow = PERF_TIER === 'low'
 
     CFG.WIDTH = width;
     CFG.HEIGHT = height;
 
     if (isPortrait) {
         // --- PORTRAIT MODE (e.g. Base App / Mobile Vertical) ---
-        // Push ground to bottom safely (leaving room for UI)
         CFG.GROUND = height * 0.83;
-
-        // Push player far left for max reaction time
         CFG.PLAYER_X = width * 0.18;
-
-        // Player size — slightly smaller for cleaner mobile feel
         CFG.PLAYER_SIZE = clamp(width * 0.07, 24, 36);
         CFG.HITBOX = CFG.PLAYER_SIZE * 0.22;
 
-        // Physics logic requires lower speed on narrow screens
         const speedScale = clamp(width / 960, 0.45, 0.7);
         CFG.BASE_SPEED = clamp(360 * speedScale * 1.6, 220, 320);
         CFG.MAX_SPEED = clamp(680 * speedScale * 1.6, 400, 580);
 
-        // Floatier gravity and jumps to compensate for lower speed
         const physicsScale = clamp(height / 540, 0.8, 1.4);
         CFG.GRAVITY = 2400 * physicsScale * 0.9;
         CFG.JUMP = -820 * Math.sqrt(physicsScale) * 0.95;
         CFG.DOUBLE_JUMP = -680 * Math.sqrt(physicsScale) * 0.95;
         CFG.MAX_FALL = 1200 * physicsScale;
 
-        // Spawning needs to be tighter, but less dense for fun factor
         CFG.BASE_SPAWN_GAP = CFG.BASE_SPEED * 1.55;
         CFG.MIN_SPAWN_GAP = CFG.BASE_SPEED * 0.95;
         CFG.MAX_CANDLES_PATTERN = 2;
 
-        // Visuals optimized for battery & narrow viewport
-        CFG.PARTICLE_LIMIT = 40;
-        CFG.TRAIL_LIMIT = 2;
-        CFG.STAR_COUNT = 15;
-        CFG.CLOUD_COUNT = 3;
+        // Particle budgets — halved on low-end devices
+        CFG.PARTICLE_LIMIT = isLow ? 20 : 40;
+        CFG.TRAIL_LIMIT = isLow ? 1 : 2;
+        CFG.STAR_COUNT = isLow ? 8 : 15;
+        CFG.CLOUD_COUNT = isLow ? 2 : 3;
         CFG.MAX_CANDLES = 6;
-        CFG.GROUND_PARTICLE_COUNT = 8;
+        CFG.GROUND_PARTICLE_COUNT = isLow ? 4 : 8;
 
     } else {
         // --- LANDSCAPE MODE (Desktop / Tablet Horizontal) ---
@@ -1103,7 +1139,6 @@ export function updateGameConfig(width: number, height: number) {
         CFG.PLAYER_SIZE = clamp(width * 0.045, 34, 46);
         CFG.HITBOX = CFG.PLAYER_SIZE * 0.25;
 
-        // Scales natively by width
         const scale = clamp(width / 960, 0.6, 1.2);
         CFG.BASE_SPEED = 360 * scale;
         CFG.MAX_SPEED = 680 * scale;
@@ -1119,12 +1154,12 @@ export function updateGameConfig(width: number, height: number) {
 
         CFG.MAX_CANDLES_PATTERN = width < 768 ? 4 : 5;
 
-        CFG.PARTICLE_LIMIT = width < 768 ? 60 : 140;
-        CFG.TRAIL_LIMIT = width < 768 ? 4 : 7;
-        CFG.STAR_COUNT = width < 768 ? 20 : 45;
-        CFG.CLOUD_COUNT = width < 768 ? 4 : 6;
-        CFG.MAX_CANDLES = width < 768 ? 10 : 16;
-        CFG.GROUND_PARTICLE_COUNT = width < 768 ? 12 : 24;
+        const lowBudget = isLow || width < 768
+        CFG.PARTICLE_LIMIT = lowBudget ? (isLow ? 30 : 60) : 140;
+        CFG.TRAIL_LIMIT = lowBudget ? (isLow ? 2 : 4) : 7;
+        CFG.STAR_COUNT = lowBudget ? (isLow ? 10 : 20) : 45;
+        CFG.CLOUD_COUNT = lowBudget ? (isLow ? 2 : 4) : 6;
+        CFG.MAX_CANDLES = lowBudget ? (isLow ? 6 : 10) : 16;
+        CFG.GROUND_PARTICLE_COUNT = lowBudget ? (isLow ? 6 : 12) : 24;
     }
 }
-

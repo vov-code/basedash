@@ -16,19 +16,19 @@ interface RankMeta {
 
 const RANK_META: Record<number, RankMeta> = {
   1: {
-    label: '1',
+    label: '🥇',
     tone: 'bg-[#fff8dd]',
     border: 'border-[#f8da7f]',
     text: 'text-[#b78905]',
   },
   2: {
-    label: '2',
+    label: '🥈',
     tone: 'bg-slate-100',
     border: 'border-slate-300',
     text: 'text-slate-600',
   },
   3: {
-    label: '3',
+    label: '🥉',
     tone: 'bg-orange-50',
     border: 'border-orange-300',
     text: 'text-orange-700',
@@ -103,7 +103,7 @@ export default function Leaderboard() {
   const { data: leaderboard, isLoading, refetch } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: GAME_LEADERBOARD_ABI,
-    functionName: 'getLeaderboard',
+    functionName: 'getSortedLeaderboard',
     args: [BigInt(33)],
     query: {
       enabled: CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000',
@@ -126,13 +126,14 @@ export default function Leaderboard() {
 
   const scores = useMemo(() => {
     const data = (leaderboard as unknown as PlayerScore[]) || []
-    return data.filter((s) => s.player !== '0x0000000000000000000000000000000000000000')
+    if (!Array.isArray(data)) return []
+    return data.filter((s) => s && s.player && s.player !== '0x0000000000000000000000000000000000000000')
   }, [leaderboard])
 
   // Find user's rank
   const userRank = useMemo(() => {
     if (!address) return null
-    const idx = scores.findIndex(s => s.player.toLowerCase() === address.toLowerCase())
+    const idx = scores.findIndex(s => s && s.player && s.player.toLowerCase() === address.toLowerCase())
     return idx >= 0 ? idx + 1 : null
   }, [scores, address])
 
@@ -171,9 +172,19 @@ export default function Leaderboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center border border-slate-200 bg-white p-8 py-14 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-        <div className="h-10 w-10 animate-spin border-4 border-[#0052FF]/20 border-t-[#0052FF]" />
-        <span className="ml-4 text-sm text-slate-500">loading leaderboard...</span>
+      <div className="border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-3 p-3 rounded-xl animate-pulse">
+              <div className="w-10 h-10 bg-slate-200 rounded-xl flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 bg-slate-200 rounded w-2/3" />
+                <div className="h-2 bg-slate-100 rounded w-1/3" />
+              </div>
+              <div className="w-16 h-6 bg-slate-200 rounded" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -256,7 +267,7 @@ export default function Leaderboard() {
           <span className="text-sm font-black text-[#0052FF] uppercase tracking-wide">
             {userRank
               ? `your rank: #${userRank} of ${scores.length}`
-              : playerRankData
+              : (playerRankData && typeof playerRankData === 'bigint')
                 ? `your position: #${bigIntToNumber(playerRankData as bigint)} of ${scores.length}+`
                 : 'play to rank'}
           </span>

@@ -4,9 +4,13 @@
   "description": "Jump candles, send it to chain. Built on Base blockchain.",
   "start_url": "/",
   "display": "standalone",
+  "display_override": [
+    "standalone",
+    "fullscreen"
+  ],
   "background_color": "#FFFFFF",
   "theme_color": "#0052FF",
-  "orientation": "any",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "/icons/icon-192.svg",

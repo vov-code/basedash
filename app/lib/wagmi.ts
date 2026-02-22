@@ -2,28 +2,22 @@
 
 import { createConfig, http } from 'wagmi'
 import { base, baseSepolia } from 'wagmi/chains'
-import { coinbaseWallet, injected, metaMask, walletConnect } from 'wagmi/connectors'
+import { coinbaseWallet, injected } from 'wagmi/connectors'
 
 const isTestnet = process.env.NEXT_PUBLIC_USE_TESTNET === 'true'
-const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || ''
 
+/**
+ * Base App standard: Coinbase Smart Wallet is the primary connector.
+ * Injected (browser wallet) kept as fallback.
+ * MetaMask & WalletConnect removed — Base App = Coinbase ecosystem.
+ */
 const connectors = [
-  coinbaseWallet({ appName: 'base dash', preference: 'smartWalletOnly' }),
+  coinbaseWallet({
+    appName: 'base dash',
+    appLogoUrl: 'https://basedash-five.vercel.app/base-logo.png',
+    preference: 'smartWalletOnly',
+  }),
   injected({ shimDisconnect: true }),
-  metaMask(),
-  ...(walletConnectProjectId
-    ? [
-      walletConnect({
-        projectId: walletConnectProjectId,
-        metadata: {
-          name: 'base dash',
-          description: 'base dash endless runner',
-          url: 'https://basedash-five.vercel.app',
-          icons: ['https://basedash-five.vercel.app/icons/icon-192.svg'],
-        },
-      }),
-    ]
-    : []),
 ]
 
 export const config = createConfig({
@@ -34,3 +28,4 @@ export const config = createConfig({
     [baseSepolia.id]: http(),
   },
 })
+

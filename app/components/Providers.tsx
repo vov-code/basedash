@@ -17,6 +17,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <OnchainKitProvider
           apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
           chain={chain}
+          config={{
+            wallet: {
+              display: 'modal',
+            },
+            appearance: {
+              name: 'Base Dash',
+            }
+          }}
         >
           {children}
         </OnchainKitProvider>

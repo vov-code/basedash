@@ -65,12 +65,11 @@ const getGroundGradient = (
     w: WorldTheme,
     worldIdx: number
 ): CanvasGradient => {
-    if (cachedGroundGrad && cachedGroundWorldIdx === worldIdx) return cachedGroundGrad
+    // Always recreate for white fade effect
     const g = ctx.createLinearGradient(0, CFG.GROUND, 0, CFG.HEIGHT)
     g.addColorStop(0, w.groundTop)
-    g.addColorStop(1, w.groundBottom)
-    cachedGroundGrad = g
-    cachedGroundWorldIdx = worldIdx
+    g.addColorStop(0.5, w.groundTop)
+    g.addColorStop(1, '#FFFFFF')
     return g
 }
 
@@ -1006,8 +1005,8 @@ export const drawWorldBanner = (
     ctx.save()
     ctx.globalAlpha = alpha
 
-    // Banner background
-    const bw = 260, bh = 48
+    // Banner background — thinner (py-2 instead of py-4)
+    const bw = 240, bh = 36
     const bx = CFG.WIDTH / 2 - bw / 2, by = 40
 
     ctx.fillStyle = 'rgba(255,255,255,0.95)'
@@ -1022,9 +1021,9 @@ export const drawWorldBanner = (
     ctx.roundRect(bx, by, bw, bh, 8)
     ctx.stroke()
 
-    // World name text
+    // World name text — smaller (text-xl instead of text-3xl)
     ctx.fillStyle = w.accent
-    ctx.font = `600 ${CFG.WIDTH < 600 ? 24 : 16}px Inter, sans-serif`
+    ctx.font = `600 ${CFG.WIDTH < 600 ? 18 : 13}px Inter, sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(w.name, CFG.WIDTH / 2, by + bh / 2)
@@ -1136,36 +1135,39 @@ export const drawComboPulse = (
 // TUTORIAL HINT (6.3)
 // ============================================================================
 
-/** Draw pulsing "TAP!" hint during tutorial phase */
+/** Draw pulsing "[ TAP TO TRADE ]" hint during tutorial phase */
 export const drawTutorialHint = (
     ctx: CanvasRenderingContext2D,
     e: EngineState
 ): void => {
     if (!e.showTutorial) return
-    const pulse = 0.6 + Math.sin(e.gameTime * 4) * 0.4
+
+    // Fade out after 3.5 seconds
+    if (e.gameTime > 3.5) {
+        e.showTutorial = false
+        return
+    }
+
+    const fade = clamp(1 - (e.gameTime / 3.5), 0, 1)
+    const pulse = 0.5 + Math.sin(e.gameTime * 6) * 0.5
 
     ctx.save()
-    ctx.globalAlpha = pulse
+    ctx.globalAlpha = fade
 
-    // Hand icon area
-    const hx = CFG.PLAYER_X + CFG.PLAYER_SIZE + 30
-    const hy = CFG.GROUND - 60
+    const cx = CFG.WIDTH / 2
+    const cy = CFG.HEIGHT * 0.35
 
-    // Arrow pointing down (tap gesture)
-    ctx.fillStyle = '#FFFFFF'
-    ctx.font = `700 ${CFG.WIDTH < 600 ? 28 : 18}px Inter, sans-serif`
-    ctx.textAlign = 'center'
-    ctx.fillText('TAP!', hx, hy - 10)
-
-    // Finger icon
-    ctx.font = `${CFG.WIDTH < 600 ? 36 : 24}px sans-serif`
-    ctx.fillText('👆', hx, hy + 18)
-
-    // Subtle background pill
-    ctx.globalAlpha = pulse * 0.2
+    // Minimalist text
     ctx.fillStyle = '#0052FF'
+    ctx.font = `600 ${CFG.WIDTH < 600 ? 11 : 14}px monospace`
+    ctx.textAlign = 'center'
+    ctx.letterSpacing = '3px'
+    ctx.fillText('TAP TO JUMP', cx, cy)
+
+    // Pulsing minimal indicator below text
+    ctx.globalAlpha = fade * pulse
     ctx.beginPath()
-    ctx.roundRect(hx - 32, hy - 28, 64, 60, 12)
+    ctx.arc(cx, cy + 14, 3, 0, Math.PI * 2)
     ctx.fill()
 
     ctx.restore()

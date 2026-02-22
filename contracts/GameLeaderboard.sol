@@ -85,9 +85,8 @@ contract GameLeaderboard {
         uint256 timestamp
     );
 
-    // Events (item 20)
-    event ScoreSubmitted(address indexed player, uint96 score, uint256 nonce);
-    event DailyCheckInEvent(address indexed player, uint256 streak, uint256 timestamp);
+    // Events defined above (ScoreSubmitted, DailyCheckInCompleted, etc.)
+    // Frontend should use getSortedLeaderboard() for pre-sorted results
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Not owner");
@@ -268,6 +267,7 @@ contract GameLeaderboard {
 
     /**
      * @dev Получение отсортированного лидерборда (view function, gas free для caller)
+     * @notice Frontend should use this function to get pre-sorted results.
      */
     function getSortedLeaderboard(
         uint256 limit
@@ -354,4 +354,9 @@ contract GameLeaderboard {
     function getBalance() external view returns (uint256) {
         return address(this).balance;
     }
+
+    /**
+     * @dev Accept ETH payments
+     */
+    receive() external payable {}
 }

@@ -6,8 +6,9 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  compress: true,
 
-  // Отключаем все предупреждения
+  // Production lint skip
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -34,13 +35,6 @@ const nextConfig = {
       config.devtool = false
     }
 
-    // Подавляем warnings
-    config.ignoreWarnings = [
-      { module: /node_modules/ },
-      { message: /deprecated/ },
-      { message: /Critical dependency/ },
-    ]
-
     // Tree shaking for lodash
     if (!isServer) {
       config.optimization.sideEffects = true
@@ -49,7 +43,6 @@ const nextConfig = {
     return config
   },
 
-  // Подавляем логи
   logging: {
     fetches: {
       fullUrl: false,

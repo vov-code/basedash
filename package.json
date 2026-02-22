@@ -13,7 +13,9 @@
     "deploy:base-sepolia": "hardhat run scripts/deploy.js --network baseSepolia",
     "deploy:base": "hardhat run scripts/deploy.js --network base",
     "verify": "hardhat verify --network baseSepolia",
-    "test": "hardhat test"
+    "test": "hardhat test",
+    "full-deploy:testnet": "npm run compile && npm run deploy:base-sepolia",
+    "full-deploy:mainnet": "npm run compile && npm run deploy:base"
   },
   "dependencies": {
     "@coinbase/onchainkit": "^1.1.2",
@@ -22,6 +24,7 @@
     "next": "^14.2.21",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "styled-jsx": "^5.1.7",
     "viem": "^2.8.0",
     "wagmi": "^2.5.0"
   },

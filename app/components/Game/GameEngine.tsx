@@ -210,7 +210,7 @@ function initAudio(): boolean {
   if (!ctx) return false
 
   try {
-    // Resume audio context if suspended (browser policy)
+    // Resume audio context if suspended (iOS requires user gesture)
     if (ctx.state === 'suspended') {
       ctx.resume().catch(() => { /* ignore resume errors */ })
     }
@@ -219,6 +219,21 @@ function initAudio(): boolean {
     console.warn('Failed to initialize audio:', error)
     return false
   }
+}
+
+/** iOS Safari audio unlock — call once on first touchstart */
+function unlockAudioOnTouch(): void {
+  if (audioInitialized && audioCtx && audioCtx.state === 'running') return
+  const ctx = getAudioCtx()
+  if (!ctx) return
+  ctx.resume().then(() => {
+    // Play a silent buffer to fully unlock
+    const buf = ctx.createBuffer(1, 1, 22050)
+    const src = ctx.createBufferSource()
+    src.buffer = buf
+    src.connect(ctx.destination)
+    src.start(0)
+  }).catch(() => { /* ignore */ })
 }
 
 function playTone(freq: number, duration: number, type: OscillatorType = 'square', volume = 0.12) {
@@ -287,31 +302,32 @@ function startBackgroundMusic(): void {
         const now = ctx.currentTime
         const s = musicStep % 16
 
-        // Dynamically change music based on current world tracker
+        // Dynamically change music based on current world tracker (Item 8)
         const currentWorld = activeWorldIndex
 
-        let melodyNotes = [220, 262, 294, 220, 330, 294, 262, 247, 220, 262, 330, 294, 262, 247, 220, 262]
-        let padNotes = [110, 110, 131, 131, 110, 110, 98, 98, 110, 110, 131, 131, 110, 110, 98, 98]
+        // Base Ambient/Chill sequences (Pentatonic/Lydian vibes)
+        let melodyNotes = [329.63, 0, 392.00, 0, 440.00, 0, 329.63, 0, 293.66, 0, 261.63, 0, 329.63, 0, 261.63, 0] // E G A E D C E C
+        let padNotes = [130.81, 130.81, 130.81, 130.81, 164.81, 164.81, 164.81, 164.81, 174.61, 174.61, 174.61, 174.61, 146.83, 146.83, 146.83, 146.83] // C E F D (deep bass drone)
         let waveType: OscillatorType = 'sine'
-        let padType: OscillatorType = 'sine'
+        let padType: OscillatorType = 'triangle'
 
-        // World-dependent music variations
+        // World-dependent music variations - Gets faster & more complex
         if (currentWorld >= 8) {
-          // Intense alien synthesis
-          melodyNotes = [880, 0, 987, 880, 1046, 0, 987, 880, 1318, 0, 1174, 1046, 987, 0, 880, 783]
-          padNotes = [220, 220, 246, 246, 261, 261, 246, 246, 329, 329, 293, 293, 246, 246, 220, 220]
+          // Intense trance synth (deep in the matrix)
+          melodyNotes = [659.25, 587.33, 523.25, 587.33, 659.25, 783.99, 659.25, 523.25, 880.00, 783.99, 659.25, 587.33, 523.25, 587.33, 659.25, 523.25]
+          padNotes = [261.63, 261.63, 261.63, 261.63, 329.63, 329.63, 329.63, 329.63, 349.23, 349.23, 349.23, 349.23, 293.66, 293.66, 293.66, 293.66]
           waveType = 'sawtooth'
           padType = 'square'
         } else if (currentWorld >= 5) {
-          // Upbeat techy 
-          melodyNotes = [329, 329, 392, 329, 440, 392, 329, 293, 261, 261, 329, 261, 293, 261, 220, 261]
-          padNotes = [164, 0, 196, 0, 220, 0, 196, 0, 130, 0, 164, 0, 146, 0, 110, 0]
+          // Upbeat tech chill
+          melodyNotes = [440.00, 392.00, 329.63, 0, 523.25, 440.00, 392.00, 0, 349.23, 293.66, 261.63, 0, 392.00, 329.63, 261.63, 0]
+          padNotes = [220.00, 0, 220.00, 0, 261.63, 0, 261.63, 0, 293.66, 0, 293.66, 0, 261.63, 0, 261.63, 0]
           waveType = 'square'
           padType = 'triangle'
         } else if (currentWorld >= 2) {
-          // Harmonic synth
-          melodyNotes = [261, 293, 329, 392, 440, 392, 329, 293, 261, 329, 392, 440, 523, 440, 392, 329]
-          padNotes = [130, 130, 164, 164, 196, 196, 164, 164, 130, 130, 164, 164, 196, 196, 164, 164]
+          // Double time chill synth
+          melodyNotes = [329.63, 392.00, 440.00, 523.25, 440.00, 392.00, 329.63, 293.66, 261.63, 293.66, 329.63, 392.00, 329.63, 293.66, 261.63, 0]
+          padNotes = [164.81, 164.81, 164.81, 164.81, 220.00, 220.00, 220.00, 220.00, 174.61, 174.61, 174.61, 174.61, 130.81, 130.81, 130.81, 130.81]
           waveType = 'triangle'
           padType = 'sine'
         }
@@ -322,12 +338,13 @@ function startBackgroundMusic(): void {
           const leadGain = ctx.createGain()
           leadOsc.type = waveType
           leadOsc.frequency.setValueAtTime(melodyNotes[s], now)
-          leadGain.gain.setValueAtTime(0.04, now)
-          leadGain.gain.exponentialRampToValueAtTime(0.001, now + (waveType === 'sine' ? 0.35 : 0.2))
+          // Lower volume for chill
+          leadGain.gain.setValueAtTime(0.025, now)
+          leadGain.gain.exponentialRampToValueAtTime(0.001, now + (waveType === 'sine' ? 0.45 : 0.25))
           leadOsc.connect(leadGain)
           leadGain.connect(musicGain!)
           leadOsc.start(now)
-          leadOsc.stop(now + 0.4)
+          leadOsc.stop(now + 0.5)
         }
 
         // Pad bass
@@ -336,34 +353,35 @@ function startBackgroundMusic(): void {
           const padGain = ctx.createGain()
           padOsc.type = padType
           padOsc.frequency.setValueAtTime(padNotes[s], now)
-          padGain.gain.setValueAtTime(0.03, now)
-          padGain.gain.exponentialRampToValueAtTime(0.001, now + (padType === 'sine' ? 0.6 : 0.3))
+          padGain.gain.setValueAtTime(0.035, now)
+          padGain.gain.exponentialRampToValueAtTime(0.001, now + (padType === 'sine' ? 0.8 : 0.4))
           padOsc.connect(padGain)
           padGain.connect(musicGain!)
           padOsc.start(now)
-          padOsc.stop(now + 0.7)
+          padOsc.stop(now + 0.9)
         }
 
-        // Soft tick — gentle sine blip
+        // Soft tick — gentle ambient click 
         if (tickBeat[s]) {
           const tickOsc = ctx.createOscillator()
           const tickG = ctx.createGain()
           tickOsc.type = 'sine'
-          tickOsc.frequency.setValueAtTime(800, now)
-          tickG.gain.setValueAtTime(0.02, now)
-          tickG.gain.exponentialRampToValueAtTime(0.001, now + 0.05)
+          tickOsc.frequency.setValueAtTime(400, now) // Lower pitched tick
+          tickG.gain.setValueAtTime(0.015, now)
+          tickG.gain.exponentialRampToValueAtTime(0.001, now + 0.04)
           tickOsc.connect(tickG)
           tickG.connect(musicGain!)
           tickOsc.start(now)
-          tickOsc.stop(now + 0.06)
+          tickOsc.stop(now + 0.05)
         }
 
         musicStep++
       } catch { /* ignore */ }
     }
 
-    // ~80 BPM = ~188ms per 16th note step (calm tempo)
-    musicIntervalId = setInterval(playStep, 188)
+    // Base tempo: 80 BPM = 188ms step. Speeds up by ~3% per world tier
+    const stepDuration = Math.max(120, 188 * Math.pow(0.97, activeWorldIndex))
+    musicIntervalId = setInterval(playStep, stepDuration)
     playStep()
 
     isMusicPlaying = true
@@ -433,8 +451,11 @@ function playNewRecordFanfare(): void {
   }
 }
 
-// Global sound mute flag
-let globalSoundMuted = false
+// Global sound mute flag — persisted in localStorage
+let globalSoundMuted = (() => {
+  if (typeof window === 'undefined') return false
+  return localStorage.getItem('bd_muted') === '1'
+})()
 
 function sfxJump() {
   if (globalSoundMuted || !initAudio()) return
@@ -591,7 +612,10 @@ export default function GameEngine({
   const [isNewRecord, setIsNewRecord] = useState(false)
   const [musicEnabled, setMusicEnabled] = useState(false)
   const [deathMessage, setDeathMessage] = useState('rekt!')
-  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem('bd_muted') !== '1'
+  })
   const [activeTrail, setActiveTrail] = useState<TrailType>('default')
   const { address } = useWallet()
   const [txContracts, setTxContracts] = useState<any[] | null>(null)
@@ -851,20 +875,22 @@ export default function GameEngine({
       spawnPattern(e)
     }
 
-    // --- Collision detection ---
-    const px1 = CFG.PLAYER_X + CFG.HITBOX
-    const py1 = p.y + CFG.HITBOX
-    const px2 = CFG.PLAYER_X + CFG.PLAYER_SIZE - CFG.HITBOX
-    const py2 = p.y + CFG.PLAYER_SIZE - CFG.HITBOX
+    // --- Collision detection — STRICT hitboxes ---
+    const HITBOX_PAD = 5 // Tighter padding = stricter collision
+    const px1 = CFG.PLAYER_X + HITBOX_PAD
+    const py1 = p.y + HITBOX_PAD
+    const px2 = CFG.PLAYER_X + CFG.PLAYER_SIZE - HITBOX_PAD
+    const py2 = p.y + CFG.PLAYER_SIZE - HITBOX_PAD
 
     for (const c of e.candles) {
       if (c.collected || c.x + c.width < CFG.PLAYER_X - 10) continue
       if (c.x > CFG.PLAYER_X + CFG.PLAYER_SIZE + 10) continue
-
-      const cx1 = c.x + 2
-      const cy1 = c.bodyY + 2
-      const cx2 = c.x + c.width - 2
-      const cy2 = c.bodyY + c.bodyHeight - 2
+      
+      // Stricter candle hitbox (no margin)
+      const cx1 = c.x + 1
+      const cy1 = c.bodyY + 1
+      const cx2 = c.x + c.width - 1
+      const cy2 = c.bodyY + c.bodyHeight - 1
 
       const hit = px1 < cx2 && px2 > cx1 && py1 < cy2 && py2 > cy1
 
@@ -1176,6 +1202,7 @@ export default function GameEngine({
   // ========================================================================
 
   const performJump = useCallback((e: EngineState, isDouble: boolean) => {
+    e.showTutorial = false
     const p = e.player
     if (isDouble) {
       p.velocityY = CFG.DOUBLE_JUMP
@@ -1204,6 +1231,13 @@ export default function GameEngine({
   const startGame = useCallback(() => {
     const engine = createEngine()
     engine.activeTrail = activeTrail
+
+    // Show tutorial on first play only
+    if (typeof window !== 'undefined' && !localStorage.getItem('bd_played_tutorial_v2')) {
+      engine.showTutorial = true
+      localStorage.setItem('bd_played_tutorial_v2', '1')
+    }
+
     engineRef.current = engine
     setScore(0)
     setCombo(0)
@@ -1323,6 +1357,7 @@ export default function GameEngine({
     // Support high-DPI scaling
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.scale(dims.dpr, dims.dpr)
+    ctx.imageSmoothingEnabled = false // enforce crisp pixels
 
     drawFrame(ctx, engineRef.current, logoRef.current, logoLoaded)
   }, [logoLoaded, dims.dpr])
@@ -1331,33 +1366,55 @@ export default function GameEngine({
   // EFFECTS — Initialization, keyboard, touch, game loop
   // ========================================================================
 
-  // Adaptive Resize Handling
+  // Adaptive Resize Handling — FORCE sync on mount
   useEffect(() => {
     const handleResize = () => {
       let w = window.innerWidth
       let h = window.innerHeight
 
-      // If we have a container, we can read the actual flex-allocated space
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect()
+      // If we have a container, measure the actual flex-allocated space
+      if (containerRef.current && containerRef.current.parentElement) {
+        const rect = containerRef.current.parentElement.getBoundingClientRect()
         w = rect.width
         h = rect.height
       }
 
+      // 15% smaller height for better layout
+      const maxMobileH = window.innerHeight * 0.40
+      if (IS_MOBILE && h > maxMobileH) {
+        h = maxMobileH
+      }
+
       // Constrain width on desktop
       if (w > 1024) w = 1024
-      // Force roughly 16:9 on desktop
-      if (!IS_MOBILE && h > w * 0.6) h = w * 0.6
+      // Force roughly 16:9 on desktop - 15% smaller
+      if (!IS_MOBILE && h > w * 0.52) h = w * 0.52
 
-      const dpr = window.devicePixelRatio || 1
+      // Better quality: always use devicePixelRatio, capped at 2
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
 
       updateGameConfig(w, h)
       setDims({ w, h, dpr })
     }
 
+    // FORCE immediate resize on mount
     handleResize()
+    
+    // Small delay to ensure DOM is fully laid out
+    const timeoutId = setTimeout(handleResize, 50)
+    
     window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    return () => {
+      clearTimeout(timeoutId)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+
+  // iOS audio unlock on first touch
+  useEffect(() => {
+    const handler = () => { unlockAudioOnTouch(); document.removeEventListener('touchstart', handler) }
+    document.addEventListener('touchstart', handler, { once: true, passive: true })
+    return () => document.removeEventListener('touchstart', handler)
   }, [])
 
   // Load logo image
@@ -1372,6 +1429,7 @@ export default function GameEngine({
   // Sync sound mute state
   useEffect(() => {
     globalSoundMuted = !soundEnabled
+    localStorage.setItem('bd_muted', soundEnabled ? '0' : '1')
     if (!soundEnabled && isMusicPlaying) {
       stopBackgroundMusic()
       setMusicEnabled(false)
@@ -1491,28 +1549,36 @@ export default function GameEngine({
     }
   }, [mode, update, draw])
 
-  // 1.1 + 1.2 — Demo auto-play loop behind menu
+  // 1.1 + 1.2 — Demo auto-play loop behind menu — OPTIMIZED & FIXED
   useEffect(() => {
     if (mode !== 'menu') {
       if (demoRafRef.current) { cancelAnimationFrame(demoRafRef.current); demoRafRef.current = null }
       return
     }
-    // Create a disposable demo engine
+
+    // Create demo engine with proper initial state
     const demoEngine = createEngine()
     demoEngine.alive = true
     demoEngine.showTutorial = false
+    demoEngine.player.y = CFG.GROUND - CFG.PLAYER_SIZE
+    demoEngine.player.onGround = true
+
     let prev = performance.now()
     let demoAcc = 0
-    let autoJumpCooldown = 0
+    let jumpCooldown = 0
 
     const demoLoop = (t: number) => {
+      if (mode !== 'menu') return
+
       const dt = Math.min(0.033, (t - prev) / 1000)
       prev = t
       demoAcc += dt
 
-      // Simple physics tick
+      // Physics tick with fixed step
       while (demoAcc >= CFG.STEP) {
         const de = demoEngine
+
+        // Update game state
         de.gameTime += CFG.STEP
         de.difficulty = clamp(de.score / 4000, 0, 1)
         const sMult = getSpeed(de.score).multiplier
@@ -1528,15 +1594,18 @@ export default function GameEngine({
         dp.velocityY += CFG.GRAVITY * CFG.STEP
         dp.velocityY = Math.min(dp.velocityY, CFG.MAX_FALL)
         dp.y += dp.velocityY * CFG.STEP
-        // Floor collision & exact snapping to prevent clipping
+
+        // EXACT ground collision
         if (dp.y >= CFG.GROUND - CFG.PLAYER_SIZE) {
           dp.y = CFG.GROUND - CFG.PLAYER_SIZE
-          dp.velocityY = 0 // Kill downward velocity stringently
+          dp.velocityY = 0
           dp.onGround = true
           dp.jumpCount = 0
         } else {
           dp.onGround = false
         }
+
+        // Rotation & squash
         if (!dp.onGround) dp.rotation += CFG.ROT_SPEED * CFG.STEP
         dp.squash = lerp(dp.squash, 0, CFG.STEP * 12)
         dp.scale = 1 + dp.squash * (dp.velocityY < 0 ? -0.3 : 0.4)
@@ -1552,19 +1621,26 @@ export default function GameEngine({
         // Spawn
         if (de.distance >= de.nextSpawnDistance) spawnPattern(de)
 
-        // AI: auto-jump near obstacles
-        autoJumpCooldown -= CFG.STEP
-        if (dp.onGround && autoJumpCooldown <= 0) {
-          const nearest = de.candles.find(c => c.kind === 'red' && c.x > CFG.PLAYER_X - 20 && c.x < CFG.PLAYER_X + 200)
-          if (nearest && nearest.x < CFG.PLAYER_X + 120) {
-            dp.velocityY = CFG.JUMP
-            dp.onGround = false
-            dp.squash = -0.15
-            autoJumpCooldown = 0.3
+        // AI: auto-jump
+        jumpCooldown -= CFG.STEP
+        if (dp.onGround && jumpCooldown <= 0) {
+          const nearest = de.candles.find(c => 
+            c.kind === 'red' && 
+            c.x > CFG.PLAYER_X - 20 && 
+            c.x < CFG.PLAYER_X + 180
+          )
+          if (nearest) {
+            const distToCandle = nearest.x - (CFG.PLAYER_X + CFG.PLAYER_SIZE)
+            if (distToCandle < 90 && distToCandle > 40) {
+              dp.velocityY = CFG.JUMP
+              dp.onGround = false
+              dp.squash = -0.15
+              jumpCooldown = 0.35
+            }
           }
         }
 
-        // Auto-collect greens + pass reds for score
+        // Auto-collect greens
         for (const c of de.candles) {
           if (!c.passed && c.x + c.width < CFG.PLAYER_X) {
             c.passed = true
@@ -1575,27 +1651,28 @@ export default function GameEngine({
             const gy = c.bodyY + c.bodyHeight / 2
             const px = CFG.PLAYER_X + CFG.PLAYER_SIZE / 2
             const py = dp.y + CFG.PLAYER_SIZE / 2
-            if (Math.abs(gx - px) < 30 && Math.abs(gy - py) < 30) {
+            if (Math.abs(gx - px) < 35 && Math.abs(gy - py) < 35) {
               c.collected = true
               de.score += CFG.GREEN_SCORE
             }
           }
         }
 
-        // Stars
+        // Background elements
         for (const s of de.stars) s.twinkle += CFG.STEP * s.twinkleSpeed
-        // Ground particles
         for (const gp of de.groundParticles) {
           gp.x -= de.speed * CFG.STEP * gp.speed
           gp.phase += CFG.STEP * 2 * gp.speed
           if (gp.x < -10) gp.x = CFG.WIDTH + rand(5, 30)
         }
 
-        // Reset if score too high (loop demo)
-        if (de.score > 800) {
+        // Reset if score too high
+        if (de.score > 600) {
           Object.assign(de, createEngine())
           de.alive = true
           de.showTutorial = false
+          de.player.y = CFG.GROUND - CFG.PLAYER_SIZE
+          de.player.onGround = true
         }
 
         demoAcc -= CFG.STEP
@@ -1619,6 +1696,7 @@ export default function GameEngine({
     demoRafRef.current = requestAnimationFrame(demoLoop)
     return () => {
       if (demoRafRef.current) cancelAnimationFrame(demoRafRef.current)
+      demoRafRef.current = null
     }
   }, [mode, logoLoaded])
 
@@ -1690,278 +1768,292 @@ export default function GameEngine({
   // ========================================================================
 
   return (
-    <div ref={containerRef} className="relative w-full h-full mx-auto flex items-center justify-center border-none min-h-0" style={{ padding: 0 }}>
-      <div
-        className="relative overflow-hidden w-full h-full sm:border sm:border-slate-200 sm:shadow-[0_18px_42px_rgba(15,23,42,0.12)] game-container bg-gradient-to-br from-white via-[#f5f8ff] to-[#e8f0fe] sm:rounded-none"
-        style={{ width: `${dims.w}px`, height: `${dims.h}px` }}
-      >
-        <canvas
-          ref={canvasRef}
-          width={dims.w * dims.dpr}
-          height={dims.h * dims.dpr}
-          className="w-full h-full cursor-pointer game-canvas"
-          onClick={handleAction}
-          tabIndex={0}
-          role="application"
-          aria-label="Base Dash Game Canvas"
-          style={{
-            display: 'block'
-          }}
-        />
+    <div
+      ref={containerRef}
+      className="relative overflow-hidden w-full mx-auto sm:border sm:border-slate-200 sm:shadow-[0_18px_42px_rgba(15,23,42,0.12)] game-container bg-gradient-to-br from-white via-[#f5f8ff] to-[#e8f0fe] sm:rounded-none"
+      style={{ willChange: 'transform' }}
+    >
+      <canvas
+        ref={canvasRef}
+        width={dims.w * dims.dpr}
+        height={dims.h * dims.dpr}
+        className="w-full h-full cursor-pointer game-canvas"
+        onClick={handleAction}
+        tabIndex={0}
+        role="application"
+        aria-label="Base Dash Game Canvas"
+        style={{
+          display: 'block',
+          imageRendering: 'auto'
+        }}
+      />
 
-        {/* ===================== MENU OVERLAY ===================== */}
-        {mode === 'menu' && (
-          <div className="game-overlay" style={{ background: 'rgba(255,255,255,0.45)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-            <div className="w-full max-w-[180px] border border-white/60 bg-white/40 backdrop-blur-3xl px-5 py-6 shadow-[0_24px_80px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.9)] mx-auto relative mt-[12%] flex flex-col items-center gap-4 rounded-[20px]"
-              style={{ animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
+      {/* ===================== MENU OVERLAY ===================== */}
+      {mode === 'menu' && (
+        <div className="game-overlay flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.45)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+          <div className="w-full max-w-[180px] border border-white/60 bg-white/40 backdrop-blur-3xl px-5 py-6 shadow-[0_24px_80px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.9)] relative flex flex-col items-center gap-4 rounded-[20px]"
+            style={{ animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
 
-              {/* Best Score Display — Premium */}
-              <div className="w-full bg-gradient-to-br from-[#FFFBEB] to-[#FFF3CC] px-4 py-3 border border-[#F0B90B]/30 text-center rounded-2xl shadow-[0_4px_12px_rgba(240,185,11,0.15)]"
-                style={{ animation: 'menuFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both', animationDelay: '0.05s' }}>
-                <p className="text-[7px] font-black text-[#D4A002] uppercase tracking-[0.18em] mb-1" style={{ fontFamily: 'var(--font-space, Space Grotesk, system-ui)' }}>best pnl</p>
-                <p className="font-black text-[#B78905] leading-none text-lg tracking-tighter" style={{ fontFamily: 'var(--font-space, Space Grotesk, system-ui)' }}>{formatMarketCap(best)}</p>
-              </div>
+            {/* Best Score Display — Premium */}
+            <div className="w-full bg-gradient-to-br from-[#FFFBEB] to-[#FFF3CC] px-4 py-3 border border-[#F0B90B]/30 text-center rounded-2xl shadow-[0_4px_12px_rgba(240,185,11,0.15)]"
+              style={{ animation: 'menuFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both', animationDelay: '0.05s' }}>
+              <p className="text-[7px] font-black text-[#D4A002] uppercase tracking-[0.18em] mb-1" style={{ fontFamily: 'var(--font-mono, monospace)' }}>best pnl</p>
+              <p className="font-black text-[#B78905] leading-none text-lg tracking-tighter" style={{ fontFamily: 'var(--font-mono, monospace)' }}>{formatMarketCap(best)}</p>
+            </div>
 
-              {/* Start Button — PREMIUM pulsing glow */}
+            {/* Start Button — PREMIUM pulsing glow */}
+            <button
+              onClick={(e) => { e.stopPropagation(); startGame() }}
+              className="w-full relative overflow-hidden px-4 py-4 text-[12px] font-black tracking-[0.18em] text-white transition-all duration-300 active:scale-95 group rounded-2xl"
+              style={{
+                background: 'linear-gradient(135deg, #0052FF 0%, #0040CC 100%)',
+                boxShadow: '0 8px 32px rgba(0,82,255,0.45), 0 0 0 1px rgba(0,82,255,0.3)',
+                animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both, startGlow 2.5s ease-in-out 0.5s infinite',
+                animationDelay: '0.15s',
+                fontFamily: 'var(--font-mono, monospace)',
+              }}
+            >
+              <span className="relative z-10">START TRADE</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 rounded-2xl" />
+            </button>
+
+            {/* Hint Text */}
+            <div className="text-center" style={{ animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both', animationDelay: '0.25s' }}>
+              <p className="text-[7px] font-bold text-slate-500 uppercase tracking-[0.22em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>tap or space to start</p>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ===================== PAUSED OVERLAY ===================== */}
+      {mode === 'paused' && (
+        <div className="game-overlay bg-black/20 backdrop-blur-[2px]">
+          <div className="w-full h-full flex items-center justify-center p-4">
+            <div className="w-full max-w-[240px] border-2 border-[#0A0B14] bg-white px-5 py-6 shadow-none mx-auto text-center rounded-2xl">
+              <h2 className="text-xl font-black text-[#0A0B14] mb-2 uppercase tracking-widest" style={{ fontFamily: 'var(--font-mono)' }}>paused</h2>
+              <p className="text-slate-500 text-[10px] mb-5 font-bold uppercase tracking-widest">take a breath</p>
               <button
-                onClick={(e) => { e.stopPropagation(); startGame() }}
-                className="w-full relative overflow-hidden px-4 py-4 text-[12px] font-black tracking-[0.18em] text-white transition-all duration-300 active:scale-95 group rounded-2xl"
-                style={{
-                  background: 'linear-gradient(135deg, #0052FF 0%, #0040CC 100%)',
-                  boxShadow: '0 8px 32px rgba(0,82,255,0.45), 0 0 0 1px rgba(0,82,255,0.3)',
-                  animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both, startGlow 2.5s ease-in-out 0.5s infinite',
-                  animationDelay: '0.15s',
-                  fontFamily: 'var(--font-space, Space Grotesk, system-ui)',
-                }}
+                onClick={() => setMode('playing')}
+                className="w-full bg-[#0052FF] px-4 py-3 text-[11px] font-black text-white hover:bg-[#0040CC] border-2 border-[#0052FF] transition-colors rounded-xl uppercase tracking-widest"
               >
-                <span className="relative z-10">START TRADE</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 rounded-2xl" />
+                RESUME
               </button>
-
-              {/* Hint Text */}
-              <div className="text-center" style={{ animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both', animationDelay: '0.25s' }}>
-                <p className="text-[7px] font-bold text-slate-500 uppercase tracking-[0.22em]" style={{ fontFamily: 'var(--font-space, Space Grotesk, system-ui)' }}>tap or space to start</p>
-              </div>
-
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ===================== PAUSED OVERLAY ===================== */}
-        {mode === 'paused' && (
-          <div className="game-overlay bg-black/20 backdrop-blur-[2px]">
-            <div className="w-full h-full flex items-center justify-center p-4">
-              <div className="w-full max-w-[240px] border-2 border-[#0A0B14] bg-white px-5 py-6 shadow-none mx-auto text-center rounded-2xl">
-                <h2 className="text-xl font-black text-[#0A0B14] mb-2 uppercase tracking-widest" style={{ fontFamily: 'var(--font-mono)' }}>paused</h2>
-                <p className="text-slate-500 text-[10px] mb-5 font-bold uppercase tracking-widest">take a breath</p>
-                <button
-                  onClick={() => setMode('playing')}
-                  className="w-full bg-[#0052FF] px-4 py-3 text-[11px] font-black text-white hover:bg-[#0040CC] border-2 border-[#0052FF] transition-colors rounded-xl uppercase tracking-widest"
-                >
-                  RESUME
-                </button>
+      {/* ===================== GAME OVER OVERLAY ===================== */}
+      {mode === 'gameover' && (
+        <div className="game-overlay" style={{ background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', animation: 'deathFadeIn 0.5s ease-out forwards' }}>
+          <div className="w-full h-full flex items-center justify-center p-3">
+            <div className="w-full max-w-[260px] rounded-xl bg-white border border-[#0A0B14]/20 shadow-2xl px-3 py-3 mx-auto relative overflow-hidden">
+
+              <div className="flex items-center justify-center gap-1.5 mb-2.5">
+                {isNewRecord && (
+                  <div className="flex h-4 w-4 items-center justify-center bg-[#F0B90B] border border-[#B78905] rounded-full">
+                    <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                  </div>
+                )}
+                <h2 className={`text-[13px] font-black uppercase ${isNewRecord ? 'text-[#F0B90B]' : 'text-[#F6465D]'} tracking-widest`} style={{ fontFamily: 'var(--font-mono)' }}>
+                  {isNewRecord ? 'NEW HIGH!' : deathMessage}
+                </h2>
               </div>
-            </div>
-          </div>
-        )}
 
-        {/* ===================== GAME OVER OVERLAY ===================== */}
-        {mode === 'gameover' && (
-          <div className="game-overlay" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', animation: 'deathFadeIn 0.6s ease-out forwards' }}>
-            <div className="w-full h-full flex items-center justify-center p-2">
-              <div className="w-full max-w-[300px] rounded-2xl bg-white border-2 border-[#0A0B14] shadow-none px-4 py-4 mx-auto relative overflow-hidden">
-
-                <div className="flex items-center justify-center gap-1.5 mb-3">
-                  {isNewRecord && (
-                    <div className="flex h-5 w-5 items-center justify-center bg-[#F0B90B] border-2 border-[#B78905] rounded-full">
-                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    </div>
-                  )}
-                  <h2 className={`text-[16px] font-black uppercase ${isNewRecord ? 'text-[#F0B90B]' : 'text-[#F6465D]'} tracking-widest`} style={{ fontFamily: 'var(--font-mono)' }}>
-                    {isNewRecord ? 'NEW ALL-TIME HIGH!' : deathMessage}
-                  </h2>
+              <div className="mb-2.5 grid grid-cols-2 gap-1.5">
+                <div className="bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200 text-center">
+                  <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-0.5">pnl</p>
+                  <p className="text-[12px] font-black text-slate-900 leading-none">{formatMarketCap(deathScore)}</p>
                 </div>
-
-                <div className="mb-3 grid grid-cols-2 gap-2">
-                  <div className="bg-slate-50 px-2 py-2 rounded-xl border-2 border-slate-200 text-center"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">portfolio</p><p className="text-[14px] font-black text-slate-900 leading-none">{formatMarketCap(deathScore)}</p></div>
-                  <div className="bg-[#eef4ff] px-2 py-2 rounded-xl border-2 border-[#0052FF]/20 text-center"><p className="text-[9px] font-black text-[#6CACFF] uppercase tracking-widest mb-1">mode</p><p className="text-[12px] font-black leading-none uppercase tracking-widest" style={{ color: getSpeed(score).color }}>{speedName}</p></div>
-                </div>
-
-                {/* Near-record motivational message — minimal */}
-                {nearRecordDiff !== null && (
-                  <div className="mb-3 bg-[#FFFBEB] px-2 py-2 rounded-xl border-2 border-[#F0B90B]/30 text-center flex items-center justify-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-[#F0B90B]" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" /></svg>
-                    <p className="text-[9px] font-black text-[#B78905] uppercase tracking-widest">only {nearRecordDiff} pts from max!</p>
-                  </div>
-                )}
-
-                {/* Stats — compact */}
-                {gameStats && (
-                  <div className="grid grid-cols-4 gap-1.5 mb-3 text-center text-[8px] font-bold mt-1">
-                    <div className="bg-slate-50 px-1 py-1.5 rounded-xl border-2 border-slate-200"><p className="text-slate-400 uppercase tracking-widest mb-1" style={{ fontSize: '7px' }}>session</p><p className="text-slate-700 font-black text-[10px]">{Math.floor(gameStats.timeSurvived)}s</p></div>
-                    <div className="bg-slate-50 px-1 py-1.5 rounded-xl border-2 border-slate-200"><p className="text-slate-400 uppercase tracking-widest mb-1" style={{ fontSize: '7px' }}>survived</p><p className="text-slate-700 font-black text-[10px]">{gameStats.candlesDodged}</p></div>
-                    <div className="bg-[#e8f8f0] px-1 py-1.5 rounded-xl border-2 border-[#0ECB81]/40"><p className="text-[#0ECB81] uppercase tracking-widest mb-1" style={{ fontSize: '7px' }}>buys</p><p className="text-[#0ECB81] font-black text-[10px]">{gameStats.greensCollected}</p></div>
-                    <div className="bg-slate-50 px-1 py-1.5 rounded-xl border-2 border-slate-200"><p className="text-slate-400 uppercase tracking-widest mb-1" style={{ fontSize: '7px' }}>entries</p><p className="text-slate-700 font-black text-[10px]">{gameStats.totalJumps}</p></div>
-                  </div>
-                )}
-
-                {/* Score submit / success / wallet connect — ONLY ON NEW RECORD OR IF ALREADY SUBMITTED */}
-                {(submitted || isScoreConfirmed) ? (
-                  <div className="mb-3 bg-[#e8f8f0] border-2 border-[#0ECB81] px-3 py-2 rounded-xl flex flex-col items-center justify-center">
-                    <div className="flex items-center gap-1.5">
-                      <svg className="w-4 h-4 text-[#0ECB81]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                      <span className="text-[11px] font-black text-[#0ECB81] uppercase tracking-widest">saved on-chain!</span>
-                    </div>
-                    {submitTxHash && (
-                      <a href={`https://${process.env.NEXT_PUBLIC_USE_TESTNET === 'true' ? 'sepolia.' : ''}basescan.org/tx/${submitTxHash}`} target="_blank" rel="noopener noreferrer" className="mt-1 text-[9px] font-black font-mono text-[#0A0B14] hover:text-[#0052FF] underline opacity-90 transition-colors uppercase tracking-widest">
-                        view tx ↗
-                      </a>
-                    )}
-                  </div>
-                ) : isNewRecord ? (
-                  isConnected && canSubmitScore && deathScore > 0 ? (
-                    txContracts ? (
-                      <Transaction
-                        calls={txContracts as any}
-                        capabilities={process.env.NEXT_PUBLIC_PAYMASTER_URL ? { paymasterService: { url: process.env.NEXT_PUBLIC_PAYMASTER_URL } } : undefined}
-                        onSuccess={() => setSubmitted(true)}
-                        onError={(e) => setError(e.message)}
-                        className="w-full flex flex-col items-center"
-                      >
-                        {/* @ts-expect-error React 18 Server Component type mismatch in OnchainKit */}
-                        <TransactionButton
-                          className="mb-3 w-full bg-[#0052FF] text-white py-3 text-[11px] font-black uppercase tracking-widest hover:bg-[#0A0B14] active:scale-[0.98] rounded-none border-2 border-[#0052FF] hover:border-[#0A0B14] transition-colors"
-                          text="SAVE RECORD GASLESS"
-                        />
-                        <TransactionStatus>
-                          <TransactionStatusLabel />
-                          <TransactionStatusAction />
-                        </TransactionStatus>
-                      </Transaction>
-                    ) : (
-                      <button disabled className="mb-3 w-full bg-slate-200 text-slate-500 py-3 text-[11px] font-black uppercase tracking-widest rounded-none border-2 border-slate-300">
-                        PREPARING TX...
-                      </button>
-                    )
-                  ) : !isConnected ? (
-                    <button onClick={handleConnectWallet} disabled={connectingWallet} className="mb-3 w-full bg-[#0052FF] text-white py-3 text-[11px] font-black uppercase tracking-widest hover:bg-[#0A0B14] active:scale-[0.98] rounded-none border-2 border-[#0052FF] hover:border-[#0A0B14] transition-colors disabled:opacity-50">
-                      {connectingWallet ? 'CONNECTING...' : 'CONNECT TO SAVE RECORD'}
-                    </button>
-                  ) : (
-                    <p className="mb-3 px-2 py-2 text-[9px] font-black text-slate-500 uppercase tracking-widest bg-slate-100/80 rounded-none border-2 border-slate-200 text-center">contract not configured.</p>
-                  )
-                ) : null}
-
-                {error && <p className="text-[#F6465D] text-[9px] font-black mb-3 bg-[#FFF0F2] px-2 py-2 rounded-none text-center border-2 border-[#F6465D]/30 uppercase tracking-widest">{error}</p>}
-
-                <button onClick={startGame} className={`w-full border-2 border-[#0A0B14] bg-white px-3 py-3 text-[12px] font-black text-[#0A0B14] uppercase tracking-widest hover:bg-[#0A0B14] hover:text-white active:scale-[0.98] transition-all rounded-none ${retryVisible ? 'opacity-100' : 'opacity-0 scale-95 pointer-events-none'}`} style={retryVisible ? { animation: 'retryPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards' } : undefined}>
-                  RUN IT BACK
-                </button>
-
-                {/* Share button — Farcaster Frame (item 10) */}
-                {retryVisible && (
-                  <button
-                    onClick={() => {
-                      const shareUrl = `${window.location.origin}/api/frames/result?score=${deathScore}&address=${address || ''}`
-                      const shareText = `I scored ${formatMarketCap(deathScore)} PNL in Base Dash! 🎮\n\nCan you beat my score?`
-                      if (navigator.share) {
-                        navigator.share({ title: 'Base Dash Score', text: shareText, url: shareUrl }).catch(() => { })
-                      } else {
-                        navigator.clipboard.writeText(`${shareText}\n${shareUrl}`).catch(() => { })
-                      }
-                    }}
-                    className="w-full mt-2 border-2 border-[#8B5CF6] bg-[#8B5CF6]/10 px-3 py-2.5 text-[10px] font-black text-[#8B5CF6] uppercase tracking-widest hover:bg-[#8B5CF6] hover:text-white active:scale-[0.98] transition-all rounded-none flex items-center justify-center gap-1.5"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" /></svg>
-                    SHARE SCORE
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ===================== PLAYING HUD ===================== */}
-        {mode === 'playing' && (
-          <>
-            {/* Minimalist Premium HUD — Left */}
-            <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5 z-10">
-              <div className="flex items-center gap-2.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-xl border border-white/80 shadow-sm pointer-events-none"
-                style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-                <span className="text-[15px] font-black text-slate-900 leading-none tracking-tighter"
-                  style={{ fontFamily: 'var(--font-space, Space Grotesk, system-ui)', textShadow: 'none' }}>
-                  {formatMarketCap(score)}
-                </span>
-                <div className="w-px h-3.5 bg-slate-300" />
-                <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 bg-[#0ECB81] rounded-sm shadow-[0_0_4px_#0ECB81]" />
-                  <span className="text-[11px] font-bold text-slate-700"
-                    style={{ fontFamily: 'var(--font-space, Space Grotesk, system-ui)' }}>
-                    {engineRef.current.totalCollected}
-                  </span>
+                <div className="bg-[#eef4ff] px-2 py-1.5 rounded-lg border border-[#0052FF]/20 text-center">
+                  <p className="text-[7px] font-black text-[#6CACFF] uppercase tracking-widest mb-0.5">mode</p>
+                  <p className="text-[10px] font-black leading-none uppercase tracking-widest" style={{ color: getSpeed(score).color }}>{speedName}</p>
                 </div>
               </div>
 
-              {/* Combo badge */}
-              {engineRef.current.combo > 1 && (
-                <div className="flex items-center px-2 py-1 bg-[#FFF8DC]/90 backdrop-blur border border-[#F0B90B]/40 rounded-lg shadow-sm">
-                  <span className="text-[10px] font-black text-[#D4A002] drop-shadow-[0_0_4px_rgba(240,185,11,0.4)]"
-                    style={{ fontFamily: 'var(--font-space, Space Grotesk, system-ui)' }}>
-                    {engineRef.current.combo}× COMBO
-                  </span>
+              {nearRecordDiff !== null && (
+                <div className="mb-2.5 bg-[#FFFBEB] px-2 py-1.5 rounded-lg border border-[#F0B90B]/30 text-center flex items-center justify-center gap-1">
+                  <svg className="w-3 h-3 text-[#F0B90B]" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" /></svg>
+                  <p className="text-[8px] font-black text-[#B78905] uppercase tracking-widest">-{nearRecordDiff} from max</p>
                 </div>
               )}
-            </div>
 
-            {/* Premium HUD — Right: World + Speed + Sound */}
-            <div className="absolute top-3 right-3 flex flex-col items-end gap-2 z-10">
-              <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-xl border border-white/80 shadow-sm pointer-events-none"
-                style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-                <span className="text-[9px] font-bold text-slate-600 uppercase leading-none tracking-[0.14em]"
-                  style={{ fontFamily: 'var(--font-space, Space Grotesk, system-ui)' }}>
-                  {worldName}
-                </span>
-                <div className="w-px h-2.5 bg-slate-300" />
-                <span className="text-[9px] font-black leading-none uppercase tracking-[0.1em]"
-                  style={{ color: getSpeed(score).color, fontFamily: 'var(--font-space, Space Grotesk, system-ui)', textShadow: `0 0 8px ${getSpeed(score).color}80` }}>
-                  {speedName.split('.').pop()?.trim() || speedName}
+              {gameStats && (
+                <div className="grid grid-cols-4 gap-1 mb-2.5 text-center text-[7px] font-bold">
+                  <div className="bg-slate-50 px-1 py-1 rounded border border-slate-200">
+                    <p className="text-slate-400 uppercase tracking-widest mb-0.5" style={{ fontSize: '6px' }}>time</p>
+                    <p className="text-slate-700 font-black text-[9px]">{Math.floor(gameStats.timeSurvived)}s</p>
+                  </div>
+                  <div className="bg-slate-50 px-1 py-1 rounded border border-slate-200">
+                    <p className="text-slate-400 uppercase tracking-widest mb-0.5" style={{ fontSize: '6px' }}>dodged</p>
+                    <p className="text-slate-700 font-black text-[9px]">{gameStats.candlesDodged}</p>
+                  </div>
+                  <div className="bg-[#e8f8f0] px-1 py-1 rounded border border-[#0ECB81]/40">
+                    <p className="text-[#0ECB81] uppercase tracking-widest mb-0.5" style={{ fontSize: '6px' }}>buys</p>
+                    <p className="text-[#0ECB81] font-black text-[9px]">{gameStats.greensCollected}</p>
+                  </div>
+                  <div className="bg-slate-50 px-1 py-1 rounded border border-slate-200">
+                    <p className="text-slate-400 uppercase tracking-widest mb-0.5" style={{ fontSize: '6px' }}>jumps</p>
+                    <p className="text-slate-700 font-black text-[9px]">{gameStats.totalJumps}</p>
+                  </div>
+                </div>
+              )}
+
+              {(submitted || isScoreConfirmed) ? (
+                <div className="mb-2.5 bg-[#e8f8f0] border border-[#0ECB81] px-2 py-1.5 rounded-lg flex flex-col items-center justify-center">
+                  <div className="flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5 text-[#0ECB81]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    <span className="text-[9px] font-black text-[#0ECB81] uppercase tracking-widest">saved!</span>
+                  </div>
+                  {submitTxHash && (
+                    <a href={`https://${process.env.NEXT_PUBLIC_USE_TESTNET === 'true' ? 'sepolia.' : ''}basescan.org/tx/${submitTxHash}`} target="_blank" rel="noopener noreferrer" className="mt-0.5 text-[7px] font-black font-mono text-[#0A0B14] hover:text-[#0052FF] underline opacity-90 transition-colors uppercase tracking-widest">
+                      view tx ↗
+                    </a>
+                  )}
+                </div>
+              ) : isNewRecord ? (
+                isConnected && canSubmitScore && deathScore > 0 ? (
+                  txContracts ? (
+                    <Transaction
+                      calls={txContracts as any}
+                      capabilities={process.env.NEXT_PUBLIC_PAYMASTER_URL ? { paymasterService: { url: process.env.NEXT_PUBLIC_PAYMASTER_URL } } : undefined}
+                      onSuccess={() => setSubmitted(true)}
+                      onError={(e) => setError(e.message)}
+                      className="w-full flex flex-col items-center"
+                    >
+                      {/* @ts-expect-error React 18 Server Component type mismatch in OnchainKit */}
+                      <TransactionButton
+                        className="mb-2.5 w-full bg-[#0052FF] text-white py-2 text-[9px] font-black uppercase tracking-widest hover:bg-[#0A0B14] active:scale-[0.98] rounded-none border border-[#0052FF] hover:border-[#0A0B14] transition-colors"
+                        text="SAVE RECORD"
+                      />
+                      <TransactionStatus>
+                        <TransactionStatusLabel />
+                        <TransactionStatusAction />
+                      </TransactionStatus>
+                    </Transaction>
+                  ) : (
+                    <button disabled className="mb-2.5 w-full bg-slate-200 text-slate-500 py-2 text-[9px] font-black uppercase tracking-widest rounded-none border border-slate-300">
+                      PREPARING...
+                    </button>
+                  )
+                ) : !isConnected ? (
+                  <button onClick={handleConnectWallet} disabled={connectingWallet} className="mb-2.5 w-full bg-[#0052FF] text-white py-2 text-[9px] font-black uppercase tracking-widest hover:bg-[#0A0B14] active:scale-[0.98] rounded-none border border-[#0052FF] hover:border-[#0A0B14] transition-colors disabled:opacity-50">
+                    {connectingWallet ? 'CONNECTING...' : 'CONNECT TO SAVE'}
+                  </button>
+                ) : (
+                  <p className="mb-2.5 px-2 py-1.5 text-[7px] font-black text-slate-500 uppercase tracking-widest bg-slate-100/80 rounded border border-slate-200 text-center">contract not configured.</p>
+                )
+              ) : null}
+
+              {error && <p className="text-[#F6465D] text-[7px] font-black mb-2.5 bg-[#FFF0F2] px-2 py-1.5 rounded text-center border border-[#F6465D]/30 uppercase tracking-widest">{error}</p>}
+
+              <button onClick={startGame} className={`w-full border border-[#0A0B14] bg-white px-2 py-2 text-[10px] font-black text-[#0A0B14] uppercase tracking-widest hover:bg-[#0A0B14] hover:text-white active:scale-[0.98] transition-all rounded-none ${retryVisible ? 'opacity-100' : 'opacity-0 scale-95 pointer-events-none'}`} style={retryVisible ? { animation: 'retryPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards' } : undefined}>
+                RUN IT BACK
+              </button>
+
+              {retryVisible && (
+                <button
+                  onClick={() => {
+                    const shareUrl = `${window.location.origin}/api/frames/result?score=${deathScore}&address=${address || ''}`
+                    const shareText = `I scored ${formatMarketCap(deathScore)} PNL in Base Dash! 🎮`
+                    if (navigator.share) {
+                      navigator.share({ title: 'Base Dash Score', text: shareText, url: shareUrl }).catch(() => { })
+                    } else {
+                      navigator.clipboard.writeText(`${shareText}\n${shareUrl}`).catch(() => { })
+                    }
+                  }}
+                  className="w-full mt-1.5 border border-[#8B5CF6] bg-[#8B5CF6]/10 px-2 py-1.5 text-[8px] font-black text-[#8B5CF6] uppercase tracking-widest hover:bg-[#8B5CF6] hover:text-white active:scale-[0.98] transition-all rounded-none flex items-center justify-center gap-1"
+                >
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" /></svg>
+                  SHARE
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================== PLAYING HUD ===================== */}
+      {mode === 'playing' && (
+        <>
+          {/* Minimalist Premium HUD — Left */}
+          <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5 z-10">
+            <div className="flex items-center gap-2.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-xl border border-white/80 shadow-sm pointer-events-none"
+              style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              <span className="text-[15px] font-black text-slate-900 leading-none tracking-tighter"
+                style={{ fontFamily: 'var(--font-mono, monospace)', textShadow: 'none' }}>
+                {formatMarketCap(score)}
+              </span>
+              <div className="w-px h-3.5 bg-slate-300" />
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 bg-[#0ECB81] rounded-sm shadow-[0_0_4px_#0ECB81]" />
+                <span className="text-[11px] font-bold text-slate-700"
+                  style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                  {engineRef.current.totalCollected}
                 </span>
               </div>
-
-              {/* Sound toggle — clean, premium */}
-              <button
-                onClick={() => setSoundEnabled(prev => !prev)}
-                className="h-[30px] w-[30px] flex items-center justify-center bg-white/80 backdrop-blur border border-slate-200/80 rounded-lg text-slate-500 hover:text-[#0052FF] hover:border-[#0052FF]/30 active:scale-95 transition-all shadow-sm z-20 touch-manipulation"
-                title={soundEnabled ? 'mute' : 'unmute'}
-              >
-                {soundEnabled ? (
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072M12 6l-4 4H4v4h4l4 4V6z" /></svg>
-                ) : (
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707A1 1 0 0112 5v14a1 1 0 01-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-                )}
-              </button>
             </div>
 
-            {/* Chill / whale mode — glowing banner */}
-            {engineRef.current.slowdownTimer > 0 && (
-              <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-[#0ECB81]/15 backdrop-blur-md border border-[#0ECB81]/30 px-3 py-1 rounded-full z-10 shadow-[0_0_10px_rgba(14,203,129,0.2)] pointer-events-none">
-                <p className="text-[#0ECB81] text-[9px] font-bold text-center drop-shadow-[0_0_4px_rgba(14,203,129,0.5)] tracking-wide uppercase">
-                  {engineRef.current.whaleTimer > 0 ? 'whale alert' : 'chill mode'}
-                </p>
+            {/* Combo badge */}
+            {engineRef.current.combo > 1 && (
+              <div className="flex items-center px-2 py-1 bg-[#FFF8DC]/90 backdrop-blur border border-[#F0B90B]/40 rounded-lg shadow-sm">
+                <span className="text-[10px] font-black text-[#D4A002] drop-shadow-[0_0_4px_rgba(240,185,11,0.4)]"
+                  style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                  {engineRef.current.combo}× COMBO
+                </span>
               </div>
             )}
+          </div>
 
-            {/* Sound toggle moved to top right - previous location removed */}
-
-            {/* Jump indicators — glowing dots */}
-            <div className="absolute bottom-2 right-2 flex gap-1.5 z-10">
-              {Array.from({ length: getJumps(score) }).map((_, i) => (
-                <div key={i} className={`w-3 h-3 border transition-all duration-300 rounded-sm ${i < engineRef.current.player.maxJumps - engineRef.current.player.jumpCount ? 'border-[#4d8dff]/60 bg-[#0052FF] shadow-[0_0_6px_rgba(0,82,255,0.6)] scale-100' : 'border-white/10 bg-white/10 scale-90'}`} />
-              ))}
+          {/* Premium HUD — Right: World + Speed + Sound */}
+          <div className="absolute top-3 right-3 flex flex-col items-end gap-2 z-10">
+            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-xl border border-white/80 shadow-sm pointer-events-none"
+              style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              <span className="text-[9px] font-bold text-slate-600 uppercase leading-none tracking-[0.14em]"
+                style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                {worldName}
+              </span>
+              <div className="w-px h-2.5 bg-slate-300" />
+              <span className="text-[9px] font-black leading-none uppercase tracking-[0.1em]"
+                style={{ color: getSpeed(score).color, fontFamily: 'var(--font-mono, monospace)', textShadow: `0 0 8px ${getSpeed(score).color}80` }}>
+                {speedName.split('.').pop()?.trim() || speedName}
+              </span>
             </div>
-          </>
-        )}
-      </div>
-    </div >
+
+            {/* Sound toggle — clean, premium */}
+            <button
+              onClick={() => setSoundEnabled(prev => !prev)}
+              className="h-[30px] w-[30px] flex items-center justify-center bg-white/80 backdrop-blur border border-slate-200/80 rounded-lg text-slate-500 hover:text-[#0052FF] hover:border-[#0052FF]/30 active:scale-95 transition-all shadow-sm z-20 touch-manipulation"
+              title={soundEnabled ? 'mute' : 'unmute'}
+            >
+              {soundEnabled ? (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072M12 6l-4 4H4v4h4l4 4V6z" /></svg>
+              ) : (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707A1 1 0 0112 5v14a1 1 0 01-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+              )}
+            </button>
+          </div>
+
+          {/* Chill / whale mode — glowing banner */}
+          {engineRef.current.slowdownTimer > 0 && (
+            <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-[#0ECB81]/15 backdrop-blur-md border border-[#0ECB81]/30 px-3 py-1 rounded-full z-10 shadow-[0_0_10px_rgba(14,203,129,0.2)] pointer-events-none">
+              <p className="text-[#0ECB81] text-[9px] font-bold text-center drop-shadow-[0_0_4px_rgba(14,203,129,0.5)] tracking-wide uppercase">
+                {engineRef.current.whaleTimer > 0 ? 'whale alert' : 'chill mode'}
+              </p>
+            </div>
+          )}
+
+          {/* Sound toggle moved to top right - previous location removed */}
+
+          {/* Jump indicators — glowing dots */}
+          <div className="absolute bottom-2 right-2 flex gap-1.5 z-10">
+            {Array.from({ length: getJumps(score) }).map((_, i) => (
+              <div key={i} className={`w-3 h-3 border transition-all duration-300 rounded-sm ${i < engineRef.current.player.maxJumps - engineRef.current.player.jumpCount ? 'border-[#4d8dff]/60 bg-[#0052FF] shadow-[0_0_6px_rgba(0,82,255,0.6)] scale-100' : 'border-white/10 bg-white/10 scale-90'}`} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   )
 }

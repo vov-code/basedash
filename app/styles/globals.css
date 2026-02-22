@@ -841,105 +841,7 @@ a:hover {
   transform: translateY(-2px);
 }
 
-.card-elevated {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  padding: var(--space-6);
-  box-shadow: var(--shadow-md);
-}
-
-.card-interactive {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  padding: var(--space-6);
-  transition: all var(--transition-base);
-  cursor: pointer;
-}
-
-.card-interactive:hover {
-  border-color: var(--border-hover);
-  box-shadow: var(--shadow-lg), var(--shadow-blue);
-  transform: translateY(-4px);
-}
-
-/* ============================================================================
-   INPUT STYLES — Clean Forms
-   ============================================================================ */
-
-.input {
-  width: 100%;
-  padding: 12px 16px;
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-fast);
-}
-
-.input:hover {
-  border-color: var(--border-strong);
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px var(--base-blue-pale);
-}
-
-.input::placeholder {
-  color: var(--text-tertiary);
-}
-
-.input:disabled {
-  background: var(--bg-secondary);
-  cursor: not-allowed;
-}
-
-/* ============================================================================
-   BADGE STYLES — Status Indicators
-   ============================================================================ */
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1;
-  border-radius: var(--radius-full);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.badge-primary {
-  background: var(--base-blue-pale);
-  color: var(--base-blue);
-}
-
-.badge-success {
-  background: var(--success-bg);
-  color: var(--success);
-}
-
-.badge-error {
-  background: var(--error-bg);
-  color: var(--error);
-}
-
-.badge-warning {
-  background: var(--warning-bg);
-  color: var(--warning);
-}
-
-.badge-gray {
-  background: var(--gray-100);
-  color: var(--gray-600);
-}
+/* Input & badge styles removed — unused in this project */
 
 /* ============================================================================
    UTILITY CLASSES
@@ -1182,20 +1084,12 @@ body.game-active {
   body {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
   }
 
-  /* Explicit minimum touch targets (outside game overlay) */
-  button,
-  a,
-  input,
-  select {
+  /* Explicit minimum touch targets — only outside game canvas */
+  :where(header, footer, main > div:not(.game-container)) :where(button, a, input, select) {
     min-height: 44px;
-  }
-
-  /* No min-height inside game overlays — compact fit */
-  .game-overlay button,
-  .game-overlay a {
-    min-height: unset;
   }
 
   /* Game container — full width, edge-to-edge on mobile */
@@ -1294,29 +1188,7 @@ body.game-active {
    PREMIUM CUSTOM ANIMATIONS
    ============================================================================ */
 
-@keyframes float {
-
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-12px);
-  }
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(24px) scale(0.98);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
+/* float and fadeInUp defined above — no duplicates */
 
 @keyframes shimmerSweep {
   0% {
@@ -1488,16 +1360,256 @@ body.game-active {
 }
 
 /* ============================================================================
-   PRINT STYLES
+   GLITCH ANIMATIONS — Entry screen degen effect
    ============================================================================ */
 
-@media print {
-  body {
-    background: white;
-    color: black;
+@keyframes glitchText {
+
+  0%,
+  92%,
+  100% {
+    transform: translate(0);
   }
 
-  .no-print {
-    display: none !important;
+  93% {
+    transform: translate(-2px, 1px);
   }
+
+  95% {
+    transform: translate(2px, -1px);
+  }
+
+  97% {
+    transform: translate(-1px, -1px);
+  }
+}
+
+@keyframes glitchLayer1 {
+
+  0%,
+  92%,
+  100% {
+    opacity: 0;
+    transform: translate(0);
+  }
+
+  93% {
+    opacity: 0.7;
+    transform: translate(3px, 0);
+  }
+
+  95% {
+    opacity: 0;
+    transform: translate(-3px, 0);
+  }
+
+  97% {
+    opacity: 0.5;
+    transform: translate(2px, 0);
+  }
+}
+
+@keyframes glitchLayer2 {
+
+  0%,
+  91%,
+  100% {
+    opacity: 0;
+    transform: translate(0);
+  }
+
+  92% {
+    opacity: 0.6;
+    transform: translate(-3px, 0);
+  }
+
+  94% {
+    opacity: 0;
+    transform: translate(3px, 0);
+  }
+
+  96% {
+    opacity: 0.4;
+    transform: translate(-2px, 0);
+  }
+}
+
+/* ============================================================================
+   PREMIUM ANIMATIONS — Unique & Optimized
+   ============================================================================ */
+
+/* Gentle breathing glow for cards */
+@keyframes breatheGlow {
+  0%, 100% {
+    box-shadow: 0 4px 16px rgba(0, 82, 255, 0.08), 0 0 0 1px rgba(0, 82, 255, 0.05);
+  }
+  50% {
+    box-shadow: 0 8px 32px rgba(0, 82, 255, 0.15), 0 0 0 1px rgba(0, 82, 255, 0.1);
+  }
+}
+
+/* Subtle gradient shift */
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Icon float animation */
+@keyframes iconFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(2deg);
+  }
+}
+
+/* Border shimmer - optimized */
+@keyframes borderShimmer {
+  0% {
+    border-color: rgba(0, 82, 255, 0.2);
+  }
+  50% {
+    border-color: rgba(0, 82, 255, 0.4);
+  }
+  100% {
+    border-color: rgba(0, 82, 255, 0.2);
+  }
+}
+
+/* Pulse ring */
+@keyframes pulseRing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 82, 255, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 82, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 82, 255, 0);
+  }
+}
+
+/* Slide up fade - smooth */
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scale in with spring */
+@keyframes scaleInSpring {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Gentle rotation */
+@keyframes gentleRotate {
+  0%, 100% {
+    transform: rotate(-1deg);
+  }
+  50% {
+    transform: rotate(1deg);
+  }
+}
+
+/* Shimmer sweep - optimized version */
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.3;
+  }
+  80% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Glow pulse for buttons */
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 4px 14px rgba(0, 82, 255, 0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(0, 82, 255, 0.5), inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+}
+
+/* Particle float */
+@keyframes particleFloat {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(5px, -5px);
+  }
+  50% {
+    transform: translate(-5px, 5px);
+  }
+  75% {
+    transform: translate(5px, 5px);
+  }
+}
+
+/* Utility classes for new animations */
+.animate-breathe-glow {
+  animation: breatheGlow 3s ease-in-out infinite;
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradientShift 4s ease infinite;
+}
+
+.animate-icon-float {
+  animation: iconFloat 2s ease-in-out infinite;
+}
+
+.animate-border-shimmer {
+  animation: borderShimmer 2s ease-in-out infinite;
+}
+
+.animate-pulse-ring {
+  animation: pulseRing 1.5s ease-out infinite;
+}
+
+.animate-slide-up-fade {
+  animation: slideUpFade 0.4s ease-out forwards;
+}
+
+.animate-scale-in-spring {
+  animation: scaleInSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-gentle-rotate {
+  animation: gentleRotate 3s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+.animate-particle-float {
+  animation: particleFloat 4s ease-in-out infinite;
 }
