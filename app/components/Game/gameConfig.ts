@@ -1102,11 +1102,11 @@ export function updateGameConfig(width: number, height: number) {
         CFG.MAX_SPEED = clamp(680 * speedScale * 1.6, 400, 580);
 
         const physicsScale = clamp(height / 540, 0.8, 1.4);
-        CFG.GRAVITY_UP = 1900 * physicsScale * 0.9;
-        CFG.GRAVITY_DOWN = 3200 * physicsScale * 0.9;
-        CFG.JUMP = -720 * Math.sqrt(physicsScale) * 0.95;
-        CFG.DOUBLE_JUMP = -600 * Math.sqrt(physicsScale) * 0.95;
-        CFG.MAX_FALL = 1200 * physicsScale;
+        CFG.GRAVITY_UP = 1900 * physicsScale * 0.95;  // Чуть легче вверх
+        CFG.GRAVITY_DOWN = 2800 * physicsScale * 0.95;  // Чуть легче вниз (плавнее)
+        CFG.JUMP = -680 * Math.sqrt(physicsScale) * 0.95;  // Чуть ниже прыжок
+        CFG.DOUBLE_JUMP = -520 * Math.sqrt(physicsScale) * 0.95;  // Заметно ниже double jump
+        CFG.MAX_FALL = 1100 * physicsScale;
 
         CFG.BASE_SPAWN_GAP = CFG.BASE_SPEED * 1.55;
         CFG.MIN_SPAWN_GAP = CFG.BASE_SPEED * 0.95;

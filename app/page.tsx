@@ -287,9 +287,9 @@ export default function Home() {
   // MAIN APP (always renders — entry popup is overlay on top)
   // ========================================================================
   return (
-    <div className="h-[100dvh] w-full bg-white flex flex-col relative overflow-hidden">
+    <div className="h-[100dvh] w-full bg-white flex flex-col relative overflow-hidden" style={{ overflow: 'hidden' }}>
       {/* GLOBAL PARTICLE BACKGROUND - z-0, covers full length of site */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" style={{ maxHeight: 'calc(100dvh - 80px)' }}>
         <ParticleChaos opacity={0.6} />
       </div>
 
@@ -646,10 +646,10 @@ export default function Home() {
           </div>
         </main>
 
-        {/* FOOTER - z-[40] */}
-        <footer className="mt-auto bg-white/50 backdrop-blur-md relative z-[40]">
-          <div className="mx-auto w-full max-w-3xl px-6 py-4 border-t border-slate-100/50">
-            <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.15em] font-medium" style={{ fontFamily: 'var(--font-mono)' }}>
+        {/* FOOTER - z-[40], fixed height */}
+        <footer className="mt-auto bg-white/50 backdrop-blur-md relative z-[40] flex-shrink-0" style={{ height: '60px' }}>
+          <div className="mx-auto w-full max-w-3xl px-6 py-4 border-t border-slate-100/50 h-full flex items-center">
+            <div className="flex items-center justify-between w-full text-[10px] uppercase tracking-[0.15em] font-medium" style={{ fontFamily: 'var(--font-mono)' }}>
               <span className="text-slate-400/80">© {new Date().getFullYear()} base dash</span>
               <span className="text-slate-400/80">built by <span className="font-black text-[#0052FF]">vov</span></span>
             </div>

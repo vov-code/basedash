@@ -274,6 +274,11 @@ function startBackgroundMusic(): void {
   const ctx = getAudioCtx()
   if (!ctx) return
 
+  // Resume audio context if suspended (happens after tab switch)
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => { /* ignore */ })
+  }
+
   // Stop any existing music first to prevent layering
   stopBackgroundMusic()
 
@@ -692,18 +697,18 @@ export default function GameEngine({
     // Apply velocity
     p.y += p.velocityY * dt
 
-    // Ground collision — strict snap to ground with velocity check
+    // Ground collision — PERFECT snap with zero tolerance
     const groundLevel = CFG.GROUND - CFG.PLAYER_SIZE
     const distToGround = groundLevel - p.y
-
-    // Snap to ground when very close (within 3px)
-    if (Math.abs(distToGround) < 3) {
-      p.y = groundLevel  // Exact snap
+    
+    // PERFECT snap: if within 5px and not moving up fast
+    if (Math.abs(distToGround) < 5 && p.velocityY >= -100) {
+      p.y = groundLevel  // EXACT snap - no gap
       p.velocityY = 0
       p.onGround = true
       p.coyoteTimer = CFG.COYOTE
       p.jumpCount = 0
-      p.rotation = 0  // Reset rotation on ground
+      p.rotation = 0  // Reset rotation
     } else {
       p.onGround = false
     }
@@ -751,17 +756,17 @@ export default function GameEngine({
       p.rotation += 11.5 * dt
     }
 
-    // Squash/stretch animation
+    // Squash/stretch animation — SMOOTHER landing
     // Breathe idle animation when on ground
     if (p.onGround && e.alive && Math.abs(p.squash) < 0.01) {
       p.squash = Math.sin(e.gameTime * CFG.BREATHE_SPEED) * CFG.BREATHE_AMP
     }
-    p.squash = lerp(p.squash, 0, dt * 12)
-    p.scale = 1 + p.squash * (p.velocityY < 0 ? -0.3 : 0.4)
+    p.squash = lerp(p.squash, 0, dt * 8)  // Плавнее затухание
+    p.scale = 1 + p.squash * (p.velocityY < 0 ? -0.25 : 0.35)  // Мягче эффект
 
-    // Tilt based on velocity
-    const targetTilt = clamp(p.velocityY / 800, -1, 1)
-    p.tilt = lerp(p.tilt, targetTilt, dt * 8)
+    // Tilt based on velocity — SMOOTHER
+    const targetTilt = clamp(p.velocityY / 900, -0.9, 0.9)  // Меньше наклон
+    p.tilt = lerp(p.tilt, targetTilt, dt * 6)  // Плавнее
 
     // Flash decay
     p.flash = Math.max(0, p.flash - dt * 4)
@@ -1423,11 +1428,17 @@ export default function GameEngine({
     }
   }, [])
 
-  // Auto-pause on visibility change (fix #6)
+  // Auto-pause on visibility change + resume audio on return
   useEffect(() => {
     const handleVisibility = () => {
       if (document.hidden && mode === 'playing') {
         setMode('paused')
+      } else if (!document.hidden && mode === 'paused') {
+        // Resume audio context when returning to tab
+        const ctx = getAudioCtx()
+        if (ctx && ctx.state === 'suspended') {
+          ctx.resume().catch(() => { /* ignore */ })
+        }
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
