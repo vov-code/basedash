@@ -697,13 +697,13 @@ export default function GameEngine({
     // Apply velocity
     p.y += p.velocityY * dt
 
-    // Ground collision — PERFECT snap with zero tolerance
+    // Ground collision — PERFECT snap with ZERO tolerance
     const groundLevel = CFG.GROUND - CFG.PLAYER_SIZE
     const distToGround = groundLevel - p.y
     
-    // PERFECT snap: if within 5px and not moving up fast
-    if (Math.abs(distToGround) < 5 && p.velocityY >= -100) {
-      p.y = groundLevel  // EXACT snap - no gap
+    // PERFECT snap: if within 8px and moving down or stopped
+    if (distToGround > -8 && distToGround < 8 && p.velocityY >= -50) {
+      p.y = groundLevel  // EXACT snap - ZERO gap
       p.velocityY = 0
       p.onGround = true
       p.coyoteTimer = CFG.COYOTE
@@ -880,6 +880,7 @@ export default function GameEngine({
             // DEATH
             e.alive = false
             e.shakeTimer = 0.4
+            e.combo = 0  // Сброс комбо при смерти
             setDeathScore(e.score)
             // Compute game stats
             const dodged = e.candles.filter(c => c.kind === 'red' && c.passed && !c.collected).length

@@ -521,7 +521,7 @@ export default function Home() {
                 </div>
 
                 {/* BOTTOM INFO GRID — Auto-hide on very small screens */}
-                <div className="w-full px-2 sm:px-4 py-2 sm:py-3 flex-1 flex flex-col relative z-20 min-h-0 overflow-hidden">
+                <div className="w-full px-2 sm:px-4 pb-4 sm:pb-6 pt-1 flex-1 flex flex-col relative z-20 min-h-0 overflow-hidden">
                   <div className="w-full h-full grid grid-cols-2 gap-1.5 sm:gap-2.5 max-w-lg mx-auto auto-rows-fr content-center">
 
                     {/* Liquidation Watch — full width */}

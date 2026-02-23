@@ -538,7 +538,7 @@ export const drawPowerUps = (
 // ACTIVE POWER-UP INDICATORS
 // ============================================================================
 
-/** Draw active power-up indicators at bottom-left — Crypto themed */
+/** Draw active power-up indicators — Compact & clean */
 export const drawPowerUpIndicators = (
     ctx: CanvasRenderingContext2D,
     e: EngineState
@@ -551,114 +551,38 @@ export const drawPowerUpIndicators = (
     if (indicators.length === 0) return
 
     ctx.save()
-    let offsetX = 10
+    let offsetX = 8
     for (const ind of indicators) {
-        const y = CFG.GROUND - 28
-        const boxW = 56
-        const boxH = 26
+        const y = CFG.GROUND - 32  // Чуть выше
+        const boxW = 48  // Меньше ширина
+        const boxH = 22  // Меньше высота
 
-        // Background with gradient
-        const bgGrad = ctx.createLinearGradient(offsetX, y, offsetX, y + boxH)
-        bgGrad.addColorStop(0, 'rgba(20,20,35,0.95)')
-        bgGrad.addColorStop(1, 'rgba(10,10,18,0.95)')
-        ctx.globalAlpha = 1
-        ctx.fillStyle = bgGrad
-        ctx.beginPath()
-        ctx.roundRect(offsetX, y, boxW, boxH, 8)
-        ctx.fill()
-
-        // Border glow
+        // Background
+        ctx.globalAlpha = 0.95
+        ctx.fillStyle = 'rgba(10,10,20,0.95)'
         ctx.strokeStyle = ind.color
         ctx.lineWidth = 1.5
-        ctx.globalAlpha = 0.6
+        ctx.beginPath()
+        ctx.roundRect(offsetX, y, boxW, boxH, 6)
+        ctx.fill()
         ctx.stroke()
 
-        // Icon background circle
-        ctx.globalAlpha = 1
-        ctx.fillStyle = ind.color + '20'
+        // Progress bar (timer)
+        const progress = ind.timer / ind.maxTime
+        ctx.globalAlpha = 0.3
+        ctx.fillStyle = ind.color
         ctx.beginPath()
-        ctx.arc(offsetX + 14, y + 13, 9, 0, TWO_PI)
+        ctx.roundRect(offsetX + 2, y + boxH - 4, (boxW - 4) * progress, 2, 1)
         ctx.fill()
 
-        // Draw crypto icon
-        ctx.save()
-        ctx.translate(offsetX + 14, y + 13)
-
-        if (ind.type === 'diamond') {
-            // Diamond icon
-            ctx.fillStyle = '#FFFFFF'
-            ctx.beginPath()
-            ctx.moveTo(0, -5)
-            ctx.lineTo(4, -2)
-            ctx.lineTo(0, 5)
-            ctx.lineTo(-4, -2)
-            ctx.closePath()
-            ctx.fill()
-            ctx.fillStyle = ind.color
-            ctx.globalAlpha = 0.8
-            ctx.beginPath()
-            ctx.moveTo(0, -5)
-            ctx.lineTo(4, -2)
-            ctx.lineTo(0, 3)
-            ctx.closePath()
-            ctx.fill()
-        } else if (ind.type === 'rocket') {
-            // Rocket icon
-            ctx.fillStyle = '#FFFFFF'
-            ctx.beginPath()
-            ctx.moveTo(0, -6)
-            ctx.quadraticCurveTo(3, -2, 2.5, 4)
-            ctx.lineTo(-2.5, 4)
-            ctx.quadraticCurveTo(-3, -2, 0, -6)
-            ctx.closePath()
-            ctx.fill()
-            // Window
-            ctx.fillStyle = '#0ECB81'
-            ctx.beginPath()
-            ctx.arc(0, -1, 1.5, 0, TWO_PI)
-            ctx.fill()
-        } else if (ind.type === 'whale') {
-            // Whale icon
-            ctx.fillStyle = ind.color
-            ctx.beginPath()
-            ctx.ellipse(0, 0, 5, 3, 0, 0, TWO_PI)
-            ctx.fill()
-            // Tail
-            ctx.beginPath()
-            ctx.moveTo(-4, 0)
-            ctx.quadraticCurveTo(-7, -1.5, -8, 0)
-            ctx.quadraticCurveTo(-7, 1.5, -4, 0)
-            ctx.closePath()
-            ctx.fill()
-            // Eye
-            ctx.fillStyle = '#FFFFFF'
-            ctx.globalAlpha = 0.9
-            ctx.beginPath()
-            ctx.arc(2, -0.8, 0.8, 0, TWO_PI)
-            ctx.fill()
-        }
-
-        ctx.restore()
-
-        // Timer bar
-        const ratio = clamp(ind.timer / ind.maxTime, 0, 1)
-        ctx.globalAlpha = 0.7
-        ctx.fillStyle = ind.color
-        ctx.fillRect(offsetX + 4, y + boxH - 5, boxW - 8, 3)
-
-        // Timer bar overlay
-        ctx.globalAlpha = 0.4
-        ctx.fillStyle = '#FFFFFF'
-        ctx.fillRect(offsetX + 4, y + boxH - 5, (boxW - 8) * (1 - ratio), 3)
-
-        // Timer text
+        // Icon
         ctx.globalAlpha = 1
-        ctx.fillStyle = '#FFFFFF'
-        ctx.font = `700 ${CFG.WIDTH < 600 ? 11 : 9}px Inter, sans-serif`
-        ctx.textAlign = 'right'
-        if (ind.maxTime > 1) {
-            ctx.fillText(ind.timer.toFixed(1), offsetX + boxW - 4, y + 17)
-        }
+        ctx.fillStyle = ind.color
+        ctx.font = 'bold 14px Arial'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        const icon = ind.type === 'diamond' ? '💎' : ind.type === 'rocket' ? '🚀' : '🐋'
+        ctx.fillText(icon, offsetX + boxW / 2, y + boxH / 2 - 2)
 
         offsetX += boxW + 4
     }
@@ -831,10 +755,14 @@ export const drawPlayer = (
     ctx.fillRect(-PLAYER_HALF + 1.5, -PLAYER_HALF + 1.5, CFG.PLAYER_SIZE, CFG.PLAYER_SIZE)
     ctx.globalAlpha = 1
 
-    // === PLAYER BODY ===
+    // === PLAYER BODY — SHARP rendering ===
     if (logoLoaded && logo) {
+        // Disable smoothing for sharp logo
+        ctx.imageSmoothingEnabled = false
         ctx.drawImage(logo, -PLAYER_HALF, -PLAYER_HALF, CFG.PLAYER_SIZE, CFG.PLAYER_SIZE)
+        ctx.imageSmoothingEnabled = true
     } else {
+        // Sharp edges - no anti-aliasing tricks
         ctx.fillStyle = '#FFFFFF'
         ctx.fillRect(-PLAYER_HALF, -PLAYER_HALF, CFG.PLAYER_SIZE, CFG.PLAYER_SIZE)
         ctx.fillStyle = w.accent

@@ -1094,8 +1094,8 @@ export function updateGameConfig(width: number, height: number) {
         // --- PORTRAIT MODE (e.g. Base App / Mobile Vertical) ---
         CFG.GROUND = height * 0.83;
         CFG.PLAYER_X = width * 0.18;
-        CFG.PLAYER_SIZE = clamp(width * 0.06, 22, 32);
-        CFG.HITBOX = CFG.PLAYER_SIZE * 0.22;
+        CFG.PLAYER_SIZE = clamp(width * 0.055, 20, 28);  // Меньше размер (было 0.06, 22-32)
+        CFG.HITBOX = CFG.PLAYER_SIZE * 0.20;  // Чуть меньше хитбокс
 
         const speedScale = clamp(width / 960, 0.45, 0.7);
         CFG.BASE_SPEED = clamp(360 * speedScale * 1.6, 220, 320);
