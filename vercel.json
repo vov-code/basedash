@@ -7,8 +7,15 @@
   "regions": ["iad1"],
   "env": {
     "NEXT_PUBLIC_APP_URL": "https://basedash-five.vercel.app",
-    "NEXT_PUBLIC_CONTRACT_ADDRESS": "0xEEB40d65dE99f134a4763d0fe25b4dED439eFBAb",
+    "NEXT_PUBLIC_CONTRACT_ADDRESS": "0xe0C6DDe498630116f8c68c8b0C12dd9B82eC0144",
     "NEXT_PUBLIC_USE_TESTNET": "true",
-    "NEXT_PUBLIC_MINIKIT_APP_ID": ""
+    "NEXT_PUBLIC_MINIKIT_APP_ID": "",
+    "NEXT_PUBLIC_ONCHAINKIT_API_KEY": "",
+    "NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID": ""
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_APP_URL": "https://basedash-five.vercel.app"
+    }
   }
 }

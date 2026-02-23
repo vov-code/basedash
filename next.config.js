@@ -7,6 +7,7 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
+  productionBrowserSourceMaps: false,
 
   // Production lint skip
   eslint: {
@@ -14,8 +15,10 @@ const nextConfig = {
   },
 
   images: {
-    domains: ['localhost'],
-    remotePatterns: [{ protocol: 'https', hostname: '**' }],
+    remotePatterns: [
+      { protocol: 'http', hostname: 'localhost' },
+      { protocol: 'https', hostname: '**' }
+    ],
   },
 
   // Code splitting optimization

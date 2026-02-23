@@ -108,7 +108,6 @@ export interface Player {
     x: number
     y: number
     velocityY: number
-    velocityX: number
     onGround: boolean
     coyoteTimer: number
     jumpBufferTimer: number
@@ -122,7 +121,6 @@ export interface Player {
     flash: number
     tilt: number
     /** Accumulated rotation for smooth snapping */
-    targetRotation: number
     /** Dash cooldown timer */
     dashTimer: number
     /** Is currently dashing */
@@ -148,8 +146,6 @@ export interface Candle {
     phase: number
     flickerSpeed: number
     collectProgress: number
-    scaleAnim: number
-    rotation: number
     targetY: number
     moveSpeed: number
     movePhase: number
@@ -233,35 +229,35 @@ export const TRAIL_UNLOCKS: { trail: TrailType; score: number; label: string; de
 ]
 
 export const POWERUP_CONFIG = {
-    /** Crypto-themed power-ups */
+    /** Crypto-themed power-ups — Rebalanced for premium gameplay */
     TYPES: {
         diamond_hands: {
             label: '💎 diamond hands',
-            description: 'survive 1 red candle hit',
+            description: 'shield from 1 red candle',
             duration: 0, // instant shield
             color1: '#00D4FF',
             color2: '#0088CC',
             symbol: '💎',
         },
         moon_boost: {
-            label: '🚀 moon bag',
+            label: '🚀 moon mode',
             description: '2x score for 5s',
             duration: 5,
             color1: '#FFD700',
-            color2: '#FF8C00',
-            symbol: '🌕',
+            color2: '#FFA500',
+            symbol: '🚀',
         },
         whale_mode: {
-            label: '🐋 whale alert',
-            description: 'slow time for 4s',
+            label: '🐋 whale freeze',
+            description: 'slow motion 4s',
             duration: 4,
             color1: '#7B68EE',
             color2: '#4B0082',
-            symbol: '📊',
+            symbol: '🐋',
         },
     } as const,
     SIZE: 32,
-    SPAWN_CHANCE: 0.06, // 6% per pattern after score 200
+    SPAWN_CHANCE: 0.08, // 8% per pattern after score 200 (increased from 6%)
     MIN_SCORE: 200,
     BOB_AMPLITUDE: 12,
 } as const
@@ -273,7 +269,7 @@ export const MARKET_CONFIG = {
     BULL_GREEN_BONUS: 0.15,
     BEAR_SPEED_MULT: 1.12,
     /** Near-miss threshold in pixels (extremely tight for rarity) */
-    NEAR_MISS_DIST: 2,
+    NEAR_MISS_DIST: 10,
     /** Near-miss slow-mo duration */
     NEAR_MISS_DURATION: 0.2,
     /** Minimum cooldown between near-miss triggers (seconds) */
@@ -332,18 +328,10 @@ export interface EngineState {
     nextPowerUpId: number
     /** Timestamp of last jump for debounce */
     lastJumpTime: number
-    /** Market cycle state */
-    marketState: MarketState
-    /** Time until next market cycle change */
-    marketTimer: number
     /** Near-miss slow-mo timer */
     nearMissTimer: number
     /** Near-miss flash text */
     nearMissText: string
-    /** Rug-pull event timer (ground disappearing) */
-    rugPullTimer: number
-    /** Rug-pull active flag */
-    rugPullActive: boolean
     /** Speed-lines flash timer (on speed tier change) */
     speedLinesTimer: number
     /** Combo pulse border timer */
@@ -352,17 +340,15 @@ export interface EngineState {
     prevSpeedTierIdx: number
     /** Tutorial hint visible */
     showTutorial: boolean
-    /** Run count for rug-pull chance (every 5th run) */
-    runCount: number
     /** Camera zoom level (1.0 = normal, <1 = zoomed out) */
     cameraZoom: number
     /** Timer for spawning running dust particles */
     runDustTimer: number
+    /** Timer for spawning trail particles during flight */
+    trailTimer: number
     /** Near-miss text position for rendering */
     nearMissX: number
     nearMissY: number
-    /** Rug-pull visual holes in ground (x positions) */
-    rugPullHoles: number[]
     /** Candles spawned so far this run (for early-game guard) */
     spawnCount: number
     /** Shield flash overlay timer (item 4) */
@@ -390,30 +376,28 @@ export const CFG = {
     MAX_DELTA: 0.033,
     UI_RATE: 1 / 10,
 
-    GRAVITY: 2400,
-    GRAVITY_UP: 2100,   // Lighter going up — floaty, readable arc but fast enough
-    GRAVITY_DOWN: 3100, // Heavier falling — snappy, responsive
-    JUMP: -820,
-    DOUBLE_JUMP: -680,
+    GRAVITY_UP: 1900,   // Floatier apex — longer hang time for readable arc
+    GRAVITY_DOWN: 3200, // Snappy fall — responsive landing
+    JUMP: -720,
+    DOUBLE_JUMP: -600,
     MAX_FALL: 1200,
     COYOTE: 0.08,
     BUFFER: 0.12,
-    ROT_SPEED: 11.0,
     TILT_SPEED: 18,
-    SQUASH_LAND: -0.35,  // Strong squash on landing (item 6)
-    SQUASH_JUMP: 0.22,   // Stretch on jump takeoff (item 6)
+    SQUASH_LAND: -0.28,  // Visible but not extreme landing squash
+    SQUASH_JUMP: 0.18,   // Subtle stretch on takeoff
     BREATHE_SPEED: 1.5,  // Idle breathing oscillation speed
-    BREATHE_AMP: 0.025,  // Idle breathing amplitude
+    BREATHE_AMP: 0.02,   // Subtle idle breathing
 
     DASH_SPEED: 200,
     DASH_DURATION: 0.15,
     DASH_COOLDOWN: 0.8,
 
-    BASE_SPEED: 440,
+    BASE_SPEED: 500,
     MAX_SPEED: 780,
     DOUBLE_JUMP_AT: 120,
 
-    BASE_SPAWN_GAP: 490,
+    BASE_SPAWN_GAP: 400,
     MIN_SPAWN_GAP: 260,
     MAX_CANDLES_PATTERN: 5,
 
@@ -430,6 +414,9 @@ export const CFG = {
     MAX_CANDLES: 14,
     GROUND_PARTICLE_COUNT: 24,
     MAX_POWERUPS: 3,
+
+    // Full HD quality settings
+    MAX_DPR: 2,  // Capped at 2 — 3x is too expensive on mobile for minimal visual gain
 };
 
 // ============================================================================
@@ -438,7 +425,7 @@ export const CFG = {
 
 export const WORLDS: WorldTheme[] = [
     {
-        name: 'I. ONCHAIN', // world 1
+        name: 'PAPER HANDS',
         startScore: 0,
         skyTop: '#FFFFFF',
         skyMid: '#F5F8FF',
@@ -456,8 +443,8 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.5,
     },
     {
-        name: 'II. DEGEN',
-        startScore: 150,
+        name: 'APE IN',
+        startScore: 100,
         skyTop: '#F8FAFF',
         skyMid: '#EBF0FF',
         skyBottom: '#DCE4FF',
@@ -474,8 +461,8 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.6,
     },
     {
-        name: 'III. DIAMOND',
-        startScore: 350,
+        name: 'DIAMOND HANDS',
+        startScore: 250,
         skyTop: '#FAFBFF',
         skyMid: '#F0F2FF',
         skyBottom: '#E2E6FF',
@@ -492,8 +479,8 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.65,
     },
     {
-        name: 'IV. WHALE',
-        startScore: 600,
+        name: 'WHALE ALERT',
+        startScore: 450,
         skyTop: '#FAF8FF',
         skyMid: '#F2EBFF',
         skyBottom: '#E5D5FF',
@@ -510,8 +497,8 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.7,
     },
     {
-        name: 'V. MOON',
-        startScore: 900,
+        name: 'TO THE MOON',
+        startScore: 700,
         skyTop: '#F0F4FF',
         skyMid: '#E0EAFF',
         skyBottom: '#C8D8FF',
@@ -528,8 +515,8 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.75,
     },
     {
-        name: 'VI. FOMO',
-        startScore: 1200,
+        name: 'FOMO ZONE',
+        startScore: 1000,
         skyTop: '#F5FFF5',
         skyMid: '#E8FFE8',
         skyBottom: '#D0F8D0',
@@ -546,8 +533,8 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.8,
     },
     {
-        name: 'VII. DARKPOOL',
-        startScore: 1550,
+        name: '100X LEVERAGE',
+        startScore: 1400,
         skyTop: '#F8F8FA',
         skyMid: '#EBEBF0',
         skyBottom: '#DCDCE8',
@@ -564,8 +551,8 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.85,
     },
     {
-        name: 'VIII. FLASHCRASH',
-        startScore: 1950,
+        name: 'FLASH CRASH',
+        startScore: 1900,
         skyTop: '#F0F5FF',
         skyMid: '#E0EAFF',
         skyBottom: '#C8D8FF',
@@ -582,8 +569,8 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.9,
     },
     {
-        name: 'IX. REKT',
-        startScore: 2400,
+        name: 'REKT',
+        startScore: 2500,
         skyTop: '#FFF8F8',
         skyMid: '#FFE8E8',
         skyBottom: '#FFD0D0',
@@ -600,8 +587,8 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.95,
     },
     {
-        name: 'X. ASCENSION',
-        startScore: 3000,
+        name: 'ASCENSION',
+        startScore: 3200,
         skyTop: '#F0F0FF',
         skyMid: '#E0E0F8',
         skyBottom: '#D0D0F0',
@@ -624,15 +611,15 @@ export const WORLDS: WorldTheme[] = [
 // ============================================================================
 
 export const SPEEDS: SpeedTier[] = [
-    { label: 'I. HODL', startScore: 0, multiplier: 1.05, color: '#A0B8F0', description: 'base speed', particleBoost: 0 },
-    { label: 'II. PUMP', startScore: 400, multiplier: 1.18, color: '#0ECB81', description: 'speed up', particleBoost: 0 },
-    { label: 'III. LEVERAGE', startScore: 1200, multiplier: 1.33, color: '#F0B90B', description: 'fast', particleBoost: 1 },
-    { label: 'IV. MARGIN CALL', startScore: 2600, multiplier: 1.48, color: '#FF7B90', description: 'very fast', particleBoost: 2 },
-    { label: 'V. LIQUIDATE', startScore: 4500, multiplier: 1.62, color: '#F6465D', description: 'danger', particleBoost: 3 },
-    { label: 'VI. FOMO', startScore: 7000, multiplier: 1.78, color: '#C080FF', description: 'insane', particleBoost: 4 },
-    { label: 'VII. 100X', startScore: 10000, multiplier: 1.88, color: '#FF00FF', description: 'lightspeed', particleBoost: 5 },
-    { label: 'VIII. HYPERDRIVE', startScore: 14000, multiplier: 1.98, color: '#00FFFF', description: 'terminal velocity', particleBoost: 6 },
-    { label: 'IX. SINGULARITY', startScore: 18000, multiplier: 2.15, color: '#FFFFFF', description: 'god mode', particleBoost: 8 },
+    { label: 'HODL', startScore: 0, multiplier: 1.08, color: '#A0B8F0', description: 'warming up', particleBoost: 0 },
+    { label: 'PUMP IT', startScore: 300, multiplier: 1.22, color: '#0ECB81', description: 'speeding up', particleBoost: 0 },
+    { label: 'LEVERAGE', startScore: 800, multiplier: 1.38, color: '#F0B90B', description: 'getting fast', particleBoost: 1 },
+    { label: 'MARGIN CALL', startScore: 1600, multiplier: 1.52, color: '#FF7B90', description: 'danger zone', particleBoost: 2 },
+    { label: 'LIQUIDATION', startScore: 2800, multiplier: 1.65, color: '#F6465D', description: 'critical', particleBoost: 3 },
+    { label: 'FULL DEGEN', startScore: 4200, multiplier: 1.78, color: '#C080FF', description: 'insane mode', particleBoost: 4 },
+    { label: '100X', startScore: 6000, multiplier: 1.88, color: '#FF00FF', description: 'lightspeed', particleBoost: 5 },
+    { label: 'HYPERDRIVE', startScore: 9000, multiplier: 1.98, color: '#00FFFF', description: 'terminal velocity', particleBoost: 6 },
+    { label: 'SINGULARITY', startScore: 13000, multiplier: 2.15, color: '#FFFFFF', description: 'god mode', particleBoost: 8 },
 ]
 
 // ============================================================================
@@ -668,8 +655,12 @@ export const smoothstep = (edge0: number, edge1: number, x: number): number => {
     return t * t * (3 - 2 * t)
 }
 
-export const getWorld = (score: number): WorldTheme =>
-    WORLDS.filter(w => score >= w.startScore).at(-1) || WORLDS[0]
+export const getWorld = (score: number): WorldTheme => {
+    for (let i = WORLDS.length - 1; i >= 0; i--) {
+        if (score >= WORLDS[i].startScore) return WORLDS[i]
+    }
+    return WORLDS[0]
+}
 
 export const getWorldIndex = (score: number): number => {
     let idx = 0
@@ -679,8 +670,12 @@ export const getWorldIndex = (score: number): number => {
     return idx
 }
 
-export const getSpeed = (score: number): SpeedTier =>
-    SPEEDS.filter(s => score >= s.startScore).at(-1) || SPEEDS[0]
+export const getSpeed = (score: number): SpeedTier => {
+    for (let i = SPEEDS.length - 1; i >= 0; i--) {
+        if (score >= SPEEDS[i].startScore) return SPEEDS[i]
+    }
+    return SPEEDS[0]
+}
 
 export const getJumps = (score: number): number =>
     score >= CFG.DOUBLE_JUMP_AT ? 2 : 1
@@ -737,9 +732,8 @@ export const createGroundParticles = (
 
 export const createPlayer = (): Player => ({
     x: CFG.PLAYER_X,
-    y: CFG.GROUND - CFG.PLAYER_SIZE,
+    y: CFG.GROUND - CFG.PLAYER_SIZE,  // Start exactly on ground
     velocityY: 0,
-    velocityX: 0,
     onGround: true,
     coyoteTimer: CFG.COYOTE,
     jumpBufferTimer: 0,
@@ -752,7 +746,6 @@ export const createPlayer = (): Player => ({
     squash: 0,
     flash: 0,
     tilt: 0,
-    targetRotation: 0,
     dashTimer: 0,
     isDashing: false,
     dashVelocity: 0,
@@ -785,7 +778,7 @@ export const createCandle = (
         passed: false, collected: false,
         phase: rand(0, Math.PI * 2),
         flickerSpeed: rand(6, 10),
-        collectProgress: 0, scaleAnim: 1, rotation: 0,
+        collectProgress: 0,
         targetY: bodyY,
         moveSpeed: rand(0.8, 1.5),
         movePhase: rand(0, Math.PI * 2),
@@ -842,22 +835,17 @@ export const createEngine = (): EngineState => ({
     scoreMultiplier: 1,
     nextPowerUpId: 1,
     lastJumpTime: 0,
-    marketState: 'neutral' as MarketState,
-    marketTimer: 15,
     nearMissTimer: 0,
     nearMissText: '',
-    rugPullTimer: 0,
-    rugPullActive: false,
     speedLinesTimer: 0,
     comboPulseTimer: 0,
     prevSpeedTierIdx: 0,
-    showTutorial: false,
-    runCount: 0,
+    showTutorial: true,
     cameraZoom: 1,
     runDustTimer: 0,
+    trailTimer: 0,
     nearMissX: 0,
     nearMissY: 0,
-    rugPullHoles: [],
     spawnCount: 0,
     shieldFlashTimer: 0,
     moonBoostPulseActive: false,
@@ -872,23 +860,25 @@ export const createEngine = (): EngineState => ({
  * Patterns scale with difficulty (complexity 0-5).
  * All patterns are designed to be beatable with single or double jump.
  * Green candles only spawn after 10 red candles — learn the basics first.
+ * BALANCED: Slower difficulty ramp, more green candles, easier patterns
  */
 export const spawnPattern = (e: EngineState): void => {
     e.spawnCount++
-    // Smooth exponential difficulty — no abrupt safe zone (item 1)
-    const diff = 1 - Math.exp(-e.score / 2500)
-    // Time-based warmup: first 8s is gentler
-    const timeFactor = clamp(e.gameTime / 8, 0.4, 1.0)
+    // MUCH SLOWER difficulty ramp - divided by 4000 instead of 2500
+    const diff = 1 - Math.exp(-e.score / 4000)
+    // Time-based warmup: first 12s is gentler (was 8s)
+    const timeFactor = clamp(e.gameTime / 12, 0.3, 1.0)
     const effectiveDiff = diff * timeFactor
-    // Smooth complexity ramp instead of hard 4-candle cutoff
-    const complexity = Math.min(5, Math.floor(effectiveDiff * 6))
+    // Cap complexity at 4 until score 800 (was unlimited)
+    const maxComplexity = e.score < 800 ? 3 : (e.score < 1500 ? 4 : 5)
+    const complexity = Math.min(maxComplexity, Math.floor(effectiveDiff * 5))
     const startX = CFG.WIDTH + 140
-    const baseH = lerp(62, 105, diff)
-    const baseW = lerp(22, 38, diff)
-    const maxHM = 1.4 // always jumpable
+    const baseH = lerp(52, 88, diff * 0.7)  // Reduced height growth
+    const baseW = lerp(18, 32, diff * 0.7)  // Reduced width growth
+    const maxHM = 1.3 // Reduced from 1.4 - easier jumps
 
-    // Green candles only after 10 red candles have been spawned
-    const allowGreen = e.spawnCount >= 10
+    // Green candles allowed earlier - after 6 red candles (was 10)
+    const allowGreen = e.spawnCount >= 6
 
     const push = (
         offset: number,
@@ -896,11 +886,10 @@ export const spawnPattern = (e: EngineState): void => {
         hM = 1,
         wM = 1,
         moving = false,
-        isAir = false, // Explicitly spawn as air candle to run under
-        yOffset?: number // Explicit Y offset for precise air candle height
+        isAir = false,
+        yOffset?: number
     ): void => {
         const h = clamp(hM, 0.4, maxHM)
-        // Force red if green not yet allowed
         const actualKind = (kind === 'green' && !allowGreen) ? 'red' : kind
         const candle = createCandle(
             e.nextCandleId++,
@@ -909,41 +898,39 @@ export const spawnPattern = (e: EngineState): void => {
             baseH * rand(0.85, 1.1) * h,
             baseW * rand(0.9, 1.08) * clamp(wM, 0.6, 1.4)
         )
-        // Moving candles earlier — from score 150 (was 600)
-        if (moving || (e.score >= 150 && Math.random() < 0.12 * diff)) {
+        // Moving candles - much rarer, only after score 400
+        if (moving || (e.score >= 400 && Math.random() < 0.06 * diff)) {
             candle.isMoving = true
-            candle.moveAmplitude = rand(10, 24)
+            candle.moveAmplitude = rand(10, 20)
         }
-        // Air candles earlier — force if isAir=true, else random from score 0 (was 300)
-        if (isAir || Math.random() < 0.25 * diff) {
-            // Lift enough to guarantee the player can safely run under it without jumping
-            // Use explicit yOffset if provided, otherwise use isAir bonus or random
+        // Air candles - MORE FREQUENT for variety and easier gameplay
+        if (isAir || Math.random() < 0.35 * diff) {
             const lift = yOffset !== undefined ? yOffset : (isAir ? rand(55, 75) : rand(25, 55))
             candle.bodyY -= lift; candle.y -= lift; candle.bodyTop -= lift
             candle.wickTop -= lift; candle.wickBottom -= lift
-            // Sometimes they also move
-            if (Math.random() > 0.5) {
+            if (Math.random() > 0.6) {
                 candle.isMoving = true
-                candle.moveAmplitude = rand(10, 22)
+                candle.moveAmplitude = rand(10, 18)
             }
         }
         e.candles.push(candle)
     }
 
-    // Pattern selection using weighted random — MORE GREEN CANDLES AND EARLY VARIETY
+    // Pattern selection — BALANCED: more green candles, easier patterns
     const roll = Math.random()
 
-    // --- COMPLEXITY 0: Single candles & Early floating ducks from the start ---
+    // --- COMPLEXITY 0: Single candles & Early variety ---
     if (complexity === 0) {
-        if (roll < 0.10) push(0, 'red', 0.8, 1.2)  // wide
-        else if (roll < 0.22) push(0, 'red', 1.35, 0.65)  // tall narrow (force jump)
-        else if (roll < 0.38) push(0, 'red', 0.9, 1.0, false, true, 65)  // AIR CANDLE (run under!)
-        else if (roll < 0.50) push(0, 'red', 1.25, 0.6, false, true, 70)  // TALL AIR CANDLE (run under!)
-        else if (roll < 0.60) push(0, 'red', 0.75, 1.1, false, true, 60)  // SHORT WIDE AIR CANDLE
-        else if (roll < 0.72) push(0, 'red', 0.85)  // normal short
-        else if (roll < 0.82) push(0, 'red', 1.1)  // normal tall
-        else if (roll < 0.90) push(0, 'red')  // normal
-        else push(0, 'green', 1.0, 1.0, false, Math.random() > 0.6)  // green (60% chance it's in air)
+        if (roll < 0.08) push(0, 'red', 0.8, 1.2)  // wide
+        else if (roll < 0.18) push(0, 'red', 1.35, 0.65)  // tall narrow
+        else if (roll < 0.32) push(0, 'red', 0.9, 1.0, false, true, 65)  // AIR CANDLE
+        else if (roll < 0.44) push(0, 'red', 1.25, 0.6, false, true, 70)  // TALL AIR CANDLE
+        else if (roll < 0.54) push(0, 'red', 0.75, 1.1, false, true, 60)  // SHORT WIDE AIR
+        else if (roll < 0.66) push(0, 'green', 1.0, 1.0, false, true, 55)  // GREEN AIR
+        else if (roll < 0.78) push(0, 'green', 0.9, 1.0, false, true, 60)  // GREEN AIR small
+        else if (roll < 0.86) push(0, 'red', 0.85)  // normal short
+        else if (roll < 0.93) push(0, 'red', 1.1)  // normal tall
+        else push(0, 'green', 1.0, 1.0)  // green ground
 
         // --- COMPLEXITY 1: Pairs bringing "Jump then Duck" variety instantly ---
     } else if (complexity === 1) {
@@ -1107,7 +1094,7 @@ export function updateGameConfig(width: number, height: number) {
         // --- PORTRAIT MODE (e.g. Base App / Mobile Vertical) ---
         CFG.GROUND = height * 0.83;
         CFG.PLAYER_X = width * 0.18;
-        CFG.PLAYER_SIZE = clamp(width * 0.07, 24, 36);
+        CFG.PLAYER_SIZE = clamp(width * 0.06, 22, 32);
         CFG.HITBOX = CFG.PLAYER_SIZE * 0.22;
 
         const speedScale = clamp(width / 960, 0.45, 0.7);
@@ -1115,28 +1102,29 @@ export function updateGameConfig(width: number, height: number) {
         CFG.MAX_SPEED = clamp(680 * speedScale * 1.6, 400, 580);
 
         const physicsScale = clamp(height / 540, 0.8, 1.4);
-        CFG.GRAVITY = 2400 * physicsScale * 0.9;
-        CFG.JUMP = -820 * Math.sqrt(physicsScale) * 0.95;
-        CFG.DOUBLE_JUMP = -680 * Math.sqrt(physicsScale) * 0.95;
+        CFG.GRAVITY_UP = 1900 * physicsScale * 0.9;
+        CFG.GRAVITY_DOWN = 3200 * physicsScale * 0.9;
+        CFG.JUMP = -720 * Math.sqrt(physicsScale) * 0.95;
+        CFG.DOUBLE_JUMP = -600 * Math.sqrt(physicsScale) * 0.95;
         CFG.MAX_FALL = 1200 * physicsScale;
 
         CFG.BASE_SPAWN_GAP = CFG.BASE_SPEED * 1.55;
         CFG.MIN_SPAWN_GAP = CFG.BASE_SPEED * 0.95;
         CFG.MAX_CANDLES_PATTERN = 2;
 
-        // Particle budgets — halved on low-end devices
-        CFG.PARTICLE_LIMIT = isLow ? 20 : 40;
-        CFG.TRAIL_LIMIT = isLow ? 1 : 2;
-        CFG.STAR_COUNT = isLow ? 8 : 15;
+        // Particle budgets — aggressively optimized for mobile
+        CFG.PARTICLE_LIMIT = isLow ? 15 : 30;
+        CFG.TRAIL_LIMIT = isLow ? 4 : 8; // Increased for smooth trails
+        CFG.STAR_COUNT = isLow ? 6 : 12;
         CFG.CLOUD_COUNT = isLow ? 2 : 3;
         CFG.MAX_CANDLES = 6;
-        CFG.GROUND_PARTICLE_COUNT = isLow ? 4 : 8;
+        CFG.GROUND_PARTICLE_COUNT = isLow ? 3 : 6;
 
     } else {
         // --- LANDSCAPE MODE (Desktop / Tablet Horizontal) ---
         CFG.GROUND = height * 0.82;
         CFG.PLAYER_X = clamp(width * 0.2, 120, 220);
-        CFG.PLAYER_SIZE = clamp(width * 0.045, 34, 46);
+        CFG.PLAYER_SIZE = clamp(width * 0.038, 30, 42);
         CFG.HITBOX = CFG.PLAYER_SIZE * 0.25;
 
         const scale = clamp(width / 960, 0.6, 1.2);
@@ -1144,9 +1132,10 @@ export function updateGameConfig(width: number, height: number) {
         CFG.MAX_SPEED = 680 * scale;
 
         const physicsScale = clamp(height / 540, 0.8, 1.2);
-        CFG.GRAVITY = 2400 * physicsScale;
-        CFG.JUMP = -820 * Math.sqrt(physicsScale);
-        CFG.DOUBLE_JUMP = -680 * Math.sqrt(physicsScale);
+        CFG.GRAVITY_UP = 1900 * physicsScale;
+        CFG.GRAVITY_DOWN = 3200 * physicsScale;
+        CFG.JUMP = -720 * Math.sqrt(physicsScale);
+        CFG.DOUBLE_JUMP = -600 * Math.sqrt(physicsScale);
         CFG.MAX_FALL = 1200 * physicsScale;
 
         CFG.BASE_SPAWN_GAP = CFG.BASE_SPEED * 1.4;
@@ -1154,12 +1143,13 @@ export function updateGameConfig(width: number, height: number) {
 
         CFG.MAX_CANDLES_PATTERN = width < 768 ? 4 : 5;
 
+        // Aggressive mobile optimization
         const lowBudget = isLow || width < 768
-        CFG.PARTICLE_LIMIT = lowBudget ? (isLow ? 30 : 60) : 140;
-        CFG.TRAIL_LIMIT = lowBudget ? (isLow ? 2 : 4) : 7;
-        CFG.STAR_COUNT = lowBudget ? (isLow ? 10 : 20) : 45;
-        CFG.CLOUD_COUNT = lowBudget ? (isLow ? 2 : 4) : 6;
-        CFG.MAX_CANDLES = lowBudget ? (isLow ? 6 : 10) : 16;
-        CFG.GROUND_PARTICLE_COUNT = lowBudget ? (isLow ? 6 : 12) : 24;
+        CFG.PARTICLE_LIMIT = lowBudget ? (isLow ? 25 : 50) : 80;
+        CFG.TRAIL_LIMIT = lowBudget ? (isLow ? 6 : 10) : 24; // Increased for smooth trails
+        CFG.STAR_COUNT = lowBudget ? (isLow ? 8 : 15) : 45;
+        CFG.CLOUD_COUNT = lowBudget ? (isLow ? 2 : 3) : 6;
+        CFG.MAX_CANDLES = lowBudget ? (isLow ? 5 : 8) : 16;
+        CFG.GROUND_PARTICLE_COUNT = lowBudget ? (isLow ? 5 : 10) : 24;
     }
 }

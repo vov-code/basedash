@@ -180,11 +180,60 @@ contract GameLeaderboard {
         DailyCheckIn storage checkIn = checkIns[msg.sender];
         uint256 lastDay = checkIn.lastCheckIn / 1 days;
         uint256 today = block.timestamp / 1 days;
-        uint256 streak = (checkIn.lastCheckIn != 0 && 
-                         today <= lastDay + 1 && 
+        uint256 streak = (checkIn.lastCheckIn != 0 &&
+                         today <= lastDay + 1 &&
                          !checkIn.hasMissed) ? checkIn.streak : 0;
 
-        emit ScoreSubmitted(msg.sender, uint96(score), nonce);
+        emit ScoreSubmitted(msg.sender, uint96(score), streak, block.timestamp);
+    }
+
+    /**
+     * @dev Gasless отправка счёта - владелец контракта платит газ (Relayer)
+     * @param player Адрес игрока
+     * @param score Счёт
+     * @param nonce Уникальный номер
+     * @param signature Подпись от scoreSigner
+     */
+    function submitScoreFor(
+        address player,
+        uint256 score,
+        uint256 nonce,
+        bytes calldata signature
+    ) external onlyOwner {
+        require(player != address(0), "Invalid player");
+        require(score > 0 && score <= MAX_SCORE, "Invalid score");
+        require(score > playerBestScore[player], "Score not better");
+        require(nonce == scoreNonces[player], "Invalid nonce");
+
+        // Верификация подписи
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(
+                address(this),
+                block.chainid,
+                player,
+                score,
+                nonce
+            )
+        );
+        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(msgHash);
+        address signer = ECDSA.recover(digest, signature);
+        require(signer == scoreSigner, "Invalid signature");
+
+        scoreNonces[player] = nonce + 1;
+        playerBestScore[player] = score;
+
+        // Обновление лидерборда
+        _updateLeaderboard(player, uint96(score));
+
+        // Получаем streak для события
+        DailyCheckIn storage checkIn = checkIns[player];
+        uint256 lastDay = checkIn.lastCheckIn / 1 days;
+        uint256 today = block.timestamp / 1 days;
+        uint256 streak = (checkIn.lastCheckIn != 0 &&
+                         today <= lastDay + 1 &&
+                         !checkIn.hasMissed) ? checkIn.streak : 0;
+
+        emit ScoreSubmitted(player, score, streak, block.timestamp);
     }
 
     /**

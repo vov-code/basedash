@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createPublicClient, http, encodePacked, keccak256, isAddress } from 'viem'
+import { createPublicClient, createWalletClient, http, encodePacked, keccak256, isAddress } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { base, baseSepolia } from 'viem/chains'
 import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS } from '@/app/contracts'
@@ -13,6 +13,25 @@ const publicClient = createPublicClient({
   chain,
   transport: http(),
 })
+
+// Wallet client для отправки gasless транзакций
+let walletClient: ReturnType<typeof createWalletClient> | null = null
+
+function getWalletClient() {
+  if (!walletClient) {
+    const pk = process.env.SCORE_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY
+    if (!pk) {
+      throw new Error('PRIVATE_KEY or SCORE_SIGNER_PRIVATE_KEY not configured')
+    }
+    const account = privateKeyToAccount(pk as `0x${string}`)
+    walletClient = createWalletClient({
+      chain,
+      transport: http(),
+      account,
+    })
+  }
+  return walletClient
+}
 
 // ============================================================================
 // ANTI-CHEAT: Multi-layer rate limiting & abuse prevention
@@ -250,11 +269,116 @@ export async function GET(request: NextRequest) {
       signature,
       signer: account.address,
       timestamp: Date.now(),
+      gasless: false, // По умолчанию возвращаем подпись для обычной отправки
     })
   } catch (error) {
     console.error('Score signing error:', error)
     return NextResponse.json(
       { error: 'Failed to sign score', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}
+
+// ============================================================================
+// POST endpoint для GASLESS отправки очков (Relayer)
+// ============================================================================
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { address, score } = body
+
+    // Get client identifiers
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
+
+    // Validate
+    if (!address || !score) {
+      return NextResponse.json({ error: 'address and score are required' }, { status: 400 })
+    }
+
+    if (!isAddress(address)) {
+      return NextResponse.json({ error: 'invalid address format' }, { status: 400 })
+    }
+
+    const scoreNum = Number(score)
+    if (!Number.isFinite(scoreNum) || scoreNum <= 0 || scoreNum > 50_000) {
+      return NextResponse.json({ error: 'invalid score' }, { status: 400 })
+    }
+
+    // Check rate limit
+    const rateLimitResult = checkRateLimit(ip, address)
+    if (!rateLimitResult.allowed && rateLimitResult.retryAfter) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded', retryAfter: rateLimitResult.retryAfter },
+        { status: 429 }
+      )
+    }
+
+    // Anti-cheat cooldown
+    const addrLower = address.toLowerCase()
+    const lastSubmit = addressCooldown.get(addrLower) || 0
+    if (Date.now() - lastSubmit < 30_000) {
+      return NextResponse.json(
+        { error: 'please wait between submissions', retryAfter: 30 - Math.floor((Date.now() - lastSubmit) / 1000) },
+        { status: 429 }
+      )
+    }
+    addressCooldown.set(addrLower, Date.now())
+
+    // Verify contract is deployed
+    if (CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
+      return NextResponse.json({ error: 'Contract not deployed' }, { status: 503 })
+    }
+
+    // Get wallet client (owner account for gasless)
+    const walletClient = getWalletClient()
+
+    // Get current nonce
+    const nonce = await publicClient.readContract({
+      address: CONTRACT_ADDRESS,
+      abi: GAME_LEADERBOARD_ABI,
+      functionName: 'scoreNonces',
+      args: [address as `0x${string}`],
+    })
+
+    // Generate signature
+    const pk = process.env.SCORE_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY
+    const account = privateKeyToAccount(pk as `0x${string}`)
+    
+    const msgHash = keccak256(
+      encodePacked(
+        ['address', 'uint256', 'address', 'uint256', 'uint256'],
+        [CONTRACT_ADDRESS, BigInt(chain.id), address as `0x${string}`, BigInt(scoreNum), nonce as bigint]
+      )
+    )
+
+    const signature = await account.signMessage({ message: { raw: msgHash } })
+
+    // Отправляем транзакцию через relayer (владелец платит газ)
+    const hash = await walletClient.writeContract({
+      chain,
+      address: CONTRACT_ADDRESS,
+      abi: GAME_LEADERBOARD_ABI,
+      functionName: 'submitScoreFor',
+      args: [address as `0x${string}`, BigInt(scoreNum), nonce as bigint, signature as `0x${string}`],
+      account,
+    })
+
+    console.log(`Gasless score submitted: ${address} - ${scoreNum}, tx: ${hash}`)
+
+    return NextResponse.json({
+      success: true,
+      hash,
+      score: scoreNum,
+      address,
+      gasless: true,
+      timestamp: Date.now(),
+    })
+  } catch (error) {
+    console.error('Gasless score submission error:', error)
+    return NextResponse.json(
+      { error: 'Failed to submit score', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

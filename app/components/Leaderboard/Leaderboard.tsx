@@ -69,7 +69,7 @@ function Entry({ entry, rank, isSelf, selfRef }: { entry: PlayerScore; rank: num
               <Name className="font-mono text-[10px] sm:text-xs font-bold text-slate-700 truncate min-w-0" />
             </Identity>
             {isSelf && (
-              <span className="border border-[#0052FF]/20 bg-[#0052FF]/10 px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] uppercase tracking-wider font-black text-[#0052FF]">
+              <span className="border border-[#0052FF]/20 bg-[#0052FF]/10 px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] lowercase tracking-wider font-black text-[#0052FF]">
                 you
               </span>
             )}
@@ -89,7 +89,7 @@ function Entry({ entry, rank, isSelf, selfRef }: { entry: PlayerScore; rank: num
 
       <div className="ml-3 sm:ml-4 flex-shrink-0 text-right">
         <p className="font-mono text-lg sm:text-xl font-black text-slate-900 tracking-tight">{score.toLocaleString()}</p>
-        <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-[#0ECB81] mt-0.5">pnl</p>
+        <p className="text-[9px] sm:text-[10px] font-bold lowercase tracking-widest text-[#0ECB81] mt-0.5">pnl</p>
       </div>
     </div>
   )
@@ -232,17 +232,17 @@ export default function Leaderboard() {
       <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-3">
         <div className="border border-slate-200/60 bg-white p-2.5 sm:p-3 text-center rounded-2xl shadow-sm">
           <p className="text-lg sm:text-2xl font-black text-slate-900">{scores.length}</p>
-          <p className="mt-0.5 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-400">players</p>
+          <p className="mt-0.5 text-[8px] sm:text-[10px] font-bold lowercase tracking-widest text-slate-400">players</p>
         </div>
 
         <div className="border border-[#0052FF]/20 bg-[#0052FF]/5 p-2.5 sm:p-3 text-center rounded-2xl shadow-sm">
           <p className="text-lg sm:text-2xl font-black text-[#0052FF] font-mono">{topScore.toLocaleString()}</p>
-          <p className="mt-0.5 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-[#0052FF]/70">top score</p>
+          <p className="mt-0.5 text-[8px] sm:text-[10px] font-bold lowercase tracking-widest text-[#0052FF]/70">top score</p>
         </div>
 
         <div className="border border-[#F0B90B]/20 bg-[#F0B90B]/5 p-2.5 sm:p-3 text-center rounded-2xl shadow-sm">
           <p className="text-lg sm:text-2xl font-black text-[#D4A002]">{maxStreak}</p>
-          <p className="mt-0.5 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-[#D4A002]/70">best streak</p>
+          <p className="mt-0.5 text-[8px] sm:text-[10px] font-bold lowercase tracking-widest text-[#D4A002]/70">best streak</p>
         </div>
       </div>
 
@@ -264,7 +264,7 @@ export default function Leaderboard() {
           <svg className="w-4 h-4 text-[#0052FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
-          <span className="text-sm font-black text-[#0052FF] uppercase tracking-wide">
+          <span className="text-sm font-black text-[#0052FF] lowercase tracking-wide">
             {userRank
               ? `your rank: #${userRank} of ${scores.length}`
               : (playerRankData && typeof playerRankData === 'bigint')

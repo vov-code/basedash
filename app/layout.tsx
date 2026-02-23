@@ -12,9 +12,9 @@ const outfit = Outfit({
   subsets: ['latin'],
   display: 'swap',
   preload: true,
-  fallback: ['system-ui', 'arial'],
+  fallback: ['system-ui', '-apple-system', 'sans-serif'],
   variable: '--font-outfit',
-  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  weight: ['400', '600', '700', '800'],
 })
 
 /** Space Grotesk: techy & distinctive for headings, HUD labels */
@@ -22,9 +22,9 @@ const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
   display: 'swap',
   preload: true,
-  fallback: ['system-ui', 'arial'],
+  fallback: ['system-ui', 'sans-serif'],
   variable: '--font-space',
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '600', '700'],
 })
 
 const jetbrainsMono = JetBrains_Mono({
@@ -33,7 +33,7 @@ const jetbrainsMono = JetBrains_Mono({
   preload: true,
   fallback: ['monospace'],
   variable: '--font-mono',
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '600', '700'],
 })
 
 const getMetadataBase = (): URL => {
@@ -130,6 +130,7 @@ export const metadata: Metadata = {
     icon: '/base-logo.png',
     apple: '/base-logo.png',
   },
+  manifest: '/manifest.json',
   // Farcaster Frame v2 metadata
   other: {
     'fc:frame': 'vNext',

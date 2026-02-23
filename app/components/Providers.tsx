@@ -17,12 +17,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <OnchainKitProvider
           apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
           chain={chain}
+          projectId={process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID}
           config={{
             wallet: {
               display: 'modal',
+              termsUrl: 'https://www.coinbase.com/legal/cookie',
+              privacyUrl: 'https://www.coinbase.com/legal/privacy',
             },
             appearance: {
               name: 'Base Dash',
+              mode: 'light',
             }
           }}
         >

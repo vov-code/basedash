@@ -19,7 +19,7 @@ import { Avatar, Name } from '@coinbase/onchainkit/identity'
 import Leaderboard from './components/Leaderboard/Leaderboard'
 
 // ============================================================================
-// PARTICLE BACKGROUND — Enhanced & Optimized
+// PARTICLE BACKGROUND — Minimalist Crypto Network
 // ============================================================================
 
 function ParticleChaos({ opacity = 0.4 }: { opacity?: number }) {
@@ -35,6 +35,12 @@ function ParticleChaos({ opacity = 0.4 }: { opacity?: number }) {
     let w = window.innerWidth
     let h = window.innerHeight
 
+    // Detect low-end devices
+    const isLowEnd = typeof navigator !== 'undefined' && (
+      navigator.hardwareConcurrency !== undefined && navigator.hardwareConcurrency <= 2 ||
+      (navigator as any).deviceMemory !== undefined && (navigator as any).deviceMemory < 4
+    )
+
     const updateSize = () => {
       w = window.innerWidth
       h = window.innerHeight
@@ -43,70 +49,118 @@ function ParticleChaos({ opacity = 0.4 }: { opacity?: number }) {
     }
     updateSize()
 
-    interface Dot {
-      x: number; y: number
-      vx: number; vy: number
-      size: number
-      baseAlpha: number
-      pulse: number
-      pulseSpeed: number
+    interface Bar {
+      x: number
+      y: number
+      bodyH: number
+      wickH: number
+      isGreen: boolean
+      speed: number
+      alpha: number
     }
 
-    const COUNT = Math.min(40, Math.floor(w * h / 15000))
-    const dots: Dot[] = []
-
-    for (let i = 0; i < COUNT; i++) {
-      dots.push({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
-        size: 1 + Math.random() * 2,
-        baseAlpha: 0.06 + Math.random() * 0.15,
-        pulse: Math.random() * Math.PI * 2,
-        pulseSpeed: 0.2 + Math.random() * 0.4,
+    // Scrolling candlestick bars — the signature look (enhanced visibility)
+    const barCount = isLowEnd ? 20 : 40
+    const bars: Bar[] = []
+    for (let i = 0; i < barCount; i++) {
+      const isGreen = Math.random() > 0.45
+      bars.push({
+        x: Math.random() * w * 1.5,
+        y: h * 0.15 + Math.random() * h * 0.7,
+        bodyH: 15 + Math.random() * 40,
+        wickH: 8 + Math.random() * 18,
+        isGreen,
+        speed: 0.2 + Math.random() * 0.4,
+        alpha: 0.08 + Math.random() * 0.06,
       })
     }
+
+    // Price line data points
+    const pricePoints = 60
+    const priceData: number[] = []
+    let pp = h * 0.5
+    for (let i = 0; i < pricePoints; i++) {
+      pp += (Math.random() - 0.48) * 8
+      pp = Math.max(h * 0.25, Math.min(h * 0.75, pp))
+      priceData.push(pp)
+    }
+
+    let tick = 0
 
     const draw = () => {
       if (document.hidden) { animId = requestAnimationFrame(draw); return }
       ctx.clearRect(0, 0, w, h)
+      tick++
 
-      for (const d of dots) {
-        d.x += d.vx
-        d.y += d.vy
-        d.pulse += d.pulseSpeed * 0.016
-        
-        if (d.x < -10) d.x = w + 10
-        if (d.x > w + 10) d.x = -10
-        if (d.y < -10) d.y = h + 10
-        if (d.y > h + 10) d.y = -10
-        
-        const alpha = d.baseAlpha + Math.sin(d.pulse) * 0.03
+      // === SCROLLING CANDLESTICK BARS ===
+      const barW = isLowEnd ? 6 : 8
+      for (const bar of bars) {
+        bar.x -= bar.speed
+        if (bar.x < -barW * 2) {
+          bar.x = w + barW * 2 + Math.random() * 60
+          bar.y = h * 0.15 + Math.random() * h * 0.7
+          bar.isGreen = Math.random() > 0.45
+          bar.bodyH = 10 + Math.random() * 30
+          bar.wickH = 5 + Math.random() * 15
+          bar.alpha = 0.03 + Math.random() * 0.04
+        }
+
+        const color = bar.isGreen ? '#0ECB81' : '#F6465D'
+
+        // Wick — sharp line
+        ctx.globalAlpha = bar.alpha * opacity * 1.5
+        ctx.strokeStyle = color
+        ctx.lineWidth = 1.5
+        ctx.lineCap = 'butt'
         ctx.beginPath()
-        ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(0, 82, 255, ${alpha * opacity})`
-        ctx.fill()
+        ctx.moveTo(bar.x, bar.y - bar.wickH)
+        ctx.lineTo(bar.x, bar.y + bar.bodyH + bar.wickH)
+        ctx.stroke()
+
+        // Body — Sharp terminal block
+        ctx.fillStyle = color
+        ctx.fillRect(bar.x - barW / 2, bar.y, barW, bar.bodyH)
+
+        // Inner bright streak for "neon screen" effect
+        ctx.fillStyle = '#FFFFFF'
+        ctx.globalAlpha = bar.alpha * opacity * 0.4
+        ctx.fillRect(bar.x - barW / 4 + 0.5, bar.y, barW / 2, bar.bodyH)
+        ctx.globalAlpha = 1
       }
 
-      // Connections
-      for (let i = 0; i < dots.length; i++) {
-        for (let j = i + 1; j < dots.length; j++) {
-          const dx = dots[i].x - dots[j].x
-          const dy = dots[i].y - dots[j].y
-          const distSq = dx * dx + dy * dy
-          if (distSq < 150 * 150) {
-            const dist = Math.sqrt(distSq)
-            const alpha = (1 - dist / 150) * 0.03
-            ctx.beginPath()
-            ctx.moveTo(dots[i].x, dots[i].y)
-            ctx.lineTo(dots[j].x, dots[j].y)
-            ctx.strokeStyle = `rgba(0, 82, 255, ${alpha * opacity})`
-            ctx.lineWidth = 0.5
-            ctx.stroke()
+      // === FLOATING PRICE LINE ===
+      ctx.globalAlpha = opacity * 0.08
+      ctx.strokeStyle = '#0052FF'
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      const segW = w / (pricePoints - 1)
+      const timeOff = tick * 0.3
+      for (let i = 0; i < pricePoints; i++) {
+        const idx = (i + Math.floor(timeOff)) % pricePoints
+        const px = i * segW
+        const py = priceData[idx] + Math.sin(tick * 0.01 + i * 0.2) * 5
+        if (i === 0) ctx.moveTo(px, py)
+        else ctx.lineTo(px, py)
+      }
+      ctx.stroke()
+
+      // Price line glow
+      ctx.globalAlpha = opacity * 0.03
+      ctx.lineWidth = 4
+      ctx.stroke()
+
+      // === SUBTLE GRID DOTS ===
+      if (!isLowEnd) {
+        ctx.globalAlpha = opacity * 0.04
+        ctx.fillStyle = '#0052FF'
+        const dotGap = 40
+        for (let gx = 0; gx < w; gx += dotGap) {
+          for (let gy = 0; gy < h; gy += dotGap) {
+            ctx.fillRect(gx, gy, 1, 1)
           }
         }
       }
+
       animId = requestAnimationFrame(draw)
     }
 
@@ -119,7 +173,7 @@ function ParticleChaos({ opacity = 0.4 }: { opacity?: number }) {
     }
   }, [opacity])
 
-  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }} />
+  return <canvas ref={canvasRef} className={`absolute inset-0 pointer-events-none w-full h-full ${opacity === 0.6 ? 'z-[2]' : 'z-[1]'}`} style={{ maskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)' }} suppressHydrationWarning />
 }
 
 // ============================================================================
@@ -133,112 +187,55 @@ export default function Home() {
   const [isEntering, setIsEntering] = useState(false)
   const [desktopBypass, setDesktopBypass] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('game')
-  const [entryVisitCount, setEntryVisitCount] = useState(0)
-  const [entryTimer, setEntryTimer] = useState<number | null>(null)
-  
+  const [hasPlayedChime, setHasPlayedChime] = useState(false)
+  const [isClientLoaded, setIsClientLoaded] = useState(false)
+
   const { address, isConnected, connectWallet, disconnectWallet } = useWallet()
   const { checkInStatus, canSubmitScore } = useDailyCheckin(address, activeTab === 'profile')
   const networkLabel = process.env.NEXT_PUBLIC_USE_TESTNET === 'true' ? 'base sepolia' : 'base mainnet'
-  const entryCanvasRef = useRef<HTMLCanvasElement>(null)
-  const entryButtonsRef = useRef<HTMLDivElement>(null)
 
-  // Check visit count on mount - runs ONCE
+  // Run only on client side after hydration
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const count = parseInt(sessionStorage.getItem('bd_visit_count') || '0')
-      setEntryVisitCount(count)
-      const entered = sessionStorage.getItem('bd_entered')
-      if (entered === '1') {
-        setHasEntered(true)
-      }
-    }
-  }, [])
+    setIsClientLoaded(true)
 
-  // iPad Pro & Touch bypass
-  useEffect(() => {
-    if (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) {
+    // Check if new user
+    const hasVisited = localStorage.getItem('bd_visited') === '1'
+    const chimePlayed = localStorage.getItem('bd_played_chime') === '1'
+    setHasPlayedChime(chimePlayed)
+
+    // Touch bypass logic
+    const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches || (navigator.maxTouchPoints > 0)
+
+    if (isTouch) {
       setDesktopBypass(true)
+    } else {
+      // Desktop skips intro overlay after a very short delay
+      setTimeout(() => setHasEntered(true), 150)
+    }
+
+    // Auto-enter fallback for mobile
+    if (!hasVisited && isTouch) {
+      const timeoutId = setTimeout(() => handleEnterRef.current(), 15000) // 15s auto-enter for new users
+      return () => clearTimeout(timeoutId)
+    } else if (hasVisited && isTouch) {
+      const timeoutId = setTimeout(() => handleEnterRef.current(), 6000) // Fast auto-enter for returning
+      return () => clearTimeout(timeoutId)
     }
   }, [])
 
-  // Entry screen particle animation
-  useEffect(() => {
-    if (hasEntered) return
-    const canvas = entryCanvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    let animId: number
-    let w = window.innerWidth, h = window.innerHeight
-    canvas.width = w; canvas.height = h
-    
-    const dots: { x: number; y: number; vx: number; vy: number; size: number; alpha: number; baseAlpha: number; pulse: number; pulseSpeed: number }[] = []
-    const COUNT = Math.min(50, Math.floor(w * h / 12000))
-    for (let i = 0; i < COUNT; i++) {
-      dots.push({
-        x: Math.random() * w, y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.8, vy: (Math.random() - 0.5) * 0.8,
-        size: 1.2 + Math.random() * 2.5,
-        alpha: 0.08 + Math.random() * 0.22, baseAlpha: 0.08 + Math.random() * 0.22,
-        pulse: Math.random() * Math.PI * 2, pulseSpeed: 0.3 + Math.random() * 0.8
-      })
+  // Stable enter function via ref (prevents stale closure)
+  const handleEnterRef = useRef<() => void>(() => { })
+  handleEnterRef.current = () => {
+    if (hasEntered || isEntering) return
+    setIsEntering(true)
+    localStorage.setItem('bd_visited', '1')
+    if (!hasPlayedChime) {
+      localStorage.setItem('bd_played_chime', '1')
+      setHasPlayedChime(true)
     }
-    
-    const draw = () => {
-      if (document.hidden) { animId = requestAnimationFrame(draw); return }
-      ctx.clearRect(0, 0, w, h)
-      for (const d of dots) {
-        d.x += d.vx; d.y += d.vy; d.pulse += d.pulseSpeed * 0.016
-        if (d.x < -10) d.x = w + 10; if (d.x > w + 10) d.x = -10
-        if (d.y < -10) d.y = h + 10; if (d.y > h + 10) d.y = -10
-        ctx.beginPath()
-        ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(0, 82, 255, ${d.baseAlpha + Math.sin(d.pulse) * 0.06})`
-        ctx.fill()
-      }
-      const SHOW_CONNECTIONS = COUNT <= 80
-      const CONNECTION_DIST = w < 600 ? 100 : 140
-      const CONNECTION_DIST_SQ = CONNECTION_DIST * CONNECTION_DIST
-      if (SHOW_CONNECTIONS) {
-        for (let i = 0; i < dots.length; i++) {
-          for (let j = i + 1; j < dots.length; j++) {
-            const dx = dots[i].x - dots[j].x, dy = dots[i].y - dots[j].y
-            const distSq = dx * dx + dy * dy
-            if (distSq < CONNECTION_DIST_SQ) {
-              const dist = Math.sqrt(distSq)
-              const alpha = (1 - dist / CONNECTION_DIST) * 0.06
-              ctx.beginPath()
-              ctx.moveTo(dots[i].x, dots[i].y)
-              ctx.lineTo(dots[j].x, dots[j].y)
-              ctx.strokeStyle = `rgba(0, 82, 255, ${alpha})`
-              ctx.lineWidth = 0.5
-              ctx.stroke()
-            }
-          }
-        }
-      }
-      animId = requestAnimationFrame(draw)
-    }
-    draw()
-    const onResize = () => { w = window.innerWidth; h = window.innerHeight; canvas.width = w; canvas.height = h }
-    window.addEventListener('resize', onResize)
-    return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', onResize) }
-  }, [hasEntered])
-
-  // Auto-enter after timeout (20s first visit, 10s subsequent)
-  useEffect(() => {
-    if (hasEntered) return
-
-    const isFirstVisit = entryVisitCount === 0
-    const timeout = isFirstVisit ? 20000 : 10000
-
-    const t = setTimeout(() => {
-      handleEnter()
-    }, timeout)
-    setEntryTimer(Number(t))
-
-    return () => clearTimeout(t)
-  }, [hasEntered, entryVisitCount])
+    setTimeout(() => setHasEntered(true), 400)
+  }
+  const handleEnter = useCallback(() => handleEnterRef.current(), [])
 
   const { writeContractAsync } = useWriteContract()
   const [submitTxHash, setSubmitTxHash] = useState<`0x${string}` | undefined>()
@@ -248,34 +245,38 @@ export default function Home() {
     try { await connectWallet() } catch { }
   }, [connectWallet])
 
-  const handleEnter = useCallback(() => {
-    if (entryTimer) clearTimeout(entryTimer)
-    setIsEntering(true)
-    sessionStorage.setItem('bd_entered', '1')
-    const newCount = entryVisitCount + 1
-    sessionStorage.setItem('bd_visit_count', String(newCount))
-    setEntryVisitCount(newCount)
-    setTimeout(() => setHasEntered(true), 700)
-  }, [entryVisitCount, entryTimer])
-
   const handleScoreSubmit = useCallback(async (score: number) => {
     if (!address) throw new Error('wallet not connected')
     if (CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') throw new Error('contract not deployed')
 
-    const res = await fetch(`/api/score-sign?address=${address}&score=${score}`)
+    // Используем GASLESS отправку через POST endpoint
+    const res = await fetch('/api/score-sign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address, score }),
+    })
+    
     if (!res.ok) {
       const data = await res.json().catch(() => ({ error: 'server error' }))
-      throw new Error(data.error || 'failed to sign score')
+      throw new Error(data.error || 'failed to submit score')
     }
-    const { nonce, signature } = await res.json()
-
-    const hash = await writeContractAsync({
-      address: CONTRACT_ADDRESS,
-      abi: GAME_LEADERBOARD_ABI,
-      functionName: 'submitScore',
-      args: [BigInt(score), BigInt(nonce), signature as `0x${string}`],
-    })
-    setSubmitTxHash(hash)
+    
+    const result = await res.json()
+    
+    if (result.gasless && result.hash) {
+      // Gasless транзакция отправлена владельцем
+      setSubmitTxHash(result.hash)
+    } else {
+      // Fallback на обычную отправку (юзер платит газ)
+      const { nonce, signature } = result
+      const hash = await writeContractAsync({
+        address: CONTRACT_ADDRESS,
+        abi: GAME_LEADERBOARD_ABI,
+        functionName: 'submitScore',
+        args: [BigInt(score), BigInt(nonce), signature as `0x${string}`],
+      })
+      setSubmitTxHash(hash)
+    }
   }, [address, writeContractAsync])
 
   const handleTabChange = useCallback((tab: TabType) => {
@@ -283,68 +284,78 @@ export default function Home() {
   }, [])
 
   // ========================================================================
-  // ENTRY SCREEN
-  // ========================================================================
-  if (!hasEntered) {
-    return (
-      <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden transition-opacity duration-700 ${isEntering ? 'opacity-0 scale-105' : 'opacity-100'}`}
-        style={{ background: 'linear-gradient(145deg, #0A0B14 0%, #0D121C 40%, #111827 100%)' }}>
-        <canvas ref={entryCanvasRef} className="absolute inset-0 pointer-events-none z-0" />
-        <div className="absolute inset-0 pointer-events-none z-10 opacity-[0.04]" style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent 0, transparent 2px, rgba(255,255,255,0.08) 2px, rgba(255,255,255,0.08) 4px)',
-          backgroundSize: '100% 4px'
-        }} />
-        <div className="absolute inset-0 pointer-events-none z-10 opacity-[0.03]" style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, #0052FF 0, #0052FF 1px, transparent 1px, transparent 60px), repeating-linear-gradient(90deg, #0052FF 0, #0052FF 1px, transparent 1px, transparent 60px)'
-        }} />
-        <div className="absolute inset-0 pointer-events-none z-10" style={{
-          background: 'radial-gradient(ellipse 70% 50% at 50% 45%, rgba(0,82,255,0.12) 0%, transparent 70%)'
-        }} />
-
-        <div className="relative z-20 text-center px-6 max-w-[340px] w-full" style={{ animation: 'entrySlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}>
-          <h2 className="text-[14px] font-bold text-white/80 tracking-tight mb-8 leading-relaxed"
-            style={{ fontFamily: 'var(--font-mono)', animation: 'fadeIn 1s ease-out 0.3s both' }}>
-            ready to trade like<br /><span className="text-[#0052FF]">it&#39;s your first day again?</span>
-          </h2>
-
-          <div ref={entryButtonsRef} className="flex gap-3" style={{ animation: 'fadeIn 0.8s ease-out 0.5s both' }}>
-            <button
-              onClick={handleEnter}
-              className="flex-1 py-3.5 text-white font-black uppercase tracking-[0.14em] text-[12px] transition-all active:scale-95 bg-[#0ECB81] border border-[#0ECB81]/30 rounded-none relative overflow-hidden group animate-glow-pulse"
-              style={{ fontFamily: 'var(--font-mono)', boxShadow: '0 0 20px rgba(14,203,129,0.3), inset 0 1px 0 rgba(255,255,255,0.1)' }}
-            >
-              <span className="relative z-10">yes / buy</span>
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0A9F68] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            </button>
-            <button
-              onClick={handleEnter}
-              className="flex-1 py-3.5 text-white font-black uppercase tracking-[0.14em] text-[12px] transition-all active:scale-95 bg-[#F6465D] border border-[#F6465D]/30 rounded-none relative overflow-hidden group animate-glow-pulse"
-              style={{ fontFamily: 'var(--font-mono)', boxShadow: '0 0 20px rgba(246,70,93,0.3), inset 0 1px 0 rgba(255,255,255,0.1)' }}
-            >
-              <span className="relative z-10">yes / sell</span>
-              <div className="absolute inset-0 bg-gradient-to-t from-[#D63048] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            </button>
-          </div>
-
-          <p className="mt-6 text-[9px] text-white/20 tracking-widest uppercase animate-pulse"
-            style={{ fontFamily: 'var(--font-mono)' }}>
-            {entryVisitCount === 0 ? 'auto-enter in 20s' : 'auto-enter in 10s'}
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  // ========================================================================
-  // MAIN APP
+  // MAIN APP (always renders — entry popup is overlay on top)
   // ========================================================================
   return (
     <div className="h-[100dvh] w-full bg-white flex flex-col relative overflow-hidden">
-      {/* GLOBAL PARTICLE BACKGROUND */}
-      <ParticleChaos opacity={0.4} />
+      {/* GLOBAL PARTICLE BACKGROUND - z-0, covers full length of site */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <ParticleChaos opacity={0.6} />
+      </div>
 
-      {/* Desktop block gate */}
-      <div className={`${!desktopBypass ? 'hidden lg:flex' : 'hidden'} relative z-50 h-full w-full items-center justify-center bg-[#F5F8FF] overflow-hidden`}>
+      {/* HEADER BACKGROUND BLUR AND GRID */}
+      <div className="fixed top-0 left-0 right-0 h-28 bg-white/60 backdrop-blur-xl z-[1] pointer-events-none mask-image-b" style={{ maskImage: 'linear-gradient(to bottom, black 60%, transparent)' }} />
+      <div className="fixed inset-0 pointer-events-none z-[1] opacity-[0.03]" style={{
+        backgroundImage: 'repeating-linear-gradient(0deg, #0052FF 0, #0052FF 1px, transparent 1px, transparent 80px), repeating-linear-gradient(90deg, #0052FF 0, #0052FF 1px, transparent 1px, transparent 80px)'
+      }} />
+
+      {/* ENTRY POPUP OVERLAY - Rendered on SSR, hidden on desktop via CSS */}
+      {!hasEntered && (
+        <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden transition-all duration-400 lg:hidden ${isEntering ? 'opacity-0 scale-105' : 'opacity-100'}`}
+          style={{ background: 'linear-gradient(165deg, rgba(255,255,255,0.97) 0%, rgba(245,248,255,0.96) 35%, rgba(235,240,255,0.95) 65%, rgba(224,234,255,0.94) 100%)' }}>
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-[15%] left-[10%] w-48 h-48 bg-[#0052FF]/[0.08] rounded-full blur-3xl animate-[float_8s_ease-in-out_infinite]" />
+            <div className="absolute bottom-[20%] right-[15%] w-64 h-64 bg-[#0052FF]/[0.06] rounded-full blur-3xl animate-[float_12s_ease-in-out_infinite_reverse]" />
+            <div className="absolute top-[50%] left-[50%] w-40 h-40 bg-[#0ECB81]/[0.06] rounded-full blur-3xl animate-[float_10s_ease-in-out_infinite_2s]" />
+          </div>
+          <div className="absolute inset-0 pointer-events-none z-10 opacity-[0.05]" style={{
+            backgroundImage: 'repeating-linear-gradient(0deg, #0052FF 0, #0052FF 1px, transparent 1px, transparent 80px), repeating-linear-gradient(90deg, #0052FF 0, #0052FF 1px, transparent 1px, transparent 80px)'
+          }} />
+
+          <div className="relative z-20 text-center px-6 max-w-[340px] w-full"
+            style={{ opacity: 0, animation: 'fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both' }}>
+            <h2 className="text-[15px] font-bold text-slate-700 tracking-tight mb-10 leading-relaxed"
+              style={{ fontFamily: 'var(--font-mono)', opacity: 0, animation: 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both' }}>
+              ready to trade like<br /><span className="text-[#0052FF] font-black">it&#39;s your first day again?</span>
+            </h2>
+
+            <div className="flex gap-2" style={{ opacity: 0, animation: 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both' }}>
+              <button
+                onClick={handleEnter}
+                className="flex-1 py-2.5 text-white font-bold tracking-[0.12em] text-[11px] transition-all duration-200 hover:scale-105 active:scale-95 bg-[#0ECB81] relative overflow-hidden group cursor-pointer rounded-md"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  boxShadow: '0 4px 12px rgba(14,203,129,0.25)',
+                  textTransform: 'lowercase'
+                }}
+              >
+                <span className="relative z-10">yes</span>
+                <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-200" />
+              </button>
+              <button
+                onClick={handleEnter}
+                className="flex-1 py-2.5 text-white font-bold tracking-[0.12em] text-[11px] transition-all duration-200 hover:scale-105 active:scale-95 bg-[#F6465D] relative overflow-hidden group cursor-pointer rounded-md"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  boxShadow: '0 4px 12px rgba(246,70,93,0.25)',
+                  textTransform: 'lowercase'
+                }}
+              >
+                <span className="relative z-10">yes</span>
+                <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-200" />
+              </button>
+            </div>
+
+            <p className="mt-8 text-[9px] text-slate-400/60 tracking-widest animate-pulse"
+              style={{ fontFamily: 'var(--font-mono)', textTransform: 'lowercase', opacity: 0, animation: 'fadeIn 0.6s ease 0.9s both' }}>
+              auto-enter soon
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop block gate - z-50 */}
+      <div className={`${!desktopBypass ? 'hidden lg:flex' : 'hidden'} relative z-50 h-full w-full items-center justify-center bg-[#F5F8FF] overflow-hidden`} suppressHydrationWarning>
         <div className="absolute inset-0 z-0">
           <div className="absolute top-[20%] left-[20%] w-64 h-64 bg-[#0052FF]/8 rounded-full blur-3xl animate-[float_8s_ease-in-out_infinite]" />
           <div className="absolute bottom-[20%] right-[20%] w-80 h-80 bg-[#0ecb81]/5 rounded-full blur-3xl animate-[float_10s_ease-in-out_infinite_reverse]" />
@@ -368,22 +379,22 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Content layer - mobile/tablet only */}
-      <div className={`relative z-20 flex flex-col h-full ${!desktopBypass ? 'lg:hidden' : ''}`}>
+      {/* Content layer - mobile/tablet only - z-50 */}
+      <div className={`relative z-50 flex flex-col h-full ${!desktopBypass ? 'lg:hidden' : ''}`}>
 
-        {/* HEADER */}
-        <header className="sticky top-0 z-40 backdrop-blur-md shadow-[0_2px_10px_rgba(0,0,0,0.03)] relative">
-          <div className="absolute inset-0 bg-white/90" />
+        {/* HEADER - z-[60], above background */}
+        <header className="sticky top-0 z-[60] relative overflow-hidden">
+          <div className="absolute inset-0 bg-white/70 backdrop-blur-xl" />
           <ParticleChaos opacity={0.25} />
-          
-          <div className="relative z-10 mx-auto flex w-full max-w-5xl px-3 sm:px-5 pb-1">
+
+          <div className="relative z-10 mx-auto flex w-full max-w-5xl px-3 sm:px-5 pb-1 mt-1">
             <div className="flex items-center justify-between w-full py-2.5">
               <div className="flex items-center gap-2 sm:gap-2.5 cursor-pointer flex-shrink-0" onClick={() => setActiveTab('game')}>
                 <div className="relative h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0 overflow-hidden border-2 border-[#0052FF]/80 rounded p-0.5 bg-white shadow-[0_0_12px_rgba(0,82,255,0.4)] animate-icon-float">
                   <Image src="/base-logo.png" alt="base dash logo" fill className="object-cover" priority />
                 </div>
                 <div className="block whitespace-nowrap">
-                  <h1 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-widest leading-none font-mono">base dash</h1>
+                  <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-widest leading-none font-mono">base dash</h1>
                 </div>
               </div>
 
@@ -391,7 +402,7 @@ export default function Home() {
                 {!isConnected ? (
                   <button
                     onClick={handleConnect}
-                    className="h-9 px-4 flex items-center gap-2 bg-gradient-to-br from-[#0052FF] to-[#0040CC] text-white text-[11px] font-black uppercase tracking-wider rounded-xl shadow-[0_4px_14px_rgba(0,82,255,0.35)] hover:shadow-[0_6px_20px_rgba(0,82,255,0.45)] transition-all transform hover:-translate-y-0.5 active:scale-95"
+                    className="h-9 px-4 flex items-center gap-2 bg-gradient-to-br from-[#0052FF] to-[#0040CC] text-white text-[11px] font-black tracking-wider rounded-xl shadow-[0_4px_14px_rgba(0,82,255,0.35)] hover:shadow-[0_6px_20px_rgba(0,82,255,0.45)] transition-all transform hover:-translate-y-0.5 active:scale-95"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -423,17 +434,17 @@ export default function Home() {
               <button onClick={() => handleTabChange('game')} className={`relative px-1 sm:px-3 py-1.5 rounded-lg transition-all duration-200 flex flex-col items-center justify-center gap-0.5 flex-1 ${activeTab === 'game' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
                 <div className="flex items-center gap-1">
                   <svg className="w-3.5 h-3.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wide">trade</span>
+                  <span className="text-[10px] sm:text-xs font-black tracking-wide">trade</span>
                 </div>
-                <span className="text-[7px] sm:text-[8px] font-semibold opacity-70">PLAY DEMO</span>
+                <span className="text-[7px] sm:text-[8px] font-semibold opacity-70">play demo</span>
               </button>
 
               <button onClick={() => handleTabChange('profile')} className={`relative px-1 sm:px-3 py-1.5 rounded-lg transition-all duration-200 flex flex-col items-center justify-center gap-0.5 flex-1 ${activeTab === 'profile' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
                 <div className="flex items-center gap-1">
                   <svg className="w-3.5 h-3.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
-                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wide">wallet</span>
+                  <span className="text-[10px] sm:text-xs font-black tracking-wide">wallet</span>
                 </div>
-                <span className="text-[7px] sm:text-[8px] font-semibold opacity-70">PROFILE</span>
+                <span className="text-[7px] sm:text-[8px] font-semibold opacity-70">profile</span>
               </button>
 
               <button onClick={() => handleTabChange('leaderboard')} className={`relative overflow-hidden px-1 sm:px-3 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg transition-all duration-200 group flex-1 ${activeTab === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white shadow-[0_0_15px_rgba(240,185,11,0.6)] scale-100 ring-1 ring-[#F0B90B]/80' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)]'}`}>
@@ -442,23 +453,23 @@ export default function Home() {
                   <svg className={`w-3.5 h-3.5 hidden sm:block transition-transform duration-300 ${activeTab !== 'leaderboard' ? 'group-hover:scale-110 text-[#F0B90B]' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
                     <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
                   </svg>
-                  <span className={`text-[10px] sm:text-xs font-black uppercase tracking-wide ${activeTab !== 'leaderboard' ? 'text-slate-800 group-hover:text-amber-600' : 'text-white'}`}>top 33</span>
+                  <span className={`text-[10px] sm:text-xs font-black tracking-wide ${activeTab !== 'leaderboard' ? 'text-slate-800 group-hover:text-amber-600' : 'text-white'}`}>top 33</span>
                 </div>
-                <span className={`text-[7px] sm:text-[8px] font-semibold relative z-10 ${activeTab !== 'leaderboard' ? 'opacity-70 text-slate-500' : 'opacity-90 text-white'}`}>RANKS</span>
+                <span className={`text-[7px] sm:text-[8px] font-semibold relative z-10 ${activeTab !== 'leaderboard' ? 'opacity-70 text-slate-500' : 'opacity-90 text-white'}`}>ranks</span>
               </button>
             </div>
           </div>
         </header>
 
-        {/* MAIN CONTENT */}
-        <main className="flex-1 flex flex-col min-h-0 w-full mb-auto relative z-20">
+        {/* MAIN CONTENT - z-[20], under header but above background */}
+        <main className="flex-1 flex flex-col min-h-0 w-full mb-auto relative z-[20]">
           <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col relative w-full">
 
             {/* GAME TAB */}
             {activeTab === 'game' && (
               <div className="flex flex-col h-full w-full">
                 {!isConnected && (
-                  <div className="p-3 border-b border-[#0052FF]/15 bg-gradient-to-r from-[#0052FF]/5 via-[#0052FF]/8 to-[#0052FF]/5 flex items-center justify-center gap-2">
+                  <div className="p-3 mt-2 border-[#0052FF]/15 bg-gradient-to-r from-[#0052FF]/5 via-[#0052FF]/8 to-[#0052FF]/5 flex items-center justify-center gap-2">
                     <div className="w-6 h-6 bg-[#0052FF] flex items-center justify-center flex-shrink-0 rounded-lg">
                       <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -470,9 +481,33 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Game Canvas - FIXED sizing */}
-                <div className="w-full px-4 mt-4 mb-2">
-                  <div className="w-full relative">
+                {/* GAME HINT — Styled cards above canvas */}
+                <div className="w-full px-3 py-4 relative z-20">
+                  <div className="flex items-stretch gap-2 mx-auto">
+                    <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-white/60 backdrop-blur-sm rounded-lg border border-slate-200/60">
+                      <div className="w-5 h-5 bg-[#0052FF]/10 rounded flex items-center justify-center flex-shrink-0">
+                        <svg className="w-2.5 h-2.5 text-[#0052FF]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
+                      </div>
+                      <span className="text-[8px] font-mono font-bold text-slate-500 lowercase tracking-wider">tap to jump</span>
+                    </div>
+                    <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-white/60 backdrop-blur-sm rounded-lg border border-[#F6465D]/15">
+                      <div className="w-5 h-5 bg-[#F6465D]/10 rounded flex items-center justify-center flex-shrink-0">
+                        <svg className="w-2.5 h-2.5 text-[#F6465D]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                      </div>
+                      <span className="text-[8px] font-mono font-bold text-slate-500 lowercase tracking-wider">dodge <span className="text-[#F6465D]">red</span></span>
+                    </div>
+                    <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-white/60 backdrop-blur-sm rounded-lg border border-[#0ECB81]/15">
+                      <div className="w-5 h-5 bg-[#0ECB81]/10 rounded flex items-center justify-center flex-shrink-0">
+                        <svg className="w-2.5 h-2.5 text-[#0ECB81]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                      </div>
+                      <span className="text-[8px] font-mono font-bold text-slate-500 lowercase tracking-wider">collect <span className="text-[#0ECB81]">green</span></span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Game Canvas */}
+                <div className="w-full px-0 sm:px-0 mb-0 flex flex-col items-center justify-center relative z-20" style={{ maxHeight: '50vh' }}>
+                  <div className="w-full relative shadow-[0_8px_30px_rgba(0,0,0,0.12)] sm:rounded-lg overflow-hidden border-y sm:border-x border-slate-200/50 flex-shrink-0 bg-white">
                     <GameEngine
                       storageKey="basedash_highscore_v2"
                       onScoreSubmit={handleScoreSubmit}
@@ -485,62 +520,61 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* DEGEN CONSOLE - Minimalist Premium */}
-                <div className="flex-1 flex flex-col w-full max-w-2xl mx-auto px-4 pb-4 mt-2">
-                  <div className="w-full bg-white/80 backdrop-blur-xl rounded-2xl p-4 border border-slate-200/60 shadow-lg relative overflow-hidden">
-                    {/* Animated background */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#0052FF]/4 via-transparent to-[#0ECB81]/4 animate-gradient-shift" />
-                    
-                    <div className="relative z-10">
-                      {/* Header */}
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-[#0ECB81] rounded-full animate-pulse" />
-                          <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest">online</span>
-                        </div>
-                        <span className="text-[9px] font-mono font-bold text-[#0052FF] uppercase tracking-widest">base</span>
-                      </div>
+                {/* BOTTOM INFO GRID — Fills space between canvas and footer */}
+                <div className="w-full px-3 sm:px-4 py-3 flex-1 flex flex-col relative z-20">
+                  <div className="w-full flex-1 grid grid-cols-2 gap-2.5 max-w-lg mx-auto auto-rows-min content-center">
 
-                      {/* Main text */}
-                      <div className="text-center py-2">
-                        <p className="text-[15px] font-black text-slate-800 uppercase tracking-tight leading-none mb-1">
-                          don't get liquidated
-                        </p>
-                        <div className="flex items-center justify-center gap-2 text-[9px] font-bold">
-                          <span className="px-2 py-0.5 bg-[#F6465D]/10 text-[#F6465D] rounded font-mono">reds = death</span>
-                          <span className="text-slate-400">/</span>
-                          <span className="px-2 py-0.5 bg-[#0ECB81]/10 text-[#0ECB81] rounded font-mono">greens = profit</span>
+                    {/* Liquidation Watch — full width */}
+                    <div className="col-span-2 bg-white/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-[#F6465D]/15 flex items-center justify-between group hover:border-[#F6465D]/30 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <div className="w-2 h-2 bg-[#F6465D] rounded-full" />
+                          <div className="absolute inset-0 w-2 h-2 bg-[#F6465D] rounded-full animate-ping opacity-40" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-mono font-black text-slate-800 lowercase tracking-wider">liquidation watch</span>
+                          <span className="text-[8px] font-mono text-slate-400 lowercase">don&apos;t get rekt</span>
                         </div>
                       </div>
+                      <span className="text-[8px] font-mono font-bold text-[#F6465D] lowercase px-2 py-1 bg-[#F6465D]/8 rounded-md border border-[#F6465D]/15">high risk</span>
+                    </div>
 
-                      {/* Stats */}
-                      <div className="grid grid-cols-3 gap-1.5 mt-3">
-                        <div className="bg-slate-50/80 px-2 py-2 border border-slate-200/60 text-center rounded-lg">
-                          <p className="text-[6px] font-mono text-slate-400 uppercase mb-0.5">fps</p>
-                          <p className="text-[9px] font-black text-slate-700">60</p>
-                        </div>
-                        <div className="bg-[#0052FF]/8 px-2 py-2 border border-[#0052FF]/15 text-center rounded-lg">
-                          <p className="text-[6px] font-mono text-[#0052FF]/60 uppercase mb-0.5">data</p>
-                          <p className="text-[9px] font-black text-[#0052FF]">on-chain</p>
-                        </div>
-                        <div className="bg-amber-500/8 px-2 py-2 border border-amber-500/15 text-center rounded-lg">
-                          <p className="text-[6px] font-mono text-amber-500/60 uppercase mb-0.5">mode</p>
-                          <p className="text-[9px] font-black text-amber-600">degen</p>
-                        </div>
-                        <div className="bg-slate-50/80 px-2 py-2 border border-slate-200/60 text-center rounded-lg">
-                          <p className="text-[6px] font-mono text-slate-400 uppercase mb-0.5">physics</p>
-                          <p className="text-[9px] font-black text-[#F6465D]">arcade</p>
-                        </div>
-                        <div className="bg-emerald-500/8 px-2 py-2 border border-emerald-500/15 text-center rounded-lg">
-                          <p className="text-[6px] font-mono text-emerald-500/60 uppercase mb-0.5">market</p>
-                          <p className="text-[9px] font-black text-emerald-600">live</p>
-                        </div>
-                        <div className="bg-slate-50/80 px-2 py-2 border border-slate-200/60 text-center rounded-lg">
-                          <p className="text-[6px] font-mono text-slate-400 uppercase mb-0.5">gas</p>
-                          <p className="text-[9px] font-black text-slate-700">0</p>
-                        </div>
+                    {/* Chain Status */}
+                    <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-[#0052FF]/10 flex flex-col gap-2 hover:border-[#0052FF]/25 transition-colors">
+                      <span className="text-[7px] font-mono font-bold text-slate-400 lowercase tracking-widest">network</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-[#0052FF] rounded-full animate-pulse" />
+                        <span className="text-[14px] font-black font-mono text-slate-800 lowercase leading-none">base</span>
+                      </div>
+                      <span className="text-[7px] font-mono text-[#0ECB81] lowercase">● mainnet live</span>
+                    </div>
+
+                    {/* Volatility */}
+                    <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-[#F0B90B]/10 flex flex-col gap-2 hover:border-[#F0B90B]/25 transition-colors">
+                      <span className="text-[7px] font-mono font-bold text-slate-400 lowercase tracking-widest">volatility</span>
+                      <div className="flex items-center gap-2">
+                        <svg className="w-3.5 h-3.5 text-[#F0B90B]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" /></svg>
+                        <span className="text-[14px] font-black font-mono text-[#F0B90B] lowercase leading-none">extreme</span>
+                      </div>
+                      <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-[#F0B90B] to-[#F6465D] rounded-full" style={{ width: '85%', animation: 'pulse 2s ease-in-out infinite' }} />
                       </div>
                     </div>
+
+                    {/* On-Chain Scores */}
+                    <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-slate-200/60 flex flex-col gap-2 hover:border-[#0052FF]/20 transition-colors">
+                      <span className="text-[7px] font-mono font-bold text-slate-400 lowercase tracking-widest">scoring</span>
+                      <span className="text-[10px] font-mono font-bold text-slate-700 lowercase leading-tight">on-chain verified</span>
+                      <span className="text-[7px] font-mono text-slate-400 lowercase">scores saved to base</span>
+                    </div>
+
+                    {/* Rewards */}
+                    <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-[#8B5CF6]/15 flex flex-col gap-2 hover:border-[#8B5CF6]/30 transition-colors">
+                      <span className="text-[7px] font-mono font-bold text-slate-400 lowercase tracking-widest">rewards</span>
+                      <span className="text-[10px] font-mono font-black text-[#8B5CF6] lowercase leading-tight">coming soon</span>
+                      <span className="text-[7px] font-mono text-slate-400 lowercase">play now, earn later</span>
+                    </div>
+
                   </div>
                 </div>
               </div>
@@ -559,12 +593,12 @@ export default function Home() {
                       <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 blur-3xl -translate-y-1/2 translate-x-1/3" />
                       <div className="relative z-10 flex flex-col justify-between sm:flex-row sm:items-end gap-5">
                         <div>
-                          <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1.5">connected wallet</p>
+                          <p className="text-[10px] font-bold text-white/60 lowercase tracking-widest mb-1.5">connected wallet</p>
                           <p className="font-mono text-xl sm:text-2xl font-black text-white tracking-tight leading-none">{address.slice(0, 6)}...{address.slice(-4)}</p>
                         </div>
                         <div className="flex gap-2">
                           <div className="bg-white/10 backdrop-blur-md px-3 py-2 border border-white/20">
-                            <p className="text-[8px] font-bold text-white/50 uppercase tracking-widest mb-1">network</p>
+                            <p className="text-[8px] font-bold text-white/50 lowercase tracking-widest mb-1">network</p>
                             <p className="text-[11px] font-black text-white flex items-center gap-1.5 leading-none">
                               <span className="w-1.5 h-1.5 bg-[#0ECB81] animate-pulse shadow-[0_0_4px_#0ECB81]" />
                               {networkLabel}
@@ -575,13 +609,13 @@ export default function Home() {
                     </div>
                     <div className="grid grid-cols-2 gap-2 sm:gap-3">
                       <div className="p-3 sm:p-4 border border-[#0ECB81]/10 bg-[#0ECB81]/[0.03] shadow-sm flex flex-col items-center justify-center text-center">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">time in game</p>
+                        <p className="text-[9px] font-bold text-slate-400 lowercase tracking-widest">time in game</p>
                         <p className="mt-1 text-xl sm:text-2xl font-black text-[#0ECB81] leading-none">
                           {typeof window !== 'undefined' ? (parseInt(localStorage.getItem('base_dash_time') || '0') / 60).toFixed(1) : 0}m
                         </p>
                       </div>
                       <div className="p-3 sm:p-4 border border-[#0052FF]/10 bg-[#0052FF]/[0.03] shadow-sm flex flex-col items-center justify-center text-center">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">streak</p>
+                        <p className="text-[9px] font-bold text-slate-400 lowercase tracking-widest">streak</p>
                         <p className="mt-1 text-xl sm:text-2xl font-black text-[#0052FF] leading-none">{checkInStatus.streak}</p>
                       </div>
                     </div>
@@ -598,7 +632,7 @@ export default function Home() {
                     <p className="text-slate-500 text-[13px] font-medium mb-6 leading-relaxed">save your session on-chain, access the leaderboard, and claim your rewards.</p>
                     <button
                       onClick={handleConnect}
-                      className="w-full bg-[#0052FF] text-white py-3.5 text-sm font-black tracking-wide uppercase hover:bg-[#0040CC] transition-all shadow-[0_8px_16px_rgba(0,82,255,0.2)] active:scale-[0.98] rounded-xl flex items-center justify-center gap-2"
+                      className="w-full bg-[#0052FF] text-white py-3.5 text-sm font-black tracking-wide hover:bg-[#0040CC] transition-all shadow-[0_8px_16px_rgba(0,82,255,0.2)] active:scale-[0.98] rounded-xl flex items-center justify-center gap-2"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -612,12 +646,12 @@ export default function Home() {
           </div>
         </main>
 
-        {/* FOOTER */}
-        <footer className="mt-auto border-t border-[#e5e7eb] bg-[#f8fafc] backdrop-blur-md relative z-20">
-          <div className="mx-auto w-full max-w-3xl px-6 py-4">
-            <div className="flex items-center justify-between text-[11px] font-bold">
-              <span className="text-slate-500">built by <span className="text-[#0052FF]">vov</span>. © {new Date().getFullYear()} base dash.</span>
-              <span className="text-slate-400/80 animate-[hintFade_4s_ease-in-out_infinite] tracking-wide">rewards soon.</span>
+        {/* FOOTER - z-[40] */}
+        <footer className="mt-auto bg-white/50 backdrop-blur-md relative z-[40]">
+          <div className="mx-auto w-full max-w-3xl px-6 py-4 border-t border-slate-100/50">
+            <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.15em] font-medium" style={{ fontFamily: 'var(--font-mono)' }}>
+              <span className="text-slate-400/80">© {new Date().getFullYear()} base dash</span>
+              <span className="text-slate-400/80">built by <span className="font-black text-[#0052FF]">vov</span></span>
             </div>
           </div>
         </footer>

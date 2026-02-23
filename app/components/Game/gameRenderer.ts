@@ -65,11 +65,13 @@ const getGroundGradient = (
     w: WorldTheme,
     worldIdx: number
 ): CanvasGradient => {
-    // Always recreate for white fade effect
+    if (cachedGroundGrad && cachedGroundWorldIdx === worldIdx) return cachedGroundGrad
     const g = ctx.createLinearGradient(0, CFG.GROUND, 0, CFG.HEIGHT)
     g.addColorStop(0, w.groundTop)
     g.addColorStop(0.5, w.groundTop)
     g.addColorStop(1, '#FFFFFF')
+    cachedGroundGrad = g
+    cachedGroundWorldIdx = worldIdx
     return g
 }
 
@@ -77,31 +79,49 @@ const getGroundGradient = (
 // SKY & BACKGROUND
 // ============================================================================
 
-/** Draw sky gradient and subtle grid pattern */
+/** Draw sky with smooth depth and scrolling grid — Geometry Dash premium */
 export const drawSky = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
     w: WorldTheme
 ): void => {
-    // Sky gradient
     ctx.fillStyle = getSkyGradient(ctx, w, e.worldIndex)
     ctx.fillRect(0, 0, CFG.WIDTH, CFG.GROUND)
 
-    // Subtle moving grid
     ctx.save()
-    ctx.globalAlpha = 0.4
+    // === SCROLLING VERTICAL LINES ===
     ctx.strokeStyle = w.grid
     ctx.lineWidth = 0.5
     const gridSize = 50
-    const offsetX = (e.backgroundOffset * 0.35) % gridSize
-    const offsetY = (e.gameTime * 12) % gridSize
-
+    const offsetX = (e.backgroundOffset * 0.3) % gridSize
     for (let x = -offsetX; x < CFG.WIDTH + gridSize; x += gridSize) {
+        ctx.globalAlpha = 0.12
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CFG.GROUND); ctx.stroke()
     }
-    for (let y = -offsetY; y < CFG.GROUND + gridSize; y += gridSize) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CFG.WIDTH, y); ctx.stroke()
+
+    // === SMOOTH HORIZONTAL DEPTH BANDS — GD parallax ===
+    const bandCount = 5
+    for (let i = 0; i < bandCount; i++) {
+        const t = i / bandCount
+        const y = CFG.GROUND * (0.3 + t * 0.7)
+        ctx.globalAlpha = 0.03 + t * 0.08
+        ctx.strokeStyle = w.grid
+        ctx.lineWidth = 0.4 + t * 0.6
+        ctx.beginPath()
+        ctx.moveTo(0, y)
+        ctx.lineTo(CFG.WIDTH, y)
+        ctx.stroke()
     }
+
+    // === BOTTOM GRADIENT FADE (sky-to-ground transition) ===
+    const fadeH = CFG.GROUND * 0.15
+    const fade = ctx.createLinearGradient(0, CFG.GROUND - fadeH, 0, CFG.GROUND)
+    fade.addColorStop(0, 'rgba(255,255,255,0)')
+    fade.addColorStop(1, 'rgba(255,255,255,0.08)')
+    ctx.globalAlpha = 1
+    ctx.fillStyle = fade
+    ctx.fillRect(0, CFG.GROUND - fadeH, CFG.WIDTH, fadeH)
+
     ctx.restore()
 }
 
@@ -109,7 +129,7 @@ export const drawSky = (
 // PARALLAX CLOUDS
 // ============================================================================
 
-/** Draw soft parallax cloud layers */
+/** Draw soft parallax cloud layers with inner depth */
 export const drawClouds = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
@@ -118,18 +138,20 @@ export const drawClouds = (
     ctx.save()
     for (const c of e.clouds) {
         const x = ((c.x - e.cloudOffset * c.speed * 3) % (CFG.WIDTH + c.width * 2)) - c.width
-        ctx.globalAlpha = c.alpha
         ctx.fillStyle = w.cloudColor
 
-        // Soft rounded rectangle cloud shape
+        // Main cloud body (3 overlapping ellipses)
         const rx = c.width * 0.3
         const ry = c.height * 0.4
+        ctx.globalAlpha = c.alpha * 0.7
         ctx.beginPath()
         ctx.ellipse(x + c.width * 0.3, c.y + c.height * 0.5, rx, ry, 0, 0, TWO_PI)
         ctx.fill()
+        ctx.globalAlpha = c.alpha
         ctx.beginPath()
         ctx.ellipse(x + c.width * 0.6, c.y + c.height * 0.35, rx * 1.2, ry * 1.1, 0, 0, TWO_PI)
         ctx.fill()
+        ctx.globalAlpha = c.alpha * 0.6
         ctx.beginPath()
         ctx.ellipse(x + c.width * 0.85, c.y + c.height * 0.55, rx * 0.8, ry * 0.9, 0, 0, TWO_PI)
         ctx.fill()
@@ -141,7 +163,7 @@ export const drawClouds = (
 // STARS / FLOATING DOTS
 // ============================================================================
 
-/** Draw twinkling stars with parallax depth */
+/** Draw twinkling stars — clean dots with subtle sparkle */
 export const drawStars = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
@@ -151,24 +173,24 @@ export const drawStars = (
     for (const s of e.stars) {
         const parallaxX = (s.x - e.backgroundOffset * s.depth * 0.15) % CFG.WIDTH
         const displayX = parallaxX < 0 ? parallaxX + CFG.WIDTH : parallaxX
-        const alpha = (s.alpha + Math.sin(s.twinkle + e.gameTime * s.twinkleSpeed) * 0.2) * 0.45
-        if (alpha <= 0.02) continue // skip invisible stars
+        const twinkle = Math.sin(s.twinkle + e.gameTime * s.twinkleSpeed)
+        const alpha = clamp((s.alpha + twinkle * 0.2) * 0.5, 0, 1)
+        if (alpha <= 0.03) continue
+
+        const displaySize = s.layer === 1 ? s.size : s.size * 1.3
 
         ctx.globalAlpha = alpha
         ctx.fillStyle = w.starColor
-
-        // Layer 1: simple dots — Layer 2: slightly larger
-        const displaySize = s.layer === 1 ? s.size : s.size * 1.3
         ctx.beginPath()
         ctx.arc(displayX, s.y, displaySize, 0, TWO_PI)
         ctx.fill()
 
-        // Faint cross sparkle on larger stars
-        if (displaySize > 1.4 && alpha > 0.25) {
+        // Minimal cross on bright stars
+        if (displaySize > 1.3 && alpha > 0.25) {
             ctx.globalAlpha = alpha * 0.3
             ctx.strokeStyle = w.starColor
             ctx.lineWidth = 0.5
-            const cs = displaySize * 2.5
+            const cs = displaySize * 2
             ctx.beginPath()
             ctx.moveTo(displayX - cs, s.y); ctx.lineTo(displayX + cs, s.y)
             ctx.moveTo(displayX, s.y - cs); ctx.lineTo(displayX, s.y + cs)
@@ -182,30 +204,47 @@ export const drawStars = (
 // GROUND & FLOOR PATTERNS
 // ============================================================================
 
-/** Draw the ground surface with world-specific floor pattern */
+/** Draw the ground surface with GD-style blocks and glowing top line */
 export const drawGround = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
     w: WorldTheme
 ): void => {
-    // Ground fill — cached gradient
-    ctx.fillStyle = getGroundGradient(ctx, w, e.worldIndex)
-    ctx.fillRect(0, CFG.GROUND, CFG.WIDTH, CFG.HEIGHT - CFG.GROUND)
+    const groundH = CFG.HEIGHT - CFG.GROUND
 
-    // Accent ground line — clean 2px, no blur
+    // Ground gradient
+    const gGrad = ctx.createLinearGradient(0, CFG.GROUND, 0, CFG.HEIGHT)
+    gGrad.addColorStop(0, w.groundTop)
+    gGrad.addColorStop(0.4, w.groundTop)
+    gGrad.addColorStop(1, '#FFFFFF')
+    ctx.fillStyle = gGrad
+    ctx.fillRect(0, CFG.GROUND, CFG.WIDTH, groundH)
+
+    // === GROUND ACCENT LINE — smooth 3-layer glow ===
     ctx.save()
-    ctx.strokeStyle = w.accent
-    ctx.lineWidth = 2
-    ctx.globalAlpha = 0.7 + Math.sin(e.gameTime * 2) * 0.15
-    ctx.beginPath(); ctx.moveTo(0, CFG.GROUND); ctx.lineTo(CFG.WIDTH, CFG.GROUND); ctx.stroke()
+    // Wide outer glow
+    const glowGrad = ctx.createLinearGradient(0, CFG.GROUND - 6, 0, CFG.GROUND + 4)
+    glowGrad.addColorStop(0, 'rgba(0,0,0,0)')
+    glowGrad.addColorStop(0.4, w.accent + '15')
+    glowGrad.addColorStop(0.6, w.accent + '20')
+    glowGrad.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.fillStyle = glowGrad
+    ctx.fillRect(0, CFG.GROUND - 6, CFG.WIDTH, 10)
+    // Mid accent
+    ctx.globalAlpha = 0.35 + Math.sin(e.gameTime * 2) * 0.05
+    ctx.fillStyle = w.accent
+    ctx.fillRect(0, CFG.GROUND - 1, CFG.WIDTH, 2)
+    // Bright core line
+    ctx.globalAlpha = 0.6
+    ctx.fillStyle = '#FFFFFF'
+    ctx.fillRect(0, CFG.GROUND - 0.25, CFG.WIDTH, 0.5)
     ctx.restore()
 
-    // Floor pattern
+    // === ANIMATED FLOOR PATTERN (world-specific) ===
     const fOff = (e.groundOffset * 0.5) % 60
     ctx.save()
     ctx.fillStyle = w.accent + '25'
     ctx.globalAlpha = 0.6
-
     drawFloorPattern(ctx, e, w, fOff)
     ctx.restore()
 }
@@ -219,57 +258,16 @@ const drawFloorPattern = (
 ): void => {
     const pattern = w.floorPattern
 
-    if (pattern === 'diagonal') {
-        for (let x = -fOff; x < CFG.WIDTH + 60; x += 60) {
-            ctx.beginPath()
-            ctx.moveTo(x, CFG.GROUND)
-            ctx.lineTo(x + 25, CFG.GROUND)
-            ctx.lineTo(x + 5, CFG.HEIGHT)
-            ctx.lineTo(x - 15, CFG.HEIGHT)
-            ctx.closePath()
-            ctx.fill()
-        }
-    } else if (pattern === 'circuit') {
-        for (let x = -fOff; x < CFG.WIDTH + 60; x += 60) {
-            ctx.fillRect(x, CFG.GROUND, 2, CFG.HEIGHT - CFG.GROUND)
-            ctx.fillRect(x, CFG.GROUND + 20, 30, 2)
-            ctx.fillRect(x + 20, CFG.GROUND + 40, 25, 2)
-            // Extra circuit nodes
-            ctx.beginPath()
-            ctx.arc(x + 15, CFG.GROUND + 20, 3, 0, TWO_PI)
-            ctx.fill()
-            ctx.beginPath()
-            ctx.arc(x + 45, CFG.GROUND + 40, 2, 0, TWO_PI)
-            ctx.fill()
-        }
-    } else if (pattern === 'waves') {
-        for (let x = -fOff; x < CFG.WIDTH + 60; x += 40) {
-            ctx.beginPath()
-            ctx.moveTo(x, CFG.GROUND)
-            for (let y = CFG.GROUND; y < CFG.HEIGHT; y += 10) {
-                ctx.quadraticCurveTo(
-                    x + 15 + Math.sin(e.gameTime * 3 + y * 0.1) * 10, y,
-                    x, y + 20
-                )
-            }
-            ctx.lineTo(x - 20, CFG.HEIGHT)
-            ctx.lineTo(x - 20, CFG.GROUND)
-            ctx.closePath()
-            ctx.fill()
-        }
-    } else if (pattern === 'grid') {
+    if (pattern === 'grid' || pattern === 'diagonal') {
+        // Simple 3D tech grid (fast to render)
         for (let x = -fOff; x < CFG.WIDTH + 60; x += 50) {
             ctx.fillRect(x, CFG.GROUND, 1, CFG.HEIGHT - CFG.GROUND)
             for (let y = CFG.GROUND; y < CFG.HEIGHT; y += 30) {
                 ctx.fillRect(x, y, 40, 1)
             }
         }
-    } else if (pattern === 'neon') {
-        for (let x = -fOff; x < CFG.WIDTH + 60; x += 80) {
-            ctx.globalAlpha = 0.5 + Math.sin(e.gameTime * 4 + x * 0.05) * 0.2
-            ctx.fillRect(x, CFG.GROUND, 2, CFG.HEIGHT - CFG.GROUND)
-        }
-    } else if (pattern === 'dots') {
+    } else if (pattern === 'dots' || pattern === 'hex' || pattern === 'circuit') {
+        // Constellation dots
         for (let x = -fOff; x < CFG.WIDTH + 60; x += 30) {
             for (let y = CFG.GROUND + 15; y < CFG.HEIGHT; y += 25) {
                 ctx.globalAlpha = 0.3 + Math.sin(e.gameTime * 2 + x * 0.05 + y * 0.03) * 0.15
@@ -278,51 +276,18 @@ const drawFloorPattern = (
                 ctx.fill()
             }
         }
-    } else if (pattern === 'lines') {
+    } else if (pattern === 'lines' || pattern === 'chevron' || pattern === 'waves') {
+        // Speed lines
         for (let y = CFG.GROUND + 12; y < CFG.HEIGHT; y += 18) {
             ctx.globalAlpha = 0.3
             ctx.fillRect(0, y, CFG.WIDTH, 1)
         }
-    } else if (pattern === 'chevron') {
-        for (let x = -fOff; x < CFG.WIDTH + 60; x += 45) {
-            ctx.beginPath()
-            ctx.moveTo(x, CFG.GROUND + 15)
-            ctx.lineTo(x + 20, CFG.GROUND + 30)
-            ctx.lineTo(x + 40, CFG.GROUND + 15)
-            ctx.lineWidth = 1.5
-            ctx.strokeStyle = w.accent + '40'
-            ctx.stroke()
-            // Second row
-            ctx.beginPath()
-            ctx.moveTo(x + 10, CFG.GROUND + 45)
-            ctx.lineTo(x + 30, CFG.GROUND + 60)
-            ctx.lineTo(x + 50, CFG.GROUND + 45)
-            ctx.stroke()
-        }
-    } else if (pattern === 'hex') {
-        const hexR = 12
-        for (let x = -fOff; x < CFG.WIDTH + 60; x += hexR * 3) {
-            for (let y = CFG.GROUND + hexR + 5; y < CFG.HEIGHT; y += hexR * 2.2) {
-                ctx.globalAlpha = 0.25
-                ctx.beginPath()
-                for (let i = 0; i < 6; i++) {
-                    const angle = (Math.PI / 3) * i - Math.PI / 6
-                    const hx = x + hexR * Math.cos(angle)
-                    const hy = y + hexR * Math.sin(angle)
-                    if (i === 0) ctx.moveTo(hx, hy)
-                    else ctx.lineTo(hx, hy)
-                }
-                ctx.closePath()
-                ctx.strokeStyle = w.accent + '30'
-                ctx.lineWidth = 0.8
-                ctx.stroke()
-            }
-        }
-    } else if (pattern === 'pulse') {
-        const pulseCount = 6
+    } else {
+        // Default pulse
+        const pulseCount = 4
         for (let i = 0; i < pulseCount; i++) {
-            const radius = 20 + i * 35 + Math.sin(e.gameTime * 2 + i) * 5
-            ctx.globalAlpha = clamp(0.15 - i * 0.02, 0.02, 0.15)
+            const radius = 20 + i * 45 + Math.sin(e.gameTime * 2 + i) * 5
+            ctx.globalAlpha = clamp(0.15 - i * 0.03, 0.02, 0.15)
             ctx.strokeStyle = w.accent
             ctx.lineWidth = 1
             ctx.beginPath()
@@ -336,7 +301,7 @@ const drawFloorPattern = (
 // GROUND PARTICLES
 // ============================================================================
 
-/** Draw floating ground particles */
+/** Draw floating ground particles with soft glow */
 export const drawGroundParticles = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
@@ -344,8 +309,15 @@ export const drawGroundParticles = (
 ): void => {
     ctx.save()
     for (const gp of e.groundParticles) {
-        ctx.globalAlpha = gp.alpha * (0.5 + Math.sin(gp.phase) * 0.3)
+        const a = gp.alpha * (0.5 + Math.sin(gp.phase) * 0.3)
+        // Soft glow halo
+        ctx.globalAlpha = a * 0.3
         ctx.fillStyle = w.accent
+        ctx.beginPath()
+        ctx.arc(gp.x, gp.y, gp.size * 2.5, 0, TWO_PI)
+        ctx.fill()
+        // Core dot
+        ctx.globalAlpha = a
         ctx.beginPath()
         ctx.arc(gp.x, gp.y, gp.size, 0, TWO_PI)
         ctx.fill()
@@ -359,12 +331,8 @@ export const drawGroundParticles = (
 // ============================================================================
 
 /**
- * Draw a single trading candle with animations:
- * - Clean wick + body
- * - Shimmer highlight sliding down
- * - Red: pulsing danger ring + × mark
- * - Green: pulsing border + ▲ arrow
- * - Collection: expanding ring + floating "+5"
+ * Draw a single trading candle — Geometry Dash quality
+ * Clean body with gradient, thin wick, subtle animation
  */
 const drawSingleCandle = (
     ctx: CanvasRenderingContext2D,
@@ -381,150 +349,64 @@ const drawSingleCandle = (
 
     ctx.save()
 
-    // ===== WICK — clean thin trading line =====
-    // Varied wick heights based on body size (item 8)
-    const wickExtend = Math.max(8, c.bodyHeight * 0.15 + (c.id % 5) * 3)
-    ctx.globalAlpha = 0.7
+    ctx.save()
+
+    // ===== TRADING WICK (Tail/Shadow) =====
+    // Thin, sharp line representing high/low trading prices
+    ctx.globalAlpha = 0.8
     ctx.strokeStyle = a
     ctx.lineWidth = 2
+    ctx.lineCap = 'butt' // Sharp ends for trading charts
     ctx.beginPath()
-    ctx.moveTo(cx, c.wickTop - (c.id % 3) * 2)
-    ctx.lineTo(cx, c.wickBottom + (c.id % 4) * 2)
+    ctx.moveTo(cx, c.wickTop)
+    ctx.lineTo(cx, c.wickBottom)
     ctx.stroke()
+    ctx.globalAlpha = 1
 
-    // Small wick caps (horizontal ticks)
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    ctx.moveTo(cx - 3, c.wickTop); ctx.lineTo(cx + 3, c.wickTop)
-    ctx.moveTo(cx - 3, c.wickBottom); ctx.lineTo(cx + 3, c.wickBottom)
-    ctx.stroke()
-
-    // ===== BODY — gradient fill =====
+    // ===== TRADING BODY (Open/Close) =====
+    // Sharp rectangle with a premium terminal glow
     const bodyGrad = ctx.createLinearGradient(c.x, drawY, c.x + c.width, drawY)
     bodyGrad.addColorStop(0, b)
-    bodyGrad.addColorStop(0.35, a)
-    bodyGrad.addColorStop(0.65, a)
+    bodyGrad.addColorStop(0.5, a)
     bodyGrad.addColorStop(1, b)
-    ctx.globalAlpha = 1
+
     ctx.fillStyle = bodyGrad
     ctx.fillRect(c.x, drawY, c.width, c.bodyHeight)
 
-    // ===== SHIMMER — highlight bar sliding down body =====
-    const shimmerProgress = (t * 30) % (c.bodyHeight + 20)
-    const shimmerY = drawY + shimmerProgress - 10
-    const shimmerClipY = Math.max(drawY, shimmerY)
-    const shimmerClipH = Math.min(6, drawY + c.bodyHeight - shimmerClipY)
-    if (shimmerClipH > 0) {
-        ctx.globalAlpha = 0.3
-        ctx.fillStyle = '#FFFFFF'
-        ctx.fillRect(c.x + 2, shimmerClipY, c.width - 4, shimmerClipH)
-    }
+    // Inner bright streak for "neon tube" or digital terminal screen effect
+    ctx.fillStyle = '#FFFFFF'
+    ctx.globalAlpha = 0.15
+    ctx.fillRect(c.x + c.width * 0.2, drawY, c.width * 0.6, c.bodyHeight)
+    ctx.globalAlpha = 1
 
-    // ===== BORDER — crisp =====
-    ctx.globalAlpha = 0.8
-    ctx.strokeStyle = a
-    ctx.lineWidth = 1.5
+    // Sharp outer border
+    ctx.strokeStyle = b
+    ctx.lineWidth = 1
     ctx.strokeRect(c.x, drawY, c.width, c.bodyHeight)
 
-    // ===== ANIMATED INDICATORS =====
+    // ===== ANIMATED PULSE (subtle) =====
     if (!c.collected) {
-        if (isRed) {
-            // --- Danger pulse ring ---
-            const pulseR = c.width * 0.65 + Math.sin(t * 3) * 4
-            ctx.globalAlpha = 0.12 + Math.sin(t * 3) * 0.08
-            ctx.strokeStyle = w.redA
-            ctx.lineWidth = 1.5
-            ctx.beginPath()
-            ctx.arc(cx, drawY + c.bodyHeight / 2, pulseR, 0, TWO_PI)
-            ctx.stroke()
-
-            // --- × danger mark above wick ---
-            ctx.globalAlpha = 0.5 + Math.sin(t * 2) * 0.2
-            ctx.strokeStyle = w.redA
-            ctx.lineWidth = 1.5
-            const markY = c.wickTop - 9
-            const ms = 3.5
-            ctx.beginPath()
-            ctx.moveTo(cx - ms, markY - ms); ctx.lineTo(cx + ms, markY + ms)
-            ctx.stroke()
-            ctx.beginPath()
-            ctx.moveTo(cx + ms, markY - ms); ctx.lineTo(cx - ms, markY + ms)
-            ctx.stroke()
-
-            // --- Down arrow below wick (red = price dropping) ---
-            ctx.globalAlpha = 0.35 + Math.sin(t * 1.8) * 0.15
-            ctx.fillStyle = w.redA
-            ctx.beginPath()
-            const dy = c.wickBottom + 8 + Math.sin(t * 2) * 2
-            ctx.moveTo(cx, dy + 5)
-            ctx.lineTo(cx - 4, dy - 1)
-            ctx.lineTo(cx + 4, dy - 1)
-            ctx.closePath()
-            ctx.fill()
-
-        } else {
-            // --- Collectible pulse border ---
-            ctx.globalAlpha = 0.2 + Math.sin(t * 2) * 0.12
-            ctx.strokeStyle = w.greenA
-            ctx.lineWidth = 2
-            ctx.strokeRect(c.x - 3, drawY - 3, c.width + 6, c.bodyHeight + 6)
-
-            // Green glow effect (item 8)
-            ctx.globalAlpha = 0.08 + Math.sin(t * 2.5) * 0.04
-            ctx.fillStyle = w.greenA
-            ctx.beginPath()
-            ctx.arc(cx, drawY + c.bodyHeight / 2, c.width * 0.9, 0, TWO_PI)
-            ctx.fill()
-
-            // Second outer ring pulse
-            ctx.globalAlpha = 0.08 + Math.sin(t * 2 + 1) * 0.05
-            ctx.strokeRect(c.x - 6, drawY - 6, c.width + 12, c.bodyHeight + 12)
-
-            // --- ▲ up arrow above wick (green = price rising) ---
-            ctx.globalAlpha = 0.6 + Math.sin(t * 2.5) * 0.3
-            ctx.fillStyle = w.greenA
-            ctx.beginPath()
-            const ay = c.wickTop - 11 + Math.sin(t * 2) * 3
-            ctx.moveTo(cx, ay - 5)
-            ctx.lineTo(cx - 4, ay + 2)
-            ctx.lineTo(cx + 4, ay + 2)
-            ctx.closePath()
-            ctx.fill()
-
-            // --- Small "+" text near arrow ---
-            ctx.globalAlpha = 0.4 + Math.sin(t * 3) * 0.2
-            ctx.font = `600 ${CFG.WIDTH < 600 ? 14 : 9}px Inter, sans-serif`
-            ctx.textAlign = 'center'
-            ctx.fillText('+', cx + 8, ay)
-        }
+        ctx.globalAlpha = 0.05 + Math.sin(t * 2.5) * 0.02
+        ctx.strokeStyle = a
+        ctx.lineWidth = 1
+        ctx.strokeRect(c.x - 2, drawY - 2, c.width + 4, c.bodyHeight + 4)
     }
 
     // ===== COLLECTION ANIMATION =====
     if (c.collected && c.collectProgress < 1) {
         const prog = c.collectProgress
-
-        // Expanding ring
-        ctx.globalAlpha = (1 - prog) * 0.6
+        const ease = 1 - (1 - prog) * (1 - prog)
+        ctx.globalAlpha = (1 - ease) * 0.3
         ctx.strokeStyle = a
-        ctx.lineWidth = 2
+        ctx.lineWidth = 1.5 * (1 - ease)
         ctx.beginPath()
-        ctx.arc(cx, c.bodyY + c.bodyHeight / 2, c.width * (0.8 + prog * 3), 0, TWO_PI)
+        ctx.arc(cx, c.bodyY + c.bodyHeight / 2, c.width * (0.5 + ease * 2.5), 0, TWO_PI)
         ctx.stroke()
-
-        // Second ring (delayed)
-        if (prog > 0.15) {
-            ctx.globalAlpha = (1 - prog) * 0.3
-            ctx.beginPath()
-            ctx.arc(cx, c.bodyY + c.bodyHeight / 2, c.width * (0.4 + prog * 2), 0, TWO_PI)
-            ctx.stroke()
-        }
-
-        // Floating "+5" score text
-        ctx.globalAlpha = (1 - prog) * 0.85
-        ctx.fillStyle = w.greenA
-        ctx.font = `700 ${CFG.WIDTH < 600 ? 20 : 14}px Inter, sans-serif`
+        ctx.globalAlpha = (1 - ease) * 0.8
+        ctx.fillStyle = '#FFFFFF'
+        ctx.font = `700 ${CFG.WIDTH < 600 ? 13 : 11}px Inter, sans-serif`
         ctx.textAlign = 'center'
-        ctx.fillText('+' + CFG.GREEN_SCORE, cx, c.bodyY - prog * 35)
+        ctx.fillText('+' + CFG.GREEN_SCORE, cx, c.bodyY - ease * 22 - 6)
     }
 
     ctx.restore()
@@ -556,7 +438,7 @@ const drawSinglePowerUp = (
     const bobY = Math.sin(pu.phase + gameTime * pu.bobSpeed) * POWERUP_CONFIG.BOB_AMPLITUDE
     const cx = pu.x + pu.size / 2
     const cy = pu.y + bobY
-    const glowAlpha = 0.15 + Math.sin(pu.glowPhase + gameTime * 3) * 0.1
+    const glowAlpha = 0.2 + Math.sin(pu.glowPhase + gameTime * 3) * 0.15
 
     ctx.save()
 
@@ -571,82 +453,71 @@ const drawSinglePowerUp = (
         ctx.stroke()
         // Float label
         ctx.fillStyle = config.color1
-        ctx.font = `700 ${CFG.WIDTH < 600 ? 16 : 11}px Inter, sans-serif`
+        ctx.font = `700 ${CFG.WIDTH < 600 ? 14 : 10}px Inter, sans-serif`
         ctx.textAlign = 'center'
-        ctx.fillText(config.label, cx, cy - prog * 30 - 10)
+        ctx.fillText(config.label.split(' ')[0], cx, cy - prog * 30 - 10)
         ctx.restore()
         return
     }
 
-    // Outer glow ring
+    // === OUTER GLOW RING WITH ROTATING SEGMENTS ===
     ctx.globalAlpha = glowAlpha
     ctx.strokeStyle = config.color1
     ctx.lineWidth = 2
-    ctx.beginPath()
-    ctx.arc(cx, cy, pu.size * 0.8 + Math.sin(gameTime * 4) * 3, 0, TWO_PI)
-    ctx.stroke()
 
-    // Inner base shape with neon glass effect
-    ctx.globalAlpha = Math.min(1, glowAlpha + 0.6)
-    const r = pu.size * 0.45
-    const baseGrad = ctx.createLinearGradient(cx, cy - r, cx, cy + r)
-    baseGrad.addColorStop(0, config.color1)
-    baseGrad.addColorStop(1, `${config.color2}40`) // translucent bottom
-    ctx.fillStyle = baseGrad
-
-    // Unique shape based on PowerUp Kind
-    ctx.beginPath()
-    if (pu.kind === 'diamond_hands') {
-        // Precise Diamond
-        ctx.moveTo(cx, cy - r)
-        ctx.lineTo(cx + r * 0.8, cy)
-        ctx.lineTo(cx, cy + r)
-        ctx.lineTo(cx - r * 0.8, cy)
-        ctx.closePath()
-    } else if (pu.kind === 'moon_boost') {
-        // Upward Chevron / Rocket Tip
-        ctx.moveTo(cx, cy - r)
-        ctx.lineTo(cx + r, cy + r * 0.6)
-        ctx.lineTo(cx + r * 0.5, cy + r)
-        ctx.lineTo(cx, cy + r * 0.2)
-        ctx.lineTo(cx - r * 0.5, cy + r)
-        ctx.lineTo(cx - r, cy + r * 0.6)
-        ctx.closePath()
-    } else {
-        // Whale / Crest Shape
-        ctx.moveTo(cx, cy - r)
-        ctx.bezierCurveTo(cx + r, cy - r, cx + r, cy + r, cx, cy + r)
-        ctx.bezierCurveTo(cx - r, cy + r, cx - r, cy - r, cx, cy - r)
-        ctx.closePath()
+    // Rotating segmented ring (crypto coin style)
+    const segmentCount = 8
+    const rotation = gameTime * 0.5
+    for (let i = 0; i < segmentCount; i++) {
+        const startAngle = (i / segmentCount) * TWO_PI + rotation
+        const endAngle = startAngle + (0.15 * TWO_PI / segmentCount)
+        ctx.beginPath()
+        ctx.arc(cx, cy, pu.size * 0.7, startAngle, endAngle)
+        ctx.stroke()
     }
-    ctx.fill()
-    ctx.lineWidth = 1.5
-    ctx.strokeStyle = '#FFFFFF'
-    ctx.stroke()
 
-    // White shimmer
-    ctx.globalAlpha = 0.5 + Math.sin(gameTime * 5) * 0.3
-    ctx.fillStyle = '#FFFFFF'
+    // === INNER CIRCLE WITH GRADIENT ===
+    ctx.globalAlpha = 0.9
+    const r = pu.size * 0.42
+    const innerGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
+    innerGrad.addColorStop(0, config.color1)
+    innerGrad.addColorStop(0.6, config.color2)
+    innerGrad.addColorStop(1, config.color1)
+    ctx.fillStyle = innerGrad
+
     ctx.beginPath()
-    if (pu.kind === 'moon_boost') {
-        ctx.arc(cx, cy - r * 0.3, r * 0.2, 0, TWO_PI)
-    } else {
-        ctx.arc(cx, cy, r * 0.25, 0, TWO_PI)
-    }
+    ctx.arc(cx, cy, r, 0, TWO_PI)
     ctx.fill()
 
-    // Emoji symbol — rendered slightly larger and rotated with bob
+    // White border
     ctx.globalAlpha = 1
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'
+    ctx.lineWidth = 1.5
+    ctx.stroke()
+
+    // === CRYPTO-THEMED ICONS (EMOJI OTIMIZED) ===
     ctx.save()
-    ctx.translate(cx, cy + 1)
-    ctx.rotate(Math.sin(gameTime * 2 + pu.id) * 0.1)
-    ctx.font = `${Math.floor(pu.size * 0.65)}px sans-serif`
+    ctx.translate(cx, cy)
+    ctx.font = `${r * 1.2}px "Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    // Add subtle shadow to emoji for depth
-    ctx.shadowColor = config.color1
-    ctx.shadowBlur = 4
-    ctx.fillText(config.symbol, 0, 0)
+    ctx.fillText(config.symbol, 0, r * 0.1)
+    ctx.restore()
+
+    // === ORBITING PARTICLES ===
+    ctx.save()
+    ctx.globalAlpha = 0.5 + Math.sin(gameTime * 3) * 0.3
+    ctx.fillStyle = config.color1
+    const orbitRadius = r * 1.4
+    const orbitSpeed = gameTime * (pu.kind === 'moon_boost' ? 2 : 1)
+    for (let i = 0; i < 3; i++) {
+        const angle = orbitSpeed + (i * TWO_PI / 3)
+        const ox = cx + Math.cos(angle) * orbitRadius
+        const oy = cy + Math.sin(angle) * orbitRadius
+        ctx.beginPath()
+        ctx.arc(ox, oy, pu.size * 0.08, 0, TWO_PI)
+        ctx.fill()
+    }
     ctx.restore()
 
     ctx.restore()
@@ -667,49 +538,129 @@ export const drawPowerUps = (
 // ACTIVE POWER-UP INDICATORS
 // ============================================================================
 
-/** Draw active power-up indicators at bottom-left */
+/** Draw active power-up indicators at bottom-left — Crypto themed */
 export const drawPowerUpIndicators = (
     ctx: CanvasRenderingContext2D,
     e: EngineState
 ): void => {
-    const indicators: { label: string; color: string; timer: number; maxTime: number }[] = []
-    if (e.shieldActive) indicators.push({ label: '💎', color: '#00D4FF', timer: 1, maxTime: 1 })
-    if (e.moonBoostTimer > 0) indicators.push({ label: '🚀', color: '#FFD700', timer: e.moonBoostTimer, maxTime: 5 })
-    if (e.whaleTimer > 0) indicators.push({ label: '🐋', color: '#7B68EE', timer: e.whaleTimer, maxTime: 4 })
+    const indicators: { type: string; color: string; timer: number; maxTime: number }[] = []
+    if (e.shieldActive) indicators.push({ type: 'diamond', color: '#00D4FF', timer: 1, maxTime: 1 })
+    if (e.moonBoostTimer > 0) indicators.push({ type: 'rocket', color: '#FFD700', timer: e.moonBoostTimer, maxTime: 5 })
+    if (e.whaleTimer > 0) indicators.push({ type: 'whale', color: '#7B68EE', timer: e.whaleTimer, maxTime: 4 })
 
     if (indicators.length === 0) return
 
     ctx.save()
-    let offsetX = 8
+    let offsetX = 10
     for (const ind of indicators) {
-        const y = CFG.GROUND - 30
-        // Background pill
-        ctx.globalAlpha = 0.85
-        ctx.fillStyle = 'rgba(0,0,0,0.5)'
+        const y = CFG.GROUND - 28
+        const boxW = 56
+        const boxH = 26
+
+        // Background with gradient
+        const bgGrad = ctx.createLinearGradient(offsetX, y, offsetX, y + boxH)
+        bgGrad.addColorStop(0, 'rgba(20,20,35,0.95)')
+        bgGrad.addColorStop(1, 'rgba(10,10,18,0.95)')
+        ctx.globalAlpha = 1
+        ctx.fillStyle = bgGrad
         ctx.beginPath()
-        ctx.roundRect(offsetX, y, 52, 22, 6)
+        ctx.roundRect(offsetX, y, boxW, boxH, 8)
         ctx.fill()
+
+        // Border glow
+        ctx.strokeStyle = ind.color
+        ctx.lineWidth = 1.5
+        ctx.globalAlpha = 0.6
+        ctx.stroke()
+
+        // Icon background circle
+        ctx.globalAlpha = 1
+        ctx.fillStyle = ind.color + '20'
+        ctx.beginPath()
+        ctx.arc(offsetX + 14, y + 13, 9, 0, TWO_PI)
+        ctx.fill()
+
+        // Draw crypto icon
+        ctx.save()
+        ctx.translate(offsetX + 14, y + 13)
+
+        if (ind.type === 'diamond') {
+            // Diamond icon
+            ctx.fillStyle = '#FFFFFF'
+            ctx.beginPath()
+            ctx.moveTo(0, -5)
+            ctx.lineTo(4, -2)
+            ctx.lineTo(0, 5)
+            ctx.lineTo(-4, -2)
+            ctx.closePath()
+            ctx.fill()
+            ctx.fillStyle = ind.color
+            ctx.globalAlpha = 0.8
+            ctx.beginPath()
+            ctx.moveTo(0, -5)
+            ctx.lineTo(4, -2)
+            ctx.lineTo(0, 3)
+            ctx.closePath()
+            ctx.fill()
+        } else if (ind.type === 'rocket') {
+            // Rocket icon
+            ctx.fillStyle = '#FFFFFF'
+            ctx.beginPath()
+            ctx.moveTo(0, -6)
+            ctx.quadraticCurveTo(3, -2, 2.5, 4)
+            ctx.lineTo(-2.5, 4)
+            ctx.quadraticCurveTo(-3, -2, 0, -6)
+            ctx.closePath()
+            ctx.fill()
+            // Window
+            ctx.fillStyle = '#0ECB81'
+            ctx.beginPath()
+            ctx.arc(0, -1, 1.5, 0, TWO_PI)
+            ctx.fill()
+        } else if (ind.type === 'whale') {
+            // Whale icon
+            ctx.fillStyle = ind.color
+            ctx.beginPath()
+            ctx.ellipse(0, 0, 5, 3, 0, 0, TWO_PI)
+            ctx.fill()
+            // Tail
+            ctx.beginPath()
+            ctx.moveTo(-4, 0)
+            ctx.quadraticCurveTo(-7, -1.5, -8, 0)
+            ctx.quadraticCurveTo(-7, 1.5, -4, 0)
+            ctx.closePath()
+            ctx.fill()
+            // Eye
+            ctx.fillStyle = '#FFFFFF'
+            ctx.globalAlpha = 0.9
+            ctx.beginPath()
+            ctx.arc(2, -0.8, 0.8, 0, TWO_PI)
+            ctx.fill()
+        }
+
+        ctx.restore()
+
         // Timer bar
         const ratio = clamp(ind.timer / ind.maxTime, 0, 1)
+        ctx.globalAlpha = 0.7
         ctx.fillStyle = ind.color
-        ctx.globalAlpha = 0.6
-        ctx.fillRect(offsetX + 2, y + 18, 48 * ratio, 3)
-        // Emoji
-        ctx.globalAlpha = 1
-        ctx.font = `${CFG.WIDTH < 600 ? 18 : 14}px sans-serif`
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(ind.label, offsetX + 14, y + 11)
-        // Timer text
+        ctx.fillRect(offsetX + 4, y + boxH - 5, boxW - 8, 3)
+
+        // Timer bar overlay
+        ctx.globalAlpha = 0.4
         ctx.fillStyle = '#FFFFFF'
-        ctx.font = `600 ${CFG.WIDTH < 600 ? 14 : 10}px Inter, sans-serif`
-        ctx.textAlign = 'left'
+        ctx.fillRect(offsetX + 4, y + boxH - 5, (boxW - 8) * (1 - ratio), 3)
+
+        // Timer text
+        ctx.globalAlpha = 1
+        ctx.fillStyle = '#FFFFFF'
+        ctx.font = `700 ${CFG.WIDTH < 600 ? 11 : 9}px Inter, sans-serif`
+        ctx.textAlign = 'right'
         if (ind.maxTime > 1) {
-            ctx.fillText(`${ind.timer.toFixed(1)}s`, offsetX + 26, y + 12)
-        } else {
-            ctx.fillText('on', offsetX + 26, y + 12)
+            ctx.fillText(ind.timer.toFixed(1), offsetX + boxW - 4, y + 17)
         }
-        offsetX += 58
+
+        offsetX += boxW + 4
     }
     ctx.restore()
 }
@@ -749,12 +700,18 @@ export const drawTrail = (
         const trailAlpha = t.alpha * t.life
 
         if (trailType === 'default') {
-            // Original trail
-            ctx.globalAlpha = trailAlpha * 0.4
+            // Original trail - properly centered and anchoring to the player geometry
+            const rot = t.rotation
+            const drawY = t.y + PLAYER_HALF
+
+            // Continuous physically logical motion trail: scales out slightly and fades rapidly
+            const scaleAnim = t.scale * (0.85 + (t.life * 0.15))
+
+            ctx.globalAlpha = trailAlpha * 0.7 // Brighter trail base
             ctx.save()
-            ctx.translate(CFG.PLAYER_X + PLAYER_HALF, t.y + PLAYER_HALF)
-            ctx.rotate(t.rotation)
-            ctx.scale(t.scale, t.scale)
+            ctx.translate(CFG.PLAYER_X + PLAYER_HALF, drawY)
+            ctx.rotate(rot)
+            ctx.scale(scaleAnim, scaleAnim)
             if (logoLoaded && logo) {
                 ctx.drawImage(logo, -PLAYER_HALF, -PLAYER_HALF, CFG.PLAYER_SIZE, CFG.PLAYER_SIZE)
             } else {
@@ -765,10 +722,13 @@ export const drawTrail = (
         } else {
             // Styled trails — glowing colored shapes
             const color = getTrailColor(trailType, e.gameTime, i)
+            const rot = t.rotation
+            const drawY = t.y + PLAYER_HALF
+
             ctx.save()
-            ctx.globalAlpha = trailAlpha * 0.65
-            ctx.translate(CFG.PLAYER_X + PLAYER_HALF, t.y + PLAYER_HALF)
-            ctx.rotate(t.rotation)
+            ctx.globalAlpha = trailAlpha * 0.8
+            ctx.translate(CFG.PLAYER_X + PLAYER_HALF, drawY)
+            ctx.rotate(rot)
             ctx.scale(t.scale * (0.6 + t.life * 0.4), t.scale * (0.6 + t.life * 0.4))
 
             // Outer glow
@@ -815,7 +775,7 @@ export const drawTrail = (
 // PLAYER SPRITE
 // ============================================================================
 
-/** Draw the player cube with shadow, rotation, and airborne glow */
+/** Draw the player cube — premium quality with clean shadow */
 export const drawPlayer = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
@@ -824,54 +784,80 @@ export const drawPlayer = (
     logoLoaded: boolean
 ): void => {
     const p = e.player
+    const rot = p.rotation
 
-    ctx.save()
-    ctx.translate(CFG.PLAYER_X + PLAYER_HALF, p.y + PLAYER_HALF)
-    ctx.rotate(p.rotation)
-    ctx.scale(p.scale, p.scale)
-    ctx.translate(p.tilt * 10, 0)
+    // Consistent center-based positioning
+    let drawY = p.y + PLAYER_HALF
+    const heightAboveGround = CFG.GROUND - (p.y + CFG.PLAYER_SIZE)
 
-    // Airborne glow (subtle blue ring)
-    if (!p.onGround) {
-        ctx.globalAlpha = 0.2 + Math.sin(e.gameTime * 6) * 0.1
-        ctx.strokeStyle = w.accent
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        ctx.arc(0, 0, PLAYER_HALF + 5, 0, TWO_PI)
-        ctx.stroke()
-        ctx.globalAlpha = 1
+    // Visual correction: seat cube exactly on ground line (no gap)
+    if (heightAboveGround < 2) {
+        // Firmly seat the cube on the ground - no visual gap
+        drawY = CFG.GROUND - PLAYER_HALF
+    } else {
+        // Prevent corner clipping into ground when rotated or scaled
+        const boundOffset = PLAYER_HALF * p.scale * (Math.abs(Math.sin(rot)) + Math.abs(Math.cos(rot)))
+        const lowestVisualPoint = drawY + boundOffset
+        if (lowestVisualPoint > CFG.GROUND) {
+            drawY -= (lowestVisualPoint - CFG.GROUND)
+        }
     }
 
-    // Shadow
-    ctx.globalAlpha = 0.08
-    ctx.fillStyle = '#000000'
-    ctx.fillRect(-PLAYER_HALF + 3, -PLAYER_HALF + 3, CFG.PLAYER_SIZE, CFG.PLAYER_SIZE)
+    // === GROUND SHADOW (only when airborne) ===
+    if (heightAboveGround > 10) {
+        const shadowScale = clamp(1 - heightAboveGround / 180, 0.25, 1)
+        ctx.save()
+        ctx.globalAlpha = 0.08 * shadowScale
+        ctx.fillStyle = '#000'
+        const sw = CFG.PLAYER_SIZE * shadowScale * 1.05
+        const sh = 2 * shadowScale + 1
+        const sx = CFG.PLAYER_X + PLAYER_HALF - sw / 2
+        const sy = CFG.GROUND - sh + 0.5
+        ctx.beginPath()
+        ctx.roundRect(sx, sy, sw, sh, sh / 2)
+        ctx.fill()
+        ctx.restore()
+    }
+
+    ctx.save()
+    ctx.translate(CFG.PLAYER_X + PLAYER_HALF, drawY)
+    ctx.rotate(rot)
+    ctx.scale(p.scale, p.scale)
+    ctx.translate(p.tilt * 8, 0)
+
+    // === DROP SHADOW (offset behind body) ===
+    ctx.globalAlpha = 0.06
+    ctx.fillStyle = '#000'
+    ctx.fillRect(-PLAYER_HALF + 1.5, -PLAYER_HALF + 1.5, CFG.PLAYER_SIZE, CFG.PLAYER_SIZE)
     ctx.globalAlpha = 1
 
-    // Player body
+    // === PLAYER BODY ===
     if (logoLoaded && logo) {
         ctx.drawImage(logo, -PLAYER_HALF, -PLAYER_HALF, CFG.PLAYER_SIZE, CFG.PLAYER_SIZE)
     } else {
-        // Fallback: layered squares
         ctx.fillStyle = '#FFFFFF'
         ctx.fillRect(-PLAYER_HALF, -PLAYER_HALF, CFG.PLAYER_SIZE, CFG.PLAYER_SIZE)
         ctx.fillStyle = w.accent
-        ctx.fillRect(-PLAYER_HALF + 5, -PLAYER_HALF + 5, CFG.PLAYER_SIZE - 10, CFG.PLAYER_SIZE - 10)
-        ctx.fillStyle = '#FFFFFF'
-        ctx.fillRect(-PLAYER_HALF + 10, -PLAYER_HALF + 10, CFG.PLAYER_SIZE - 20, CFG.PLAYER_SIZE - 20)
+        ctx.fillRect(-PLAYER_HALF + 3, -PLAYER_HALF + 3, CFG.PLAYER_SIZE - 6, CFG.PLAYER_SIZE - 6)
     }
 
-    // Dash effect — streak lines
+    // === SUBTLE EDGE HIGHLIGHTS ===
+    ctx.globalAlpha = 0.12
+    ctx.fillStyle = '#FFFFFF'
+    ctx.fillRect(-PLAYER_HALF, -PLAYER_HALF, CFG.PLAYER_SIZE, 1.5)
+    ctx.fillRect(-PLAYER_HALF, -PLAYER_HALF, 1.5, CFG.PLAYER_SIZE)
+
+    // Dash effect — smooth streak lines
     if (p.isDashing) {
-        ctx.globalAlpha = 0.5
         ctx.strokeStyle = w.accent
         ctx.lineWidth = 2
+        ctx.lineCap = 'round'
         for (let i = 1; i <= 3; i++) {
-            const lx = -PLAYER_HALF - i * 8
-            ctx.globalAlpha = 0.4 - i * 0.1
+            const lx = -PLAYER_HALF - i * 7
+            ctx.globalAlpha = 0.35 - i * 0.1
             ctx.beginPath()
-            ctx.moveTo(lx, -PLAYER_HALF + 5)
-            ctx.lineTo(lx, PLAYER_HALF - 5)
+            ctx.moveTo(lx, -PLAYER_HALF + 4)
+            ctx.lineTo(lx, PLAYER_HALF - 4)
             ctx.stroke()
         }
     }
@@ -891,7 +877,7 @@ export const drawPlayer = (
 // PARTICLES
 // ============================================================================
 
-/** Draw all active particles */
+/** Draw all active particles — Crypto themed */
 export const drawParticles = (
     ctx: CanvasRenderingContext2D,
     e: EngineState
@@ -908,79 +894,177 @@ export const drawParticles = (
         const sz = pt.size * (pt.type === 'ring' ? 1 : lifeRatio)
 
         if (pt.type === 'ring') {
-            // Ring particle — expanding circle outline
+            // Ring particle — expanding crypto coin outline
             ctx.strokeStyle = pt.color
             ctx.lineWidth = 1.5 * lifeRatio
             ctx.beginPath()
             ctx.arc(0, 0, sz * (2 - lifeRatio), 0, TWO_PI)
             ctx.stroke()
+            // Inner ring
+            ctx.globalAlpha *= 0.4
+            ctx.beginPath()
+            ctx.arc(0, 0, sz * (1 - lifeRatio * 0.5), 0, TWO_PI)
+            ctx.stroke()
+            ctx.globalAlpha = lifeRatio * pt.alpha
         } else if (pt.type === 'spark') {
-            // Spark — small bright square
+            // Spark — diamond shape
             ctx.fillStyle = pt.color
-            ctx.fillRect(-sz / 2, -sz / 2, sz, sz)
+            ctx.beginPath()
+            ctx.moveTo(0, -sz)
+            ctx.lineTo(sz * 0.6, 0)
+            ctx.lineTo(0, sz)
+            ctx.lineTo(-sz * 0.6, 0)
+            ctx.closePath()
+            ctx.fill()
+            // Shine
+            ctx.fillStyle = '#FFFFFF'
+            ctx.globalAlpha *= 0.6
+            ctx.beginPath()
+            ctx.arc(-sz * 0.2, -sz * 0.2, sz * 0.2, 0, TWO_PI)
+            ctx.fill()
+            ctx.globalAlpha = lifeRatio * pt.alpha
         } else if (pt.type === 'glow') {
-            // Glow — soft circle
-            ctx.fillStyle = pt.color
+            // Glow — radial gradient orb
+            const glowGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, sz)
+            glowGrad.addColorStop(0, pt.color)
+            glowGrad.addColorStop(0.5, pt.color + '80')
+            glowGrad.addColorStop(1, pt.color + '00')
+            ctx.fillStyle = glowGrad
             ctx.beginPath()
             ctx.arc(0, 0, sz, 0, TWO_PI)
             ctx.fill()
         } else if (pt.type === 'star') {
-            // Star-shaped particle
+            // Star — crypto sparkle with 8 points
             ctx.fillStyle = pt.color
             ctx.beginPath()
-            for (let i = 0; i < 4; i++) {
-                const a = (i / 4) * TWO_PI
-                ctx.lineTo(Math.cos(a) * sz, Math.sin(a) * sz)
-                const a2 = ((i + 0.5) / 4) * TWO_PI
-                ctx.lineTo(Math.cos(a2) * sz * 0.4, Math.sin(a2) * sz * 0.4)
+            for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * TWO_PI
+                const r = i % 2 === 0 ? sz : sz * 0.4
+                ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r)
             }
             ctx.closePath()
             ctx.fill()
+            // Center glow
+            ctx.fillStyle = '#FFFFFF'
+            ctx.globalAlpha *= 0.5
+            ctx.beginPath()
+            ctx.arc(0, 0, sz * 0.3, 0, TWO_PI)
+            ctx.fill()
+            ctx.globalAlpha = lifeRatio * pt.alpha
         } else if (pt.type === 'burst') {
-            // Burst — bright expanding square with fade
+            // Burst — exploding crypto coin fragments
             ctx.fillStyle = pt.color
-            ctx.globalAlpha *= 0.7
+            ctx.globalAlpha *= 0.8
+            // Outer square
             const bs = sz * 1.5
             ctx.fillRect(-bs / 2, -bs / 2, bs, bs)
-        } else if (pt.type === 'trail') {
-            // Trail — small fading dot
-            ctx.fillStyle = pt.color
+            // Inner fragment
+            ctx.fillStyle = '#FFFFFF'
             ctx.globalAlpha *= 0.5
+            const is = sz * 0.6
+            ctx.fillRect(-is / 2, -is / 2, is, is)
+            ctx.globalAlpha = lifeRatio * pt.alpha
+        } else if (pt.type === 'trail') {
+            // Trail — fading crypto dot with gradient
+            const trailGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, sz * 0.7)
+            trailGrad.addColorStop(0, pt.color)
+            trailGrad.addColorStop(1, pt.color + '00')
+            ctx.fillStyle = trailGrad
+            ctx.globalAlpha *= 0.6
             ctx.beginPath()
             ctx.arc(0, 0, sz * 0.7, 0, TWO_PI)
             ctx.fill()
+            ctx.globalAlpha = lifeRatio * pt.alpha
         } else if (pt.type === 'collect') {
-            // Collect — rising "+$" sparkle
+            // Collect — rising coin sparkle
             ctx.fillStyle = pt.color
             ctx.beginPath()
             ctx.arc(0, 0, sz, 0, TWO_PI)
             ctx.fill()
-            // Inner bright core
+            // Dollar/crypto symbol hint
+            ctx.fillStyle = '#FFFFFF'
+            ctx.globalAlpha *= 0.7
+            ctx.beginPath()
+            ctx.arc(0, 0, sz * 0.5, 0, TWO_PI)
+            ctx.fill()
+            // Outer sparkle rays
+            ctx.globalAlpha = lifeRatio * pt.alpha * 0.4
+            ctx.strokeStyle = pt.color
+            ctx.lineWidth = 1
+            for (let i = 0; i < 4; i++) {
+                const angle = (i / 4) * TWO_PI + pt.rotation
+                ctx.beginPath()
+                ctx.moveTo(Math.cos(angle) * sz * 1.2, Math.sin(angle) * sz * 1.2)
+                ctx.lineTo(Math.cos(angle) * sz * 1.8, Math.sin(angle) * sz * 1.8)
+                ctx.stroke()
+            }
+        } else if (pt.type === 'death') {
+            // Death — liquidation explosion fragments
+            ctx.fillStyle = pt.color
+            const ds = sz * 1.3
+            // Main fragment
+            ctx.fillRect(-ds / 2, -ds / 2, ds, ds)
+            // Cracked pieces
+            ctx.globalAlpha *= 0.6
+            const fs = sz * 0.5
+            ctx.fillRect(-ds, -ds, fs, fs)
+            ctx.fillRect(ds * 0.5, -ds * 0.5, fs, fs)
+            ctx.globalAlpha = lifeRatio * pt.alpha
+        } else if (pt.type === 'jump') {
+            // Jump dust — ground impact particles
+            ctx.fillStyle = pt.color
+            ctx.globalAlpha *= 0.5
+            ctx.beginPath()
+            ctx.ellipse(0, 0, sz * 1.2, sz * 0.6, 0, 0, TWO_PI)
+            ctx.fill()
+            // Secondary puffs
+            ctx.globalAlpha *= 0.4
+            ctx.beginPath()
+            ctx.arc(-sz * 0.5, -sz * 0.3, sz * 0.5, 0, TWO_PI)
+            ctx.fill()
+            ctx.beginPath()
+            ctx.arc(sz * 0.5, -sz * 0.3, sz * 0.5, 0, TWO_PI)
+            ctx.fill()
+            ctx.globalAlpha = lifeRatio * pt.alpha
+        } else if (pt.type === 'powerup') {
+            // Powerup — special crypto burst
+            ctx.fillStyle = pt.color
+            ctx.beginPath()
+            // Star burst shape
+            for (let i = 0; i < 6; i++) {
+                const angle = (i / 6) * TWO_PI + pt.rotation
+                const outerR = sz * 1.5
+                const innerR = sz * 0.6
+                ctx.lineTo(Math.cos(angle) * outerR, Math.sin(angle) * outerR)
+                ctx.lineTo(Math.cos(angle + Math.PI / 6) * innerR, Math.sin(angle + Math.PI / 6) * innerR)
+            }
+            ctx.closePath()
+            ctx.fill()
+            // Center glow
             ctx.fillStyle = '#FFFFFF'
             ctx.globalAlpha *= 0.6
             ctx.beginPath()
             ctx.arc(0, 0, sz * 0.4, 0, TWO_PI)
             ctx.fill()
-        } else if (pt.type === 'death') {
-            // Death — red expanding squares
-            ctx.fillStyle = pt.color
-            const ds = sz * 1.2
-            ctx.fillRect(-ds / 2, -ds / 2, ds, ds)
-        } else if (pt.type === 'jump') {
-            // Jump dust — semi-transparent puff
-            ctx.fillStyle = pt.color
-            ctx.globalAlpha *= 0.6
-            ctx.beginPath()
-            ctx.arc(0, 0, sz * 1.2, 0, TWO_PI)
-            ctx.fill()
+            ctx.globalAlpha = lifeRatio * pt.alpha
         } else if (pt.type === 'dust' || pt.type === 'smoke' || pt.type === 'ground') {
-            // Generic small particle
+            // Generic — floating dust with gradient
+            ctx.globalAlpha *= 0.5
             ctx.fillStyle = pt.color
-            ctx.fillRect(-sz / 2, -sz / 2, sz, sz)
+            ctx.beginPath()
+            ctx.arc(0, 0, sz, 0, TWO_PI)
+            ctx.fill()
+            ctx.globalAlpha = lifeRatio * pt.alpha
         } else {
-            // Default: simple square
+            // Default — crypto diamond
             ctx.fillStyle = pt.color
-            ctx.fillRect(-sz / 2, -sz / 2, sz, sz)
+            ctx.beginPath()
+            ctx.moveTo(0, -sz * 0.8)
+            ctx.lineTo(sz * 0.5, 0)
+            ctx.lineTo(0, sz * 0.8)
+            ctx.lineTo(-sz * 0.5, 0)
+            ctx.closePath()
+            ctx.fill()
         }
 
         ctx.restore()
@@ -993,7 +1077,7 @@ export const drawParticles = (
 // WORLD BANNER
 // ============================================================================
 
-/** Draw the world transition banner */
+/** Draw the world transition banner — positioned lower to avoid HUD overlap */
 export const drawWorldBanner = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
@@ -1001,32 +1085,52 @@ export const drawWorldBanner = (
 ): void => {
     if (e.worldBannerTimer <= 0) return
 
-    const alpha = clamp(e.worldBannerTimer / 2, 0, 1)
+    const duration = 2.5
+    const progress = clamp(e.worldBannerTimer / duration, 0, 1)
+
+    // Entrance: slide down + scale in (first 0.3s)
+    // Hold: stay visible
+    // Exit: fade out (last 0.5s)
+    const enterT = clamp(1 - (e.worldBannerTimer - (duration - 0.4)) / 0.4, 0, 1)
+    const exitT = clamp(e.worldBannerTimer / 0.6, 0, 1)
+    const enter = 1 - (1 - enterT) * (1 - enterT) // ease-out
+    const alpha = Math.min(enter, exitT)
+
+    if (alpha <= 0.01) return
+
     ctx.save()
     ctx.globalAlpha = alpha
 
-    // Banner background — thinner (py-2 instead of py-4)
-    const bw = 240, bh = 36
-    const bx = CFG.WIDTH / 2 - bw / 2, by = 40
+    // Banner dimensions — compact, positioned lower
+    const bw = Math.min(160, CFG.WIDTH * 0.45)
+    const bh = 24
+    const bx = CFG.WIDTH / 2 - bw / 2
+    const slideY = -15 + enter * 15
+    const by = 45 + slideY  // Moved down from 24 to 45 to avoid HUD overlap
 
-    ctx.fillStyle = 'rgba(255,255,255,0.95)'
+    // Background
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'
     ctx.beginPath()
-    ctx.roundRect(bx, by, bw, bh, 8)
+    ctx.roundRect(bx, by, bw, bh, 6)
     ctx.fill()
 
-    // Border
-    ctx.strokeStyle = w.accent
-    ctx.lineWidth = 2
+    // Subtle border
+    ctx.globalAlpha = alpha * 0.8
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)'
+    ctx.lineWidth = 1
     ctx.beginPath()
-    ctx.roundRect(bx, by, bw, bh, 8)
+    ctx.roundRect(bx, by, bw, bh, 6)
     ctx.stroke()
+    ctx.globalAlpha = alpha
 
-    // World name text — smaller (text-xl instead of text-3xl)
-    ctx.fillStyle = w.accent
-    ctx.font = `600 ${CFG.WIDTH < 600 ? 18 : 13}px Inter, sans-serif`
+    // World name
+    ctx.fillStyle = '#64748b' // slate-500
+    const fontSize = 10
+    ctx.font = `600 ${fontSize}px monospace`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(w.name, CFG.WIDTH / 2, by + bh / 2)
+    ctx.letterSpacing = '1px'
+    ctx.fillText(`entering ${w.name.toLowerCase()}`, CFG.WIDTH / 2, by + bh / 2 + 1)
 
     ctx.restore()
 }
@@ -1049,28 +1153,27 @@ export const applyShake = (
 // NEAR-MISS TEXT (7.1)
 // ============================================================================
 
-/** Draw floating "CLOSE!" text when near-miss triggers */
+/** Draw floating "close" text when near-miss triggers — minimal & clean */
 export const drawNearMissText = (
     ctx: CanvasRenderingContext2D,
     e: EngineState
 ): void => {
     if (e.nearMissTimer <= 0) return
     const alpha = clamp(e.nearMissTimer / MARKET_CONFIG.NEAR_MISS_DURATION, 0, 1)
-    const floatY = e.nearMissY - (1 - alpha) * 30
+    const floatY = e.nearMissY - (1 - alpha) * 15
 
     ctx.save()
-    ctx.globalAlpha = alpha
-    ctx.fillStyle = '#FFD700'
-    ctx.font = `700 ${CFG.WIDTH < 600 ? 24 : 16}px Inter, sans-serif`
+    ctx.globalAlpha = alpha * 0.9
+    // Minimal white text with subtle shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
+    ctx.shadowBlur = 8
+    ctx.shadowOffsetY = 2
+    ctx.fillStyle = '#FFFFFF'
+    ctx.font = `700 ${CFG.WIDTH < 600 ? 13 : 11}px "JetBrains Mono", monospace`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
+    ctx.letterSpacing = '0.15em'
     ctx.fillText(e.nearMissText, e.nearMissX, floatY)
-    // Glow ring
-    ctx.strokeStyle = 'rgba(255,215,0,0.4)'
-    ctx.lineWidth = 2
-    ctx.beginPath()
-    ctx.arc(e.nearMissX, floatY, 20 + (1 - alpha) * 15, 0, TWO_PI)
-    ctx.stroke()
     ctx.restore()
 }
 
@@ -1178,49 +1281,7 @@ export const drawTutorialHint = (
 // ============================================================================
 
 /** Draw market state indicator pill — DISABLED */
-export const drawMarketIndicator = (
-    ctx: CanvasRenderingContext2D,
-    e: EngineState
-): void => {
-    // Market mechanics disabled for cleaner gameplay
-    return
-}
-
-// ============================================================================
-// RUG PULL WARNING (8.4)
-// ============================================================================
-
-/** Draw rug pull visual: flashing warning + ground cracks */
-export const drawRugPullWarning = (
-    ctx: CanvasRenderingContext2D,
-    e: EngineState
-): void => {
-    if (!e.rugPullActive) return
-
-    // Flashing "RUG PULL" banner
-    const flash = Math.sin(e.gameTime * 8) > 0 ? 1 : 0.5
-    ctx.save()
-    ctx.globalAlpha = flash * 0.9
-    ctx.fillStyle = '#FF3050'
-    ctx.font = `700 ${CFG.WIDTH < 600 ? 20 : 14}px Inter, sans-serif`
-    ctx.textAlign = 'center'
-    ctx.fillText('⚠️ RUG PULL!', CFG.WIDTH / 2, 25)
-
-    // Ground cracks/holes
-    ctx.globalAlpha = 0.6
-    ctx.fillStyle = '#1a1a2e'
-    for (const hx of e.rugPullHoles) {
-        const hw = 30 + Math.sin(hx * 0.1) * 15
-        ctx.fillRect(hx - hw / 2, CFG.GROUND, hw, CFG.HEIGHT - CFG.GROUND)
-    }
-
-    // Red tint overlay
-    ctx.globalAlpha = 0.08 * flash
-    ctx.fillStyle = '#FF0000'
-    ctx.fillRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
-
-    ctx.restore()
-}
+// Market mechanics and rug pull removed
 
 // ============================================================================
 // MAIN DRAW COMPOSITE
@@ -1262,9 +1323,6 @@ export const drawFrame = (
     drawGround(ctx, e, w)
     drawGroundParticles(ctx, e, w)
 
-    // Rug pull ground damage (8.4)
-    drawRugPullWarning(ctx, e)
-
     // Game objects
     drawCandles(ctx, e, w)
     drawPowerUps(ctx, e)
@@ -1291,7 +1349,6 @@ export const drawFrame = (
     // UI (canvas-rendered)
     drawWorldBanner(ctx, e, w)
     drawPowerUpIndicators(ctx, e)
-    drawMarketIndicator(ctx, e)
 
     // End shake + zoom transform
     ctx.restore()

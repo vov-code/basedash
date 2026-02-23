@@ -1,8 +1,8 @@
 import { Abi } from 'viem'
 import GameLeaderboardArtifact from './GameLeaderboardABI.json'
 
-// Extract only the ABI array from the artifact
-export const GAME_LEADERBOARD_ABI = (GameLeaderboardArtifact.abi || GameLeaderboardArtifact) as Abi
+// ABI теперь экспортируется как чистый массив из artifacts
+export const GAME_LEADERBOARD_ABI = GameLeaderboardArtifact as Abi
 
 // Environment-specific contract addresses
 export const CONTRACT_ADDRESS = (

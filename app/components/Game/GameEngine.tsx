@@ -39,13 +39,6 @@ import {
 import { drawFrame } from './gameRenderer'
 import { useWallet } from '@/app/hooks/useWallet'
 import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS } from '@/app/contracts'
-import {
-  Transaction,
-  TransactionButton,
-  TransactionStatus,
-  TransactionStatusAction,
-  TransactionStatusLabel,
-} from '@coinbase/onchainkit/transaction'
 
 // ============================================================================
 // PARTICLE SPAWNER HELPERS
@@ -379,8 +372,8 @@ function startBackgroundMusic(): void {
       } catch { /* ignore */ }
     }
 
-    // Base tempo: 80 BPM = 188ms step. Speeds up by ~3% per world tier
-    const stepDuration = Math.max(120, 188 * Math.pow(0.97, activeWorldIndex))
+    // Base tempo: accelerates aggressively per world tier
+    const stepDuration = Math.max(80, 188 * Math.pow(0.92, activeWorldIndex))
     musicIntervalId = setInterval(playStep, stepDuration)
     playStep()
 
@@ -451,11 +444,7 @@ function playNewRecordFanfare(): void {
   }
 }
 
-// Global sound mute flag — persisted in localStorage
-let globalSoundMuted = (() => {
-  if (typeof window === 'undefined') return false
-  return localStorage.getItem('bd_muted') === '1'
-})()
+let globalSoundMuted = false
 
 function sfxJump() {
   if (globalSoundMuted || !initAudio()) return
@@ -522,14 +511,6 @@ function sfxRugPull() {
   playTone(800, 0.10, 'square', 0.08)
   setTimeout(() => playTone(600, 0.10, 'square', 0.08), 120)
   setTimeout(() => playTone(800, 0.10, 'square', 0.06), 240)
-}
-
-/** Open chime — played once on menu load */
-function sfxOpenChime() {
-  if (globalSoundMuted || !initAudio()) return
-  playTone(523, 0.12, 'sine', 0.06)
-  setTimeout(() => playTone(659, 0.10, 'sine', 0.05), 100)
-  setTimeout(() => playTone(784, 0.14, 'triangle', 0.04), 200)
 }
 
 function sfxPowerUp() {
@@ -612,38 +593,16 @@ export default function GameEngine({
   const [isNewRecord, setIsNewRecord] = useState(false)
   const [musicEnabled, setMusicEnabled] = useState(false)
   const [deathMessage, setDeathMessage] = useState('rekt!')
-  const [soundEnabled, setSoundEnabled] = useState(() => {
-    if (typeof window === 'undefined') return true
-    return localStorage.getItem('bd_muted') !== '1'
-  })
+  const [soundEnabled, setSoundEnabled] = useState(true)
   const [activeTrail, setActiveTrail] = useState<TrailType>('default')
   const { address } = useWallet()
-  const [txContracts, setTxContracts] = useState<any[] | null>(null)
 
-  // Fetch signature for OnchainKit Transaction when player dies with a new record
-  useEffect(() => {
-    if (mode === 'gameover' && isNewRecord && deathScore > 0 && address && !txContracts) {
-      fetch(`/api/score-sign?address=${address}&score=${deathScore}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.nonce && data.signature) {
-            setTxContracts([{
-              address: CONTRACT_ADDRESS,
-              abi: GAME_LEADERBOARD_ABI,
-              functionName: 'submitScore',
-              args: [BigInt(deathScore), BigInt(data.nonce), data.signature as `0x${string}`],
-            }])
-          }
-        })
-        .catch(console.error)
-    }
-    if (mode === 'playing') {
-      setTxContracts(null)
-    }
-  }, [mode, isNewRecord, deathScore, address, txContracts])
-
-  // --- Adaptive Screen State ---
-  const [dims, setDims] = useState({ w: CFG.WIDTH, h: CFG.HEIGHT, dpr: 1 })
+  // --- Adaptive Screen State — initialize with correct DPR immediately
+  const [dims, setDims] = useState(() => {
+    // Get initial DPR immediately on client side
+    const initialDpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, CFG.MAX_DPR) : 1
+    return { w: CFG.WIDTH, h: CFG.HEIGHT, dpr: initialDpr }
+  })
 
   // --- Refs ---
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -653,7 +612,6 @@ export default function GameEngine({
   const highScoreRef = useRef(0)
   const logoRef = useRef<HTMLImageElement | null>(null)
   const demoRafRef = useRef<number | null>(null)
-  const chimePlayedRef = useRef(false)
   const [nearRecordDiff, setNearRecordDiff] = useState<number | null>(null)
   const [retryVisible, setRetryVisible] = useState(false)
 
@@ -696,23 +654,6 @@ export default function GameEngine({
     // --- Market cycle — DISABLED ---
     // Market mechanics removed for cleaner gameplay
 
-    // --- Rug-pull event ---
-    if (e.rugPullActive) {
-      e.rugPullTimer -= dt
-      if (e.rugPullTimer <= 0) {
-        e.rugPullActive = false
-      }
-      // Player falls through ground during rug-pull if on ground
-      if (e.player.onGround && !e.player.isDashing) {
-        // Ground disappears — player must jump to survive
-        // They don't insta-die, just fall slightly with warning
-      }
-    } else if (e.score >= 1500 && Math.random() < 0.0002 * e.difficulty) {
-      e.rugPullActive = true
-      e.rugPullTimer = MARKET_CONFIG.RUG_PULL_DURATION
-      sfxRugPull()
-    }
-
     // --- Speed tier change detection ---
     const currentTierIdx = SPEEDS.findIndex((s, i) => {
       const next = SPEEDS[i + 1]
@@ -727,6 +668,20 @@ export default function GameEngine({
     const p = e.player
     p.maxJumps = getJumps(e.score)
 
+    // Safety: ensure player stays within bounds
+    if (p.y < 0) {
+      p.y = 0
+      p.velocityY = 0
+    }
+    if (p.y > CFG.GROUND - CFG.PLAYER_SIZE) {
+      p.y = CFG.GROUND - CFG.PLAYER_SIZE
+      p.velocityY = 0
+      p.onGround = true
+      p.coyoteTimer = CFG.COYOTE
+      p.jumpCount = 0
+      p.rotation = 0
+    }
+
     // Gravity — asymmetric: lighter going up, heavier falling (item 1)
     if (!p.isDashing) {
       const grav = p.velocityY < 0 ? CFG.GRAVITY_UP : CFG.GRAVITY_DOWN
@@ -737,22 +692,18 @@ export default function GameEngine({
     // Apply velocity
     p.y += p.velocityY * dt
 
-    // Ground collision
-    if (p.y >= CFG.GROUND - CFG.PLAYER_SIZE) {
-      if (p.velocityY > 0) {
-        p.y = CFG.GROUND - CFG.PLAYER_SIZE
-        if (p.velocityY > 150) {
-          // Strong landing squash (item 6)
-          p.squash = clamp(p.velocityY / 800, Math.abs(CFG.SQUASH_LAND) * 0.4, Math.abs(CFG.SQUASH_LAND))
-          spawnJumpDust(e, IS_MOBILE ? 4 : 7)
-        }
-        p.velocityY = 0
-        p.onGround = true
-        p.coyoteTimer = CFG.COYOTE
-        p.jumpCount = 0
-      } else {
-        p.onGround = false
-      }
+    // Ground collision — strict snap to ground with velocity check
+    const groundLevel = CFG.GROUND - CFG.PLAYER_SIZE
+    const distToGround = groundLevel - p.y
+
+    // Snap to ground when very close (within 3px)
+    if (Math.abs(distToGround) < 3) {
+      p.y = groundLevel  // Exact snap
+      p.velocityY = 0
+      p.onGround = true
+      p.coyoteTimer = CFG.COYOTE
+      p.jumpCount = 0
+      p.rotation = 0  // Reset rotation on ground
     } else {
       p.onGround = false
     }
@@ -786,17 +737,22 @@ export default function GameEngine({
       p.dashTimer -= dt
     }
 
-    // Rotation — smooth spin in the air, snap on landing
+    // Rotation — smooth spin in air, snap to 0 on ground
     if (p.onGround) {
-      // Snap rotation to nearest 90° when on ground
+      // Snap rotation to nearest 90 degrees (0, π/2, π, 3π/2)
       const snapTarget = Math.round(p.rotation / HALF_PI) * HALF_PI
-      p.rotation = lerp(p.rotation, snapTarget, dt * 18)
+      p.rotation = lerp(p.rotation, snapTarget, dt * 25)
+      // Fully snap when very close
+      if (Math.abs(p.rotation - snapTarget) < 0.05) {
+        p.rotation = snapTarget
+      }
     } else {
-      p.rotation += CFG.ROT_SPEED * dt
+      // Smooth constant spin in air (Geometry Dash style)
+      p.rotation += 11.5 * dt
     }
 
     // Squash/stretch animation
-    // Breathe idle animation when on ground (item 6)
+    // Breathe idle animation when on ground
     if (p.onGround && e.alive && Math.abs(p.squash) < 0.01) {
       p.squash = Math.sin(e.gameTime * CFG.BREATHE_SPEED) * CFG.BREATHE_AMP
     }
@@ -805,7 +761,7 @@ export default function GameEngine({
 
     // Tilt based on velocity
     const targetTilt = clamp(p.velocityY / 800, -1, 1)
-    p.tilt = lerp(p.tilt, targetTilt, dt * CFG.TILT_SPEED)
+    p.tilt = lerp(p.tilt, targetTilt, dt * 8)
 
     // Flash decay
     p.flash = Math.max(0, p.flash - dt * 4)
@@ -813,13 +769,13 @@ export default function GameEngine({
     // Invincibility
     p.invincible = Math.max(0, p.invincible - dt)
 
-    // Trail — spawn ghost image
+    // Trail — spawn ghost image (much smoother and more frequent)
     if (!p.onGround && e.player.trail.length < CFG.TRAIL_LIMIT) {
-      const trailInterval = 0.06
+      const trailInterval = 0.015 // Much faster spawn rate for a smooth beam
       if (e.gameTime % trailInterval < dt) {
         p.trail.push({
           x: p.x, y: p.y,
-          life: 1, alpha: 0.35,
+          life: 1, alpha: 0.15, // Softer alpha to blend the dense trail
           size: CFG.PLAYER_SIZE,
           rotation: p.rotation,
           scale: p.scale,
@@ -876,7 +832,7 @@ export default function GameEngine({
     }
 
     // --- Collision detection — STRICT hitboxes ---
-    const HITBOX_PAD = 5 // Tighter padding = stricter collision
+    const HITBOX_PAD = 1 // Extremely tight padding = visually perfect collisions
     const px1 = CFG.PLAYER_X + HITBOX_PAD
     const py1 = p.y + HITBOX_PAD
     const px2 = CFG.PLAYER_X + CFG.PLAYER_SIZE - HITBOX_PAD
@@ -885,7 +841,7 @@ export default function GameEngine({
     for (const c of e.candles) {
       if (c.collected || c.x + c.width < CFG.PLAYER_X - 10) continue
       if (c.x > CFG.PLAYER_X + CFG.PLAYER_SIZE + 10) continue
-      
+
       // Stricter candle hitbox (no margin)
       const cx1 = c.x + 1
       const cy1 = c.bodyY + 1
@@ -972,7 +928,7 @@ export default function GameEngine({
           // Collection particles
           spawnCollectSparkle(e, c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, IS_MOBILE ? 6 : 12)
         }
-      } else if (c.kind === 'red' && !c.passed && c.x + c.width < CFG.PLAYER_X + 5 && c.x + c.width > CFG.PLAYER_X - 10 && e.nearMissTimer <= 0 && (e.gameTime - (e as any)._lastNearMissTime > MARKET_CONFIG.NEAR_MISS_COOLDOWN)) {
+      } else if (c.kind === 'red' && !c.passed && c.x + c.width < CFG.PLAYER_X + 5 && c.x + c.width > CFG.PLAYER_X - 10 && e.nearMissTimer <= 0 && (e.gameTime - ((e as any)._lastNearMissTime || 0) > MARKET_CONFIG.NEAR_MISS_COOLDOWN)) {
         // Near-miss detection: only genuine close calls with cooldown
         const vertDistTop = Math.abs((p.y + CFG.PLAYER_SIZE - CFG.HITBOX) - c.bodyY)
         const vertDistBot = Math.abs((p.y + CFG.HITBOX) - (c.bodyY + c.bodyHeight))
@@ -982,7 +938,7 @@ export default function GameEngine({
         if (passedOver || passedUnder) {
           e.nearMissTimer = MARKET_CONFIG.NEAR_MISS_DURATION;
           (e as any)._lastNearMissTime = e.gameTime
-          e.nearMissText = 'CLOSE!'
+          e.nearMissText = 'close'
           e.nearMissX = c.x + c.width / 2
           e.nearMissY = c.bodyY - 20
           e.score += 15
@@ -1148,37 +1104,20 @@ export default function GameEngine({
       }
     }
 
-    // 8.4 — Rug-pull ground damage: force jump or take damage
-    if (e.rugPullActive) {
-      // Generate visual holes
-      if (e.rugPullHoles.length < 6) {
-        e.rugPullHoles.push(rand(0, CFG.WIDTH))
-      }
-      // Player on ground too long during rug-pull = death
-      if (p.onGround && e.rugPullTimer < MARKET_CONFIG.RUG_PULL_DURATION - 0.5) {
-        // Force player off ground—give them a chance first
-        if (e.rugPullTimer < MARKET_CONFIG.RUG_PULL_DURATION - 1.5) {
-          e.alive = false
-          e.shakeTimer = 0.4
-          setDeathScore(e.score)
-          setGameStats({
-            timeSurvived: e.gameTime,
-            candlesDodged: e.candles.filter(c => c.kind === 'red' && c.passed).length,
-            greensCollected: e.totalCollected,
-            totalJumps: e.totalJumps,
-            maxCombo: e.maxCombo,
-          })
-          setMode('gameover')
-          setDeathMessage('rug pulled!')
-          sfxDeath()
-          hapticDeath()
-          spawnDeathBurst(e, IS_MOBILE ? 16 : 28)
-          return
-        }
-      }
-    } else {
-      e.rugPullHoles = []
+    // Trail particles during jump (physical flight trail)
+    if (!p.onGround && e.alive && e.trailTimer <= 0) {
+      e.trailTimer = 0.05  // Add trail point every 50ms
+      p.trail.push({
+        x: CFG.PLAYER_X + CFG.PLAYER_SIZE / 2,
+        y: p.y + CFG.PLAYER_SIZE / 2,
+        life: 0.35,
+        alpha: 0.5,
+        size: CFG.PLAYER_SIZE * 0.7,
+        rotation: p.rotation,
+        scale: 0.9
+      })
     }
+    if (e.trailTimer > 0) e.trailTimer -= dt
 
     // --- Animation timers ---
     if (e.scorePulse > 0) e.scorePulse -= dt * 3
@@ -1219,6 +1158,18 @@ export default function GameEngine({
 
     // Jump particles
     spawnJumpDust(e, IS_MOBILE ? 3 : 6)
+    
+    // Add trail point for jump (physical trail effect)
+    p.trail.push({
+      x: CFG.PLAYER_X + CFG.PLAYER_SIZE / 2,
+      y: p.y + CFG.PLAYER_SIZE / 2,
+      life: 0.5,
+      alpha: 0.7,
+      size: CFG.PLAYER_SIZE * 0.9,
+      rotation: p.rotation,
+      scale: 1.0
+    })
+    
     // Sound + haptic
     sfxJump()
     hapticJump()
@@ -1354,10 +1305,11 @@ export default function GameEngine({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Support high-DPI scaling
+    // High-DPI scaling with smooth gradients
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.scale(dims.dpr, dims.dpr)
-    ctx.imageSmoothingEnabled = false // enforce crisp pixels
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
 
     drawFrame(ctx, engineRef.current, logoRef.current, logoLoaded)
   }, [logoLoaded, dims.dpr])
@@ -1379,7 +1331,7 @@ export default function GameEngine({
         h = rect.height
       }
 
-      // 15% smaller height for better layout
+      // Constrain height directly based on mobile limits
       const maxMobileH = window.innerHeight * 0.40
       if (IS_MOBILE && h > maxMobileH) {
         h = maxMobileH
@@ -1390,19 +1342,27 @@ export default function GameEngine({
       // Force roughly 16:9 on desktop - 15% smaller
       if (!IS_MOBILE && h > w * 0.52) h = w * 0.52
 
-      // Better quality: always use devicePixelRatio, capped at 2
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      // Better quality: always use devicePixelRatio, capped at MAX_DPR for full HD
+      const dpr = Math.min(window.devicePixelRatio || 1, CFG.MAX_DPR)
 
       updateGameConfig(w, h)
       setDims({ w, h, dpr })
     }
 
-    // FORCE immediate resize on mount
+    // FORCE immediate resize on mount with correct DPR
     handleResize()
-    
-    // Small delay to ensure DOM is fully laid out
-    const timeoutId = setTimeout(handleResize, 50)
-    
+
+    // Additional resize after very short delay to catch any layout shifts
+    const timeoutId = setTimeout(() => {
+      handleResize()
+      // Force canvas re-render after resize
+      const canvas = canvasRef.current
+      if (canvas) {
+        canvas.width = dims.w * dims.dpr
+        canvas.height = dims.h * dims.dpr
+      }
+    }, 30)
+
     window.addEventListener('resize', handleResize)
     return () => {
       clearTimeout(timeoutId)
@@ -1419,32 +1379,41 @@ export default function GameEngine({
 
   // Load logo image
   useEffect(() => {
-    setTimeout(() => setLoading(false), 400)
+    setTimeout(() => setLoading(false), 200)
     const img = new Image()
     img.src = '/base-logo.png'
     img.onload = () => { logoRef.current = img; setLogoLoaded(true) }
     img.onerror = () => setLogoLoaded(false)
   }, [])
 
-  // Sync sound mute state
-  useEffect(() => {
-    globalSoundMuted = !soundEnabled
-    localStorage.setItem('bd_muted', soundEnabled ? '0' : '1')
-    if (!soundEnabled && isMusicPlaying) {
-      stopBackgroundMusic()
-      setMusicEnabled(false)
-    } else if (soundEnabled && mode === 'playing' && !isMusicPlaying) {
-      startBackgroundMusic()
-      setMusicEnabled(true)
-    }
-  }, [soundEnabled, mode])
-
-  // Load high score
+  // Load high score and sound preferences
   useEffect(() => {
     const saved = Number(localStorage.getItem(storageKey) || 0)
     highScoreRef.current = isFinite(saved) ? saved : 0
     setBest(highScoreRef.current)
+
+    const muted = localStorage.getItem('bd_muted') === '1'
+    setSoundEnabled(!muted)
+    globalSoundMuted = muted
+
+    // Auto-start music if not muted and not yet started, but wait for user gesture inside startGame usually
   }, [storageKey])
+
+  // Sync sound mute state across lifecycle
+  useEffect(() => {
+    // Prevent overriding from initial default false->true flip before mount reads localStorage
+    if (globalSoundMuted !== !soundEnabled) {
+      globalSoundMuted = !soundEnabled
+      localStorage.setItem('bd_muted', soundEnabled ? '0' : '1')
+      if (!soundEnabled && isMusicPlaying) {
+        stopBackgroundMusic()
+        setMusicEnabled(false)
+      } else if (soundEnabled && mode === 'playing' && !isMusicPlaying) {
+        startBackgroundMusic()
+        setMusicEnabled(true)
+      }
+    }
+  }, [soundEnabled, mode])
 
   // Cleanup background music on unmount
   useEffect(() => {
@@ -1589,15 +1558,19 @@ export default function GameEngine({
         de.groundOffset += de.speed * CFG.STEP
         de.cloudOffset += de.speed * CFG.STEP
 
-        // Player physics
+        // Player physics — asymmetric gravity like real game
         const dp = de.player
-        dp.velocityY += CFG.GRAVITY * CFG.STEP
+        const dGrav = dp.velocityY < 0 ? CFG.GRAVITY_UP : CFG.GRAVITY_DOWN
+        dp.velocityY += dGrav * CFG.STEP
         dp.velocityY = Math.min(dp.velocityY, CFG.MAX_FALL)
         dp.y += dp.velocityY * CFG.STEP
 
-        // EXACT ground collision
+        // EXACT ground collision with landing squash
         if (dp.y >= CFG.GROUND - CFG.PLAYER_SIZE) {
           dp.y = CFG.GROUND - CFG.PLAYER_SIZE
+          if (dp.velocityY > 150) {
+            dp.squash = clamp(dp.velocityY / 800, 0.1, 0.25)
+          }
           dp.velocityY = 0
           dp.onGround = true
           dp.jumpCount = 0
@@ -1605,8 +1578,13 @@ export default function GameEngine({
           dp.onGround = false
         }
 
-        // Rotation & squash
-        if (!dp.onGround) dp.rotation += CFG.ROT_SPEED * CFG.STEP
+        // Rotation — GD-style constant spin, snap on ground
+        if (dp.onGround) {
+          const snapTarget = Math.round(dp.rotation / (Math.PI / 2)) * (Math.PI / 2)
+          dp.rotation = lerp(dp.rotation, snapTarget, CFG.STEP * 20)
+        } else {
+          dp.rotation += 11.5 * CFG.STEP
+        }
         dp.squash = lerp(dp.squash, 0, CFG.STEP * 12)
         dp.scale = 1 + dp.squash * (dp.velocityY < 0 ? -0.3 : 0.4)
         dp.tilt = lerp(dp.tilt, clamp(dp.velocityY / 800, -1, 1), CFG.STEP * CFG.TILT_SPEED)
@@ -1621,21 +1599,29 @@ export default function GameEngine({
         // Spawn
         if (de.distance >= de.nextSpawnDistance) spawnPattern(de)
 
-        // AI: auto-jump
+        // AI: auto-jump — improved timing and double-jump
         jumpCooldown -= CFG.STEP
-        if (dp.onGround && jumpCooldown <= 0) {
-          const nearest = de.candles.find(c => 
-            c.kind === 'red' && 
-            c.x > CFG.PLAYER_X - 20 && 
-            c.x < CFG.PLAYER_X + 180
+        if (jumpCooldown <= 0) {
+          const nearest = de.candles.find(c =>
+            c.kind === 'red' &&
+            c.x > CFG.PLAYER_X - 20 &&
+            c.x < CFG.PLAYER_X + 160
           )
           if (nearest) {
             const distToCandle = nearest.x - (CFG.PLAYER_X + CFG.PLAYER_SIZE)
-            if (distToCandle < 90 && distToCandle > 40) {
+            // Ground jump at optimized timing
+            if (dp.onGround && distToCandle < 70 && distToCandle > 25) {
               dp.velocityY = CFG.JUMP
               dp.onGround = false
-              dp.squash = -0.15
-              jumpCooldown = 0.35
+              dp.squash = -0.12
+              dp.jumpCount = 1
+              jumpCooldown = 0.3
+            }
+            // Double jump for tall candles
+            else if (!dp.onGround && dp.jumpCount < 2 && distToCandle < 40 && nearest.height > 80) {
+              dp.velocityY = CFG.DOUBLE_JUMP
+              dp.jumpCount = 2
+              jumpCooldown = 0.4
             }
           }
         }
@@ -1644,7 +1630,6 @@ export default function GameEngine({
         for (const c of de.candles) {
           if (!c.passed && c.x + c.width < CFG.PLAYER_X) {
             c.passed = true
-            if (c.kind === 'red') de.score += CFG.RED_SCORE
           }
           if (c.kind === 'green' && !c.collected) {
             const gx = c.x + c.width / 2
@@ -1653,7 +1638,6 @@ export default function GameEngine({
             const py = dp.y + CFG.PLAYER_SIZE / 2
             if (Math.abs(gx - px) < 35 && Math.abs(gy - py) < 35) {
               c.collected = true
-              de.score += CFG.GREEN_SCORE
             }
           }
         }
@@ -1666,8 +1650,8 @@ export default function GameEngine({
           if (gp.x < -10) gp.x = CFG.WIDTH + rand(5, 30)
         }
 
-        // Reset if score too high
-        if (de.score > 600) {
+        // Reset occasionally
+        if (de.distance > 10000) {
           Object.assign(de, createEngine())
           de.alive = true
           de.showTutorial = false
@@ -1683,9 +1667,11 @@ export default function GameEngine({
       if (canvas) {
         const ctx = canvas.getContext('2d')
         if (ctx) {
-          const currentDpr = window.devicePixelRatio || 1
+          const demoDpr = Math.min(window.devicePixelRatio || 1, CFG.MAX_DPR)
           ctx.setTransform(1, 0, 0, 1, 0, 0)
-          ctx.scale(currentDpr, currentDpr)
+          ctx.scale(demoDpr, demoDpr)
+          ctx.imageSmoothingEnabled = true
+          ctx.imageSmoothingQuality = 'high'
           drawFrame(ctx, demoEngine, logoRef.current, logoLoaded)
         }
       }
@@ -1699,25 +1685,6 @@ export default function GameEngine({
       demoRafRef.current = null
     }
   }, [mode, logoLoaded])
-
-  // 1.3 — Opening chime on first user interaction
-  useEffect(() => {
-    if (chimePlayedRef.current) return
-    const playChime = () => {
-      if (!chimePlayedRef.current) {
-        chimePlayedRef.current = true
-        sfxOpenChime()
-      }
-      window.removeEventListener('click', playChime)
-      window.removeEventListener('touchstart', playChime)
-    }
-    window.addEventListener('click', playChime, { once: true })
-    window.addEventListener('touchstart', playChime, { once: true })
-    return () => {
-      window.removeEventListener('click', playChime)
-      window.removeEventListener('touchstart', playChime)
-    }
-  }, [])
 
   // 3.1 — Compute near-record diff & 3.4 delayed retry button
   useEffect(() => {
@@ -1754,7 +1721,7 @@ export default function GameEngine({
     return (
       <div className="flex h-full w-full items-center justify-center">
         <div className="w-full text-center">
-          <p className="mb-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">loading</p>
+          <p className="mb-3 text-[10px] font-bold text-slate-400 lowercase tracking-widest animate-pulse">loading</p>
           <div className="mx-auto h-0.5 w-24 overflow-hidden bg-slate-100/50">
             <span className="block h-full w-1/2 animate-pulse bg-[#0052FF]" />
           </div>
@@ -1770,14 +1737,14 @@ export default function GameEngine({
   return (
     <div
       ref={containerRef}
-      className="relative overflow-hidden w-full mx-auto sm:border sm:border-slate-200 sm:shadow-[0_18px_42px_rgba(15,23,42,0.12)] game-container bg-gradient-to-br from-white via-[#f5f8ff] to-[#e8f0fe] sm:rounded-none"
-      style={{ willChange: 'transform' }}
+      className="game-container relative w-full h-full min-h-[280px] bg-[#FAFBFF] overflow-hidden rounded-[20px] select-none shadow-[inset_0_0_20px_rgba(0,82,255,0.05)]"
+      style={{ touchAction: 'none' }}
     >
       <canvas
         ref={canvasRef}
         width={dims.w * dims.dpr}
         height={dims.h * dims.dpr}
-        className="w-full h-full cursor-pointer game-canvas"
+        className="w-full h-full touch-none block absolute inset-0"
         onClick={handleAction}
         tabIndex={0}
         role="application"
@@ -1790,21 +1757,21 @@ export default function GameEngine({
 
       {/* ===================== MENU OVERLAY ===================== */}
       {mode === 'menu' && (
-        <div className="game-overlay flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.45)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-          <div className="w-full max-w-[180px] border border-white/60 bg-white/40 backdrop-blur-3xl px-5 py-6 shadow-[0_24px_80px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.9)] relative flex flex-col items-center gap-4 rounded-[20px]"
+        <div className="game-overlay flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
+          <div className="w-full max-w-[180px] border border-white/40 bg-white/50 backdrop-blur-md px-5 py-6 shadow-[0_24px_80px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.9)] relative flex flex-col items-center gap-4 rounded-[20px]"
             style={{ animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
 
             {/* Best Score Display — Premium */}
             <div className="w-full bg-gradient-to-br from-[#FFFBEB] to-[#FFF3CC] px-4 py-3 border border-[#F0B90B]/30 text-center rounded-2xl shadow-[0_4px_12px_rgba(240,185,11,0.15)]"
               style={{ animation: 'menuFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both', animationDelay: '0.05s' }}>
-              <p className="text-[7px] font-black text-[#D4A002] uppercase tracking-[0.18em] mb-1" style={{ fontFamily: 'var(--font-mono, monospace)' }}>best pnl</p>
+              <p className="text-[7px] font-black text-[#D4A002] tracking-[0.18em] mb-1 lowercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>best pnl</p>
               <p className="font-black text-[#B78905] leading-none text-lg tracking-tighter" style={{ fontFamily: 'var(--font-mono, monospace)' }}>{formatMarketCap(best)}</p>
             </div>
 
             {/* Start Button — PREMIUM pulsing glow */}
             <button
               onClick={(e) => { e.stopPropagation(); startGame() }}
-              className="w-full relative overflow-hidden px-4 py-4 text-[12px] font-black tracking-[0.18em] text-white transition-all duration-300 active:scale-95 group rounded-2xl"
+              className="w-full relative overflow-hidden px-4 py-4 text-[12px] font-black tracking-[0.18em] lowercase text-white transition-all duration-300 active:scale-95 group rounded-2xl"
               style={{
                 background: 'linear-gradient(135deg, #0052FF 0%, #0040CC 100%)',
                 boxShadow: '0 8px 32px rgba(0,82,255,0.45), 0 0 0 1px rgba(0,82,255,0.3)',
@@ -1813,13 +1780,13 @@ export default function GameEngine({
                 fontFamily: 'var(--font-mono, monospace)',
               }}
             >
-              <span className="relative z-10">START TRADE</span>
+              <span className="relative z-10">start trade</span>
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 rounded-2xl" />
             </button>
 
             {/* Hint Text */}
             <div className="text-center" style={{ animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both', animationDelay: '0.25s' }}>
-              <p className="text-[7px] font-bold text-slate-500 uppercase tracking-[0.22em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>tap or space to start</p>
+              <p className="text-[7px] font-bold text-slate-500 lowercase tracking-[0.22em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>tap or space to start</p>
             </div>
 
           </div>
@@ -1831,13 +1798,13 @@ export default function GameEngine({
         <div className="game-overlay bg-black/20 backdrop-blur-[2px]">
           <div className="w-full h-full flex items-center justify-center p-4">
             <div className="w-full max-w-[240px] border-2 border-[#0A0B14] bg-white px-5 py-6 shadow-none mx-auto text-center rounded-2xl">
-              <h2 className="text-xl font-black text-[#0A0B14] mb-2 uppercase tracking-widest" style={{ fontFamily: 'var(--font-mono)' }}>paused</h2>
-              <p className="text-slate-500 text-[10px] mb-5 font-bold uppercase tracking-widest">take a breath</p>
+              <h2 className="text-xl font-black text-[#0A0B14] mb-2 tracking-widest lowercase" style={{ fontFamily: 'var(--font-mono)' }}>paused</h2>
+              <p className="text-slate-500 text-[10px] mb-5 font-bold tracking-widest lowercase">take a breath</p>
               <button
                 onClick={() => setMode('playing')}
-                className="w-full bg-[#0052FF] px-4 py-3 text-[11px] font-black text-white hover:bg-[#0040CC] border-2 border-[#0052FF] transition-colors rounded-xl uppercase tracking-widest"
+                className="w-full bg-[#0052FF] px-4 py-3 text-[11px] font-black text-white hover:bg-[#0040CC] border-2 border-[#0052FF] transition-colors rounded-xl tracking-widest lowercase"
               >
-                RESUME
+                resume
               </button>
             </div>
           </div>
@@ -1846,116 +1813,103 @@ export default function GameEngine({
 
       {/* ===================== GAME OVER OVERLAY ===================== */}
       {mode === 'gameover' && (
-        <div className="game-overlay" style={{ background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', animation: 'deathFadeIn 0.5s ease-out forwards' }}>
-          <div className="w-full h-full flex items-center justify-center p-3">
-            <div className="w-full max-w-[260px] rounded-xl bg-white border border-[#0A0B14]/20 shadow-2xl px-3 py-3 mx-auto relative overflow-hidden">
+        <div className="game-overlay" style={{ background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', animation: 'deathFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}>
+          <div className="w-full h-full flex items-center justify-center p-2">
+            <div className="w-full max-w-[280px] rounded-xl bg-white border border-[#0A0B14]/20 shadow-2xl px-3 py-2 sm:py-2.5 mx-auto relative overflow-hidden">
 
-              <div className="flex items-center justify-center gap-1.5 mb-2.5">
+              <div className="flex items-center justify-center gap-1.5 mb-2">
                 {isNewRecord && (
                   <div className="flex h-4 w-4 items-center justify-center bg-[#F0B90B] border border-[#B78905] rounded-full">
                     <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                   </div>
                 )}
-                <h2 className={`text-[13px] font-black uppercase ${isNewRecord ? 'text-[#F0B90B]' : 'text-[#F6465D]'} tracking-widest`} style={{ fontFamily: 'var(--font-mono)' }}>
-                  {isNewRecord ? 'NEW HIGH!' : deathMessage}
+                <h2 className={`text-[13px] font-black lowercase ${isNewRecord ? 'text-[#F0B90B]' : 'text-[#F6465D]'} tracking-widest`} style={{ fontFamily: 'var(--font-mono)' }}>
+                  {isNewRecord ? 'new high!' : deathMessage.toLowerCase()}
                 </h2>
               </div>
 
-              <div className="mb-2.5 grid grid-cols-2 gap-1.5">
+              <div className="mb-2 grid grid-cols-2 gap-1.5">
                 <div className="bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200 text-center">
-                  <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-0.5">pnl</p>
+                  <p className="text-[7px] font-black text-slate-400 lowercase tracking-widest mb-0.5">pnl</p>
                   <p className="text-[12px] font-black text-slate-900 leading-none">{formatMarketCap(deathScore)}</p>
                 </div>
                 <div className="bg-[#eef4ff] px-2 py-1.5 rounded-lg border border-[#0052FF]/20 text-center">
-                  <p className="text-[7px] font-black text-[#6CACFF] uppercase tracking-widest mb-0.5">mode</p>
-                  <p className="text-[10px] font-black leading-none uppercase tracking-widest" style={{ color: getSpeed(score).color }}>{speedName}</p>
+                  <p className="text-[7px] font-black text-[#6CACFF] lowercase tracking-widest mb-0.5">mode</p>
+                  <p className="text-[10px] font-black leading-none lowercase tracking-widest" style={{ color: getSpeed(score).color }}>{speedName.toLowerCase()}</p>
                 </div>
               </div>
 
               {nearRecordDiff !== null && (
-                <div className="mb-2.5 bg-[#FFFBEB] px-2 py-1.5 rounded-lg border border-[#F0B90B]/30 text-center flex items-center justify-center gap-1">
+                <div className="mb-2 bg-[#FFFBEB] px-2 py-1.5 rounded-lg border border-[#F0B90B]/30 text-center flex items-center justify-center gap-1">
                   <svg className="w-3 h-3 text-[#F0B90B]" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" /></svg>
-                  <p className="text-[8px] font-black text-[#B78905] uppercase tracking-widest">-{nearRecordDiff} from max</p>
+                  <p className="text-[8px] font-black text-[#B78905] lowercase tracking-widest">-{nearRecordDiff} from max</p>
                 </div>
               )}
 
               {gameStats && (
-                <div className="grid grid-cols-4 gap-1 mb-2.5 text-center text-[7px] font-bold">
+                <div className="grid grid-cols-4 gap-1 mb-2 text-center text-[7px] font-bold">
                   <div className="bg-slate-50 px-1 py-1 rounded border border-slate-200">
-                    <p className="text-slate-400 uppercase tracking-widest mb-0.5" style={{ fontSize: '6px' }}>time</p>
+                    <p className="text-slate-400 lowercase tracking-widest mb-0.5" style={{ fontSize: '6px' }}>time</p>
                     <p className="text-slate-700 font-black text-[9px]">{Math.floor(gameStats.timeSurvived)}s</p>
                   </div>
                   <div className="bg-slate-50 px-1 py-1 rounded border border-slate-200">
-                    <p className="text-slate-400 uppercase tracking-widest mb-0.5" style={{ fontSize: '6px' }}>dodged</p>
+                    <p className="text-slate-400 lowercase tracking-widest mb-0.5" style={{ fontSize: '6px' }}>dodged</p>
                     <p className="text-slate-700 font-black text-[9px]">{gameStats.candlesDodged}</p>
                   </div>
                   <div className="bg-[#e8f8f0] px-1 py-1 rounded border border-[#0ECB81]/40">
-                    <p className="text-[#0ECB81] uppercase tracking-widest mb-0.5" style={{ fontSize: '6px' }}>buys</p>
+                    <p className="text-[#0ECB81] lowercase tracking-widest mb-0.5" style={{ fontSize: '6px' }}>buys</p>
                     <p className="text-[#0ECB81] font-black text-[9px]">{gameStats.greensCollected}</p>
                   </div>
                   <div className="bg-slate-50 px-1 py-1 rounded border border-slate-200">
-                    <p className="text-slate-400 uppercase tracking-widest mb-0.5" style={{ fontSize: '6px' }}>jumps</p>
+                    <p className="text-slate-400 lowercase tracking-widest mb-0.5" style={{ fontSize: '6px' }}>jumps</p>
                     <p className="text-slate-700 font-black text-[9px]">{gameStats.totalJumps}</p>
                   </div>
                 </div>
               )}
 
               {(submitted || isScoreConfirmed) ? (
-                <div className="mb-2.5 bg-[#e8f8f0] border border-[#0ECB81] px-2 py-1.5 rounded-lg flex flex-col items-center justify-center">
+                <div className="mb-2 bg-[#e8f8f0] border border-[#0ECB81] px-2 py-1.5 rounded-lg flex flex-col items-center justify-center">
                   <div className="flex items-center gap-1">
                     <svg className="w-3.5 h-3.5 text-[#0ECB81]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    <span className="text-[9px] font-black text-[#0ECB81] uppercase tracking-widest">saved!</span>
+                    <span className="text-[9px] font-black text-[#0ECB81] lowercase tracking-widest">saved!</span>
                   </div>
                   {submitTxHash && (
-                    <a href={`https://${process.env.NEXT_PUBLIC_USE_TESTNET === 'true' ? 'sepolia.' : ''}basescan.org/tx/${submitTxHash}`} target="_blank" rel="noopener noreferrer" className="mt-0.5 text-[7px] font-black font-mono text-[#0A0B14] hover:text-[#0052FF] underline opacity-90 transition-colors uppercase tracking-widest">
+                    <a href={`https://${process.env.NEXT_PUBLIC_USE_TESTNET === 'true' ? 'sepolia.' : ''}basescan.org/tx/${submitTxHash}`} target="_blank" rel="noopener noreferrer" className="mt-0.5 text-[7px] font-black font-mono text-[#0A0B14] hover:text-[#0052FF] underline opacity-90 transition-colors lowercase tracking-widest">
                       view tx ↗
                     </a>
                   )}
                 </div>
               ) : isNewRecord ? (
                 isConnected && canSubmitScore && deathScore > 0 ? (
-                  txContracts ? (
-                    <Transaction
-                      calls={txContracts as any}
-                      capabilities={process.env.NEXT_PUBLIC_PAYMASTER_URL ? { paymasterService: { url: process.env.NEXT_PUBLIC_PAYMASTER_URL } } : undefined}
-                      onSuccess={() => setSubmitted(true)}
-                      onError={(e) => setError(e.message)}
-                      className="w-full flex flex-col items-center"
-                    >
-                      {/* @ts-expect-error React 18 Server Component type mismatch in OnchainKit */}
-                      <TransactionButton
-                        className="mb-2.5 w-full bg-[#0052FF] text-white py-2 text-[9px] font-black uppercase tracking-widest hover:bg-[#0A0B14] active:scale-[0.98] rounded-none border border-[#0052FF] hover:border-[#0A0B14] transition-colors"
-                        text="SAVE RECORD"
-                      />
-                      <TransactionStatus>
-                        <TransactionStatusLabel />
-                        <TransactionStatusAction />
-                      </TransactionStatus>
-                    </Transaction>
+                  submitting ? (
+                    <button disabled className="mb-2 w-full bg-slate-200 text-slate-500 py-2 text-[9px] font-black lowercase tracking-widest rounded-none border border-slate-300">
+                      submitting...
+                    </button>
                   ) : (
-                    <button disabled className="mb-2.5 w-full bg-slate-200 text-slate-500 py-2 text-[9px] font-black uppercase tracking-widest rounded-none border border-slate-300">
-                      PREPARING...
+                    <button onClick={submitScore} className="mb-2 w-full bg-[#0052FF] text-white py-2 text-[9px] font-black lowercase tracking-widest hover:bg-[#0A0B14] active:scale-[0.98] rounded-none border border-[#0052FF] hover:border-[#0A0B14] transition-colors">
+                      save record (free)
                     </button>
                   )
                 ) : !isConnected ? (
-                  <button onClick={handleConnectWallet} disabled={connectingWallet} className="mb-2.5 w-full bg-[#0052FF] text-white py-2 text-[9px] font-black uppercase tracking-widest hover:bg-[#0A0B14] active:scale-[0.98] rounded-none border border-[#0052FF] hover:border-[#0A0B14] transition-colors disabled:opacity-50">
-                    {connectingWallet ? 'CONNECTING...' : 'CONNECT TO SAVE'}
+                  <button onClick={handleConnectWallet} disabled={connectingWallet} className="mb-2 w-full bg-[#0052FF] text-white py-2 text-[9px] font-black lowercase tracking-widest hover:bg-[#0A0B14] active:scale-[0.98] rounded-none border border-[#0052FF] hover:border-[#0A0B14] transition-colors disabled:opacity-50">
+                    {connectingWallet ? 'connecting...' : 'connect to save'}
                   </button>
                 ) : (
-                  <p className="mb-2.5 px-2 py-1.5 text-[7px] font-black text-slate-500 uppercase tracking-widest bg-slate-100/80 rounded border border-slate-200 text-center">contract not configured.</p>
+                  <p className="mb-2 px-2 py-1.5 text-[7px] font-black text-slate-500 lowercase tracking-widest bg-slate-100/80 rounded border border-slate-200 text-center">contract not configured.</p>
                 )
               ) : null}
 
-              {error && <p className="text-[#F6465D] text-[7px] font-black mb-2.5 bg-[#FFF0F2] px-2 py-1.5 rounded text-center border border-[#F6465D]/30 uppercase tracking-widest">{error}</p>}
+              {error && <p className="text-[#F6465D] text-[7px] font-black mb-2 bg-[#FFF0F2] px-2 py-1.5 rounded text-center border border-[#F6465D]/30 lowercase tracking-widest">{error.toLowerCase()}</p>}
 
-              <button onClick={startGame} className={`w-full border border-[#0A0B14] bg-white px-2 py-2 text-[10px] font-black text-[#0A0B14] uppercase tracking-widest hover:bg-[#0A0B14] hover:text-white active:scale-[0.98] transition-all rounded-none ${retryVisible ? 'opacity-100' : 'opacity-0 scale-95 pointer-events-none'}`} style={retryVisible ? { animation: 'retryPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards' } : undefined}>
-                RUN IT BACK
+              <button onClick={startGame} className={`w-full border border-[#0A0B14] bg-white px-2 py-2 text-[10px] font-black text-[#0A0B14] lowercase tracking-widest hover:bg-[#0A0B14] hover:text-white active:scale-[0.98] transition-all rounded-none ${retryVisible ? 'opacity-100' : 'opacity-0 scale-95 pointer-events-none'}`} style={retryVisible ? { animation: 'retryPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards' } : undefined}>
+                run it back
               </button>
 
               {retryVisible && (
                 <button
                   onClick={() => {
-                    const shareUrl = `${window.location.origin}/api/frames/result?score=${deathScore}&address=${address || ''}`
+                    const encodedAddr = address ? `&address=${address}` : ''
+                    const shareUrl = `${window.location.origin}/api/frames/result?score=${deathScore}${encodedAddr}`
                     const shareText = `I scored ${formatMarketCap(deathScore)} PNL in Base Dash! 🎮`
                     if (navigator.share) {
                       navigator.share({ title: 'Base Dash Score', text: shareText, url: shareUrl }).catch(() => { })
@@ -1963,10 +1917,10 @@ export default function GameEngine({
                       navigator.clipboard.writeText(`${shareText}\n${shareUrl}`).catch(() => { })
                     }
                   }}
-                  className="w-full mt-1.5 border border-[#8B5CF6] bg-[#8B5CF6]/10 px-2 py-1.5 text-[8px] font-black text-[#8B5CF6] uppercase tracking-widest hover:bg-[#8B5CF6] hover:text-white active:scale-[0.98] transition-all rounded-none flex items-center justify-center gap-1"
+                  className="w-full mt-1.5 border border-[#8B5CF6] bg-[#8B5CF6]/10 px-2 py-1.5 text-[8px] font-black text-[#8B5CF6] lowercase tracking-widest hover:bg-[#8B5CF6] hover:text-white active:scale-[0.98] transition-all rounded-none flex items-center justify-center gap-1"
                 >
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" /></svg>
-                  SHARE
+                  share
                 </button>
               )}
             </div>
@@ -1977,30 +1931,45 @@ export default function GameEngine({
       {/* ===================== PLAYING HUD ===================== */}
       {mode === 'playing' && (
         <>
-          {/* Minimalist Premium HUD — Left */}
+          {/* Minimalist Premium HUD — Left with ATH */}
           <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5 z-10">
-            <div className="flex items-center gap-2.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-xl border border-white/80 shadow-sm pointer-events-none"
-              style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-              <span className="text-[15px] font-black text-slate-900 leading-none tracking-tighter"
-                style={{ fontFamily: 'var(--font-mono, monospace)', textShadow: 'none' }}>
-                {formatMarketCap(score)}
-              </span>
-              <div className="w-px h-3.5 bg-slate-300" />
-              <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 bg-[#0ECB81] rounded-sm shadow-[0_0_4px_#0ECB81]" />
-                <span className="text-[11px] font-bold text-slate-700"
-                  style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                  {engineRef.current.totalCollected}
+            <div className="flex flex-col items-start gap-1">
+              {/* Current Score */}
+              <div className="flex items-center gap-2.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-xl border border-white/80 shadow-sm pointer-events-none"
+                style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+                <span className="text-[15px] font-black text-slate-900 leading-none tracking-tighter"
+                  style={{ fontFamily: 'var(--font-mono, monospace)', textShadow: 'none' }}>
+                  {formatMarketCap(score)}
                 </span>
+                <div className="w-px h-3.5 bg-slate-300" />
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-[#0ECB81] rounded-sm shadow-[0_0_4px_#0ECB81]" />
+                  <span className="text-[11px] font-bold text-slate-700"
+                    style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                    {engineRef.current.totalCollected}
+                  </span>
+                </div>
               </div>
+              {/* ATH (Best) indicator */}
+              {best > 0 && (
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-[#FFF8DC]/90 backdrop-blur border border-[#F0B90B]/40 rounded-lg shadow-sm">
+                  <svg className="w-2.5 h-2.5 text-[#D4A002]" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                  <span className="text-[9px] font-black text-[#B78905] lowercase tracking-wide"
+                    style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                    ath: {formatMarketCap(best)}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Combo badge */}
             {engineRef.current.combo > 1 && (
               <div className="flex items-center px-2 py-1 bg-[#FFF8DC]/90 backdrop-blur border border-[#F0B90B]/40 rounded-lg shadow-sm">
-                <span className="text-[10px] font-black text-[#D4A002] drop-shadow-[0_0_4px_rgba(240,185,11,0.4)]"
+                <span className="text-[10px] font-black text-[#D4A002] drop-shadow-[0_0_4px_rgba(240,185,11,0.4)] lowercase"
                   style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                  {engineRef.current.combo}× COMBO
+                  {engineRef.current.combo}× combo
                 </span>
               </div>
             )}
@@ -2010,14 +1979,14 @@ export default function GameEngine({
           <div className="absolute top-3 right-3 flex flex-col items-end gap-2 z-10">
             <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-xl border border-white/80 shadow-sm pointer-events-none"
               style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-              <span className="text-[9px] font-bold text-slate-600 uppercase leading-none tracking-[0.14em]"
+              <span className="text-[9px] font-bold text-slate-600 lowercase leading-none tracking-[0.14em]"
                 style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                {worldName}
+                {worldName.toLowerCase()}
               </span>
               <div className="w-px h-2.5 bg-slate-300" />
-              <span className="text-[9px] font-black leading-none uppercase tracking-[0.1em]"
+              <span className="text-[9px] font-black leading-none lowercase tracking-[0.1em]"
                 style={{ color: getSpeed(score).color, fontFamily: 'var(--font-mono, monospace)', textShadow: `0 0 8px ${getSpeed(score).color}80` }}>
-                {speedName.split('.').pop()?.trim() || speedName}
+                {(speedName.split('.').pop()?.trim() || speedName).toLowerCase()}
               </span>
             </div>
 
@@ -2038,8 +2007,8 @@ export default function GameEngine({
           {/* Chill / whale mode — glowing banner */}
           {engineRef.current.slowdownTimer > 0 && (
             <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-[#0ECB81]/15 backdrop-blur-md border border-[#0ECB81]/30 px-3 py-1 rounded-full z-10 shadow-[0_0_10px_rgba(14,203,129,0.2)] pointer-events-none">
-              <p className="text-[#0ECB81] text-[9px] font-bold text-center drop-shadow-[0_0_4px_rgba(14,203,129,0.5)] tracking-wide uppercase">
-                {engineRef.current.whaleTimer > 0 ? 'whale alert' : 'chill mode'}
+              <p className="text-[#0ECB81] text-[9px] font-bold text-center drop-shadow-[0_0_4px_rgba(14,203,129,0.5)] tracking-wide lowercase">
+                {engineRef.current.whaleTimer > 0 ? 'market freeze' : 'chill market'}
               </p>
             </div>
           )}
