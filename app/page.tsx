@@ -502,28 +502,18 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Game Canvas — strict 16:9 aspect ratio, gracefully shrinking via container queries */}
-                <div className="w-full px-2 sm:px-0 mb-1 sm:mb-2 flex-1 min-h-[150px] relative z-20 flex flex-col items-center justify-center overflow-hidden" style={{ containerType: 'size' }}>
-                  <div
-                    className="relative w-full shadow-[0_8px_30px_rgba(0,0,0,0.12)] sm:rounded-lg overflow-hidden border-y sm:border-x border-slate-200/50 bg-white"
-                    style={{
-                      aspectRatio: '16/9',
-                      maxHeight: '100%',
-                      maxWidth: 'min(600px, calc(100cqh * 16 / 9))',
-                      margin: '0 auto'
-                    }}
-                  >
-                    <div className="absolute inset-0 w-full h-full">
-                      <GameEngine
-                        storageKey="basedash_highscore_v2"
-                        onScoreSubmit={handleScoreSubmit}
-                        isConnected={isConnected}
-                        canSubmitScore={canSubmitScore}
-                        connectWallet={handleConnect}
-                        isScoreConfirmed={isScoreConfirmed}
-                        submitTxHash={submitTxHash}
-                      />
-                    </div>
+                {/* Game Canvas — Fills space precisely to eliminate gaps */}
+                <div className="w-full px-0 sm:px-0 mb-2 sm:mb-3 flex-1 min-h-[250px] relative z-20 flex flex-col items-center justify-center fade-in">
+                  <div className="relative w-full h-full max-w-[600px] shadow-[0_8px_30px_rgba(0,0,0,0.12)] sm:rounded-[20px] overflow-hidden border-y sm:border-x border-[#0052FF]/10 bg-white mx-auto">
+                    <GameEngine
+                      storageKey="basedash_highscore_v2"
+                      onScoreSubmit={handleScoreSubmit}
+                      isConnected={isConnected}
+                      canSubmitScore={canSubmitScore}
+                      connectWallet={handleConnect}
+                      isScoreConfirmed={isScoreConfirmed}
+                      submitTxHash={submitTxHash}
+                    />
                   </div>
                 </div>
 

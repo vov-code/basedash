@@ -1765,7 +1765,6 @@ export default function GameEngine({
 
   return (
     <div
-      ref={containerRef}
       className="game-container relative w-full h-full min-h-[280px] bg-[#FAFBFF] overflow-hidden rounded-[20px] select-none shadow-[inset_0_0_20px_rgba(0,82,255,0.05)]"
       style={{ touchAction: 'none' }}
     >
@@ -1775,15 +1774,14 @@ export default function GameEngine({
           ref={canvasRef}
           width={dims.w * dims.dpr}
           height={dims.h * dims.dpr}
-          className="absolute inset-0 w-full h-full touch-none block"
+          className="absolute inset-0 block"
           onClick={handleAction}
           tabIndex={0}
           role="application"
           aria-label="Base Dash Game Canvas"
           style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'fill',
+            width: `${dims.w}px`,
+            height: `${dims.h}px`,
             touchAction: 'none'
           }}
         />

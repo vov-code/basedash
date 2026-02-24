@@ -215,12 +215,14 @@ export const drawGround = (
     const groundH = renderH - CFG.GROUND
 
     // Ground gradient
-    const gGrad = ctx.createLinearGradient(0, CFG.GROUND, 0, renderH)
+    // Extend heavily down to prevent any cuts when camera shifts for tall screens
+    const safeRenderH = renderH + 1200
+    const gGrad = ctx.createLinearGradient(0, CFG.GROUND, 0, safeRenderH)
     gGrad.addColorStop(0, w.groundTop)
     gGrad.addColorStop(0.4, w.groundTop)
     gGrad.addColorStop(1, '#FFFFFF')
     ctx.fillStyle = gGrad
-    ctx.fillRect(0, CFG.GROUND, CFG.WIDTH, groundH)
+    ctx.fillRect(0, CFG.GROUND, CFG.WIDTH, safeRenderH - CFG.GROUND)
 
     // === GROUND ACCENT LINE — smooth 3-layer glow ===
     ctx.save()
@@ -247,7 +249,7 @@ export const drawGround = (
     ctx.save()
     ctx.fillStyle = w.accent + '25'
     ctx.globalAlpha = 0.6
-    drawFloorPattern(ctx, e, w, fOff, renderH)
+    drawFloorPattern(ctx, e, w, fOff, safeRenderH)
     ctx.restore()
 }
 
