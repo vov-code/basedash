@@ -87,7 +87,7 @@ export const drawSky = (
     w: WorldTheme
 ): void => {
     ctx.fillStyle = getSkyGradient(ctx, w, e.worldIndex)
-    ctx.fillRect(0, 0, CFG.WIDTH, CFG.GROUND)
+    ctx.fillRect(0, -800, CFG.WIDTH, CFG.GROUND + 800)
 
     ctx.save()
     // === SCROLLING VERTICAL LINES ===
@@ -97,7 +97,7 @@ export const drawSky = (
     const offsetX = (e.backgroundOffset * 0.3) % gridSize
     for (let x = -offsetX; x < CFG.WIDTH + gridSize; x += gridSize) {
         ctx.globalAlpha = 0.12
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CFG.GROUND); ctx.stroke()
+        ctx.beginPath(); ctx.moveTo(x, -800); ctx.lineTo(x, CFG.GROUND); ctx.stroke()
     }
 
     // === SMOOTH HORIZONTAL DEPTH BANDS — GD parallax ===
@@ -1244,14 +1244,36 @@ export const drawFrame = (
     // 2) Scale to prevent squishing and handle variable DOM height safely
     let renderH = CFG.HEIGHT;
     if (cssW && cssH) {
-        const scale = cssW / CFG.WIDTH;
-        if (CFG.HEIGHT * scale > cssH) {
-            // Container is wide (shorter than expected 16:9 ratio) -> center vertically
-            const offsetY = (cssH - CFG.HEIGHT * scale) / 2 / scale;
+        const scaleX = cssW / CFG.WIDTH;
+        const scaleY = cssH / CFG.HEIGHT;
+        let scale = scaleX;
+
+        if (CFG.HEIGHT * scaleX > cssH) {
+            // Container is wide (shorter than expected 4:3) -> crop top and bottom
+            const extraH = CFG.HEIGHT * scale - cssH;
+            // Shift up: negative offset. Instead of equal top/bottom crop, crop 80% top, 20% bottom.
+            const offsetH = extraH * 0.8;
+            const offsetY = -offsetH / scale;
             ctx.translate(0, offsetY);
         } else {
-            // Container is tall (taller than 16:9 ratio) -> extend renderer logically
+            // Container is tall (9:16)
+            // Zoom in slightly so we cut sky and ground symmetrically, instead of just stretching sky/ground
+            const zoomFactor = 0.55;
+            scale = scaleX + (scaleY - scaleX) * zoomFactor;
+
+            // Width overflows because we zoomed, center it horizontally
+            const offsetX = (cssW - CFG.WIDTH * scale) / 2 / scale;
+            ctx.translate(offsetX, 0);
+
             renderH = cssH / scale;
+            const extraH = renderH - CFG.HEIGHT;
+
+            // Push camera down vertically to balance crop (cuts a bit more sky than ground)
+            const shiftDown = Math.max(0, extraH * 0.4);
+            ctx.translate(0, shiftDown);
+
+            // Render more to cover the offset shift
+            renderH += shiftDown * 2;
         }
         ctx.scale(scale, scale);
     }
