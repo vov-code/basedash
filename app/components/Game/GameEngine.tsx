@@ -1772,18 +1772,14 @@ export default function GameEngine({
       <div ref={containerRef} className="absolute inset-0 w-full h-full overflow-hidden flex items-center justify-center bg-transparent touch-none">
         <canvas
           ref={canvasRef}
-          width={dims.w * dims.dpr}
-          height={dims.h * dims.dpr}
-          className="absolute inset-0 block"
+          width={dims.w > 0 ? dims.w * dims.dpr : 960 * dims.dpr}
+          height={dims.h > 0 ? dims.h * dims.dpr : 540 * dims.dpr}
+          className="absolute inset-0 block w-full h-full object-cover"
           onClick={handleAction}
           tabIndex={0}
           role="application"
           aria-label="Base Dash Game Canvas"
-          style={{
-            width: `${dims.w}px`,
-            height: `${dims.h}px`,
-            touchAction: 'none'
-          }}
+          style={{ touchAction: 'none' }}
         />
       </div>
 

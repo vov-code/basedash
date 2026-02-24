@@ -1243,12 +1243,31 @@ export const drawFrame = (
     // 1) Apply DPR scale universally
     ctx.scale(dpr, dpr)
 
-    // 2) Scale safely to prevent squishing
+    // 2) Scale dynamically to prevent squishing and handle variable DOM height safely
     let renderH = CFG.HEIGHT;
-    if (cssW) {
-        // Calculate raw scale factor based on width
+    if (cssW && cssH && cssW > 0 && cssH > 0) {
+        // Force the logical 960 width to fit into the CSS width
         const scaleX = cssW / CFG.WIDTH;
         ctx.scale(scaleX, scaleX);
+
+        // This means the logical height of the available screen is:
+        const logicalH = cssH / scaleX;
+        renderH = logicalH;
+
+        if (logicalH > CFG.HEIGHT) {
+            // Tall vertical screen (mobile). We have extra logical height.
+            // Shift camera down so the player isn't stuck at the top of the screen.
+            const shiftDown = (logicalH - CFG.HEIGHT) * 0.40;
+            ctx.translate(0, shiftDown);
+            // Render extra background to cover the translated shift
+            renderH += shiftDown;
+        } else if (logicalH < CFG.HEIGHT) {
+            // Ultra-wide display. We have LESS vertical space than 540.
+            // Shift up slightly to keep the ground visible instead of chopping off the player's legs.
+            const shiftUp = (CFG.HEIGHT - logicalH) * 0.2;
+            ctx.translate(0, -shiftUp);
+            renderH += shiftUp;
+        }
     }
 
     // Clear with cached world sky gradient (prevents black background)
