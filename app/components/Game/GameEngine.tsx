@@ -1418,7 +1418,6 @@ export default function GameEngine({
         // Stop music when hidden
         if (isMusicPlaying) {
           stopBackgroundMusic()
-          setMusicEnabled(false)
         }
       } else if (!document.hidden && mode === 'paused') {
         // Resume audio context when returning to tab
@@ -1426,17 +1425,17 @@ export default function GameEngine({
         if (ctx && ctx.state === 'suspended') {
           ctx.resume().catch(() => { /* ignore */ })
         }
-        // Auto-resume music if it was playing before
-        if (musicEnabled && soundEnabled) {
-          setTimeout(() => {
+        // Resume music after short delay
+        setTimeout(() => {
+          if (soundEnabled && !isMusicPlaying) {
             startBackgroundMusic()
-          }, 300)
-        }
+          }
+        }, 200)
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [mode, musicEnabled, soundEnabled])
+  }, [mode, soundEnabled, isMusicPlaying])
 
   // Keyboard controls
   useEffect(() => {

@@ -287,7 +287,7 @@ export default function Home() {
   // MAIN APP (always renders — entry popup is overlay on top)
   // ========================================================================
   return (
-    <div className="fixed inset-0 w-full bg-white flex flex-col relative overflow-hidden touch-none" style={{ height: '100dvh', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div className="fixed inset-0 w-full bg-white flex flex-col relative overflow-hidden touch-none" style={{ height: '100dvh' }}>
       {/* GLOBAL PARTICLE BACKGROUND - z-0, covers full length of site */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" style={{ maxHeight: 'calc(100dvh - 80px)' }}>
         <ParticleChaos opacity={0.6} />
@@ -400,7 +400,7 @@ export default function Home() {
               {!isConnected ? (
                 <button
                   onClick={handleConnect}
-                  className="h-8 sm:h-9 w-8 sm:w-9 flex items-center justify-center bg-gradient-to-br from-[#0052FF] to-[#0040CC] text-white rounded-lg shadow-[0_4px_14px_rgba(0,82,255,0.35)] hover:shadow-[0_6px_20px_rgba(0,82,255,0.45)] transition-all transform hover:-translate-y-0.5 active:scale-95"
+                  className="h-8 sm:h-9 w-8 sm:w-9 flex items-center justify-center bg-gradient-to-br from-[#0052FF] to-[#0040CC] text-white rounded-md shadow-[0_4px_14px_rgba(0,82,255,0.35)] hover:shadow-[0_6px_20px_rgba(0,82,255,0.45)] transition-all transform hover:-translate-y-0.5 active:scale-95"
                 >
                   <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -466,7 +466,7 @@ export default function Home() {
               <div className="flex flex-col h-full w-full overflow-hidden">
                 {/* CONNECT WALLET BANNER - with spacing from header and canvas */}
                 {!isConnected && (
-                  <div className="p-2.5 sm:p-3 mt-2 mb-2 bg-gradient-to-r from-[#0052FF]/5 via-[#0052FF]/8 to-[#0052FF]/5 flex items-center justify-center gap-2 flex-shrink-0">
+                  <div className="p-2.5 sm:p-3 mt-1 mb-1 bg-gradient-to-r from-[#0052FF]/5 via-[#0052FF]/8 to-[#0052FF]/5 flex items-center justify-center gap-2 flex-shrink-0">
                     <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0052FF] flex items-center justify-center flex-shrink-0 rounded-lg">
                       <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -502,11 +502,10 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Game Canvas — Full HD quality, proper aspect ratio for iPhone */}
-                <div className="w-full px-0 mb-2 sm:mb-3 flex flex-col items-center justify-center relative z-20 flex-shrink-0" style={{ 
-                  height: 'auto',
-                  aspectRatio: '16/9',
-                  maxHeight: '40vh'
+                {/* Game Canvas — Full HD quality, proper for iPhone (no squash) */}
+                <div className="w-full px-0 mb-2 sm:mb-3 flex flex-col items-center justify-center relative z-20 flex-shrink-0" style={{
+                  height: '38vh',
+                  maxHeight: '280px'
                 }}>
                   <div className="w-full relative shadow-[0_8px_30px_rgba(0,0,0,0.12)] sm:rounded-lg overflow-hidden border-y sm:border-x border-slate-200/50 flex-shrink-0 bg-white h-full">
                     <GameEngine
@@ -646,8 +645,8 @@ export default function Home() {
           </div>
         </main>
 
-        {/* FOOTER - z-[40], fixed minimal height */}
-        <footer className="mt-auto bg-white/50 backdrop-blur-md relative z-[40] flex-shrink-0" style={{ height: 'max(28px, 4vh)', minHeight: '28px' }}>
+        {/* FOOTER - z-[40], solid white background */}
+        <footer className="mt-auto bg-white relative z-[40] flex-shrink-0" style={{ height: '32px', minHeight: '32px' }}>
           <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 h-full flex items-center justify-between">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400/80 font-mono">© {new Date().getFullYear()} base dash</span>
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400/80 font-mono">built by <span className="font-black text-[#0052FF]">vov</span></span>

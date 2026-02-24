@@ -368,7 +368,7 @@ export const CFG = {
     GROUND: 430,
 
     PLAYER_X: 180,
-    PLAYER_SIZE: 42,
+    PLAYER_SIZE: 52, // Increased from 42 for better visibility
     HITBOX_FRAC: 0.12,  // 12% inset each side — fairly tight for precision dodging
     HITBOX: 6,          // computed at runtime from HITBOX_FRAC × PLAYER_SIZE
 
@@ -376,11 +376,11 @@ export const CFG = {
     MAX_DELTA: 0.033,
     UI_RATE: 1 / 10,
 
-    GRAVITY_UP: 1900,   // Floatier apex — longer hang time for readable arc
-    GRAVITY_DOWN: 3200, // Snappy fall — responsive landing
-    JUMP: -720,
-    DOUBLE_JUMP: -600,
-    MAX_FALL: 1200,
+    GRAVITY_UP: 2100,   // Adjusted for larger player
+    GRAVITY_DOWN: 3600, // Snappy fall — responsive landing
+    JUMP: -850,         // Increased jump power for larger player and higher jumps
+    DOUBLE_JUMP: -700,
+    MAX_FALL: 1400,
     COYOTE: 0.08,
     BUFFER: 0.12,
     TILT_SPEED: 18,
@@ -393,12 +393,12 @@ export const CFG = {
     DASH_DURATION: 0.15,
     DASH_COOLDOWN: 0.8,
 
-    BASE_SPEED: 500,
-    MAX_SPEED: 780,
+    BASE_SPEED: 520,     // Slightly faster base speed
+    MAX_SPEED: 820,
     DOUBLE_JUMP_AT: 120,
 
-    BASE_SPAWN_GAP: 400,
-    MIN_SPAWN_GAP: 260,
+    BASE_SPAWN_GAP: 440, // Increased gap for larger objects
+    MIN_SPAWN_GAP: 280,
     MAX_CANDLES_PATTERN: 5,
 
     RED_SCORE: 7,
@@ -699,8 +699,8 @@ export const createStars = (count: number = CFG.STAR_COUNT): Star[] =>
     Array.from({ length: count }, () => ({
         x: Math.random() * CFG.WIDTH,
         y: Math.random() * (CFG.GROUND - 60),
-        size: rand(0.5, 2.2),
-        alpha: rand(0.3, 0.7),
+        size: rand(1.0, 3.5),  // Bigger stars
+        alpha: rand(0.4, 0.8),
         depth: rand(0.15, 0.85),
         twinkle: rand(0, Math.PI * 2),
         twinkleSpeed: rand(1, 3),
@@ -873,8 +873,10 @@ export const spawnPattern = (e: EngineState): void => {
     const maxComplexity = e.score < 800 ? 3 : (e.score < 1500 ? 4 : 5)
     const complexity = Math.min(maxComplexity, Math.floor(effectiveDiff * 5))
     const startX = CFG.WIDTH + 140
-    const baseH = lerp(52, 88, diff * 0.7)  // Reduced height growth
-    const baseW = lerp(18, 32, diff * 0.7)  // Reduced width growth
+
+    // INCREASED BASE SIZES for all candles
+    const baseH = lerp(75, 130, diff * 0.7)  // Taller candles (was 52-88)
+    const baseW = lerp(26, 42, diff * 0.7)   // Wider candles (was 18-32)
     const maxHM = 1.3 // Reduced from 1.4 - easier jumps
 
     // Green candles allowed earlier - after 6 red candles (was 10)
@@ -901,16 +903,17 @@ export const spawnPattern = (e: EngineState): void => {
         // Moving candles - much rarer, only after score 400
         if (moving || (e.score >= 400 && Math.random() < 0.06 * diff)) {
             candle.isMoving = true
-            candle.moveAmplitude = rand(10, 20)
+            candle.moveAmplitude = rand(15, 35) // Increased movement range
         }
-        // Air candles - MORE FREQUENT for variety and easier gameplay
-        if (isAir || Math.random() < 0.35 * diff) {
-            const lift = yOffset !== undefined ? yOffset : (isAir ? rand(55, 75) : rand(25, 55))
+        // Air candles - INCREASED HEIGHT and FREQUENCY to use the top screen
+        if (isAir || Math.random() < 0.40 * diff) { // Increased from 0.35
+            // Make air candles significantly higher
+            const lift = yOffset !== undefined ? yOffset : (isAir ? rand(90, 160) : rand(40, 90))
             candle.bodyY -= lift; candle.y -= lift; candle.bodyTop -= lift
             candle.wickTop -= lift; candle.wickBottom -= lift
-            if (Math.random() > 0.6) {
+            if (Math.random() > 0.5) { // More likely to move
                 candle.isMoving = true
-                candle.moveAmplitude = rand(10, 18)
+                candle.moveAmplitude = rand(15, 30) // Broader movement up high
             }
         }
         e.candles.push(candle)
@@ -923,27 +926,27 @@ export const spawnPattern = (e: EngineState): void => {
     if (complexity === 0) {
         if (roll < 0.08) push(0, 'red', 0.8, 1.2)  // wide
         else if (roll < 0.18) push(0, 'red', 1.35, 0.65)  // tall narrow
-        else if (roll < 0.32) push(0, 'red', 0.9, 1.0, false, true, 65)  // AIR CANDLE
-        else if (roll < 0.44) push(0, 'red', 1.25, 0.6, false, true, 70)  // TALL AIR CANDLE
-        else if (roll < 0.54) push(0, 'red', 0.75, 1.1, false, true, 60)  // SHORT WIDE AIR
-        else if (roll < 0.66) push(0, 'green', 1.0, 1.0, false, true, 55)  // GREEN AIR
-        else if (roll < 0.78) push(0, 'green', 0.9, 1.0, false, true, 60)  // GREEN AIR small
+        else if (roll < 0.32) push(0, 'red', 0.9, 1.0, false, true, 110)  // AIR CANDLE (higher)
+        else if (roll < 0.44) push(0, 'red', 1.25, 0.6, false, true, 120)  // TALL AIR CANDLE (higher)
+        else if (roll < 0.54) push(0, 'red', 0.75, 1.1, false, true, 100)  // SHORT WIDE AIR (higher)
+        else if (roll < 0.66) push(0, 'green', 1.0, 1.0, false, true, 95)  // GREEN AIR (higher)
+        else if (roll < 0.78) push(0, 'green', 0.9, 1.0, false, true, 100)  // GREEN AIR small (higher)
         else if (roll < 0.86) push(0, 'red', 0.85)  // normal short
         else if (roll < 0.93) push(0, 'red', 1.1)  // normal tall
         else push(0, 'green', 1.0, 1.0)  // green ground
 
         // --- COMPLEXITY 1: Pairs bringing "Jump then Duck" variety instantly ---
     } else if (complexity === 1) {
-        if (roll < 0.10) { push(0, 'red', 0.9); push(150, 'red', 0.8, 1.0, false, true, 65) } // Jump normal -> Duck air
-        else if (roll < 0.20) { push(0, 'red', 0.8, 1.0, false, true, 65); push(150, 'red', 1.25, 0.6) } // Duck air -> Jump tall
+        if (roll < 0.10) { push(0, 'red', 0.9); push(150, 'red', 0.8, 1.0, false, true, 115) } // Jump normal -> Duck air
+        else if (roll < 0.20) { push(0, 'red', 0.8, 1.0, false, true, 115); push(150, 'red', 1.25, 0.6) } // Duck air -> Jump tall
         else if (roll < 0.30) { push(0, 'red', 1.3, 0.6); push(140, 'red', 0.7, 1.3) } // Tall jump -> short wide jump
-        else if (roll < 0.40) { push(0, 'red', 1.0, 1.0, false, true, 65); push(160, 'green', 1.0, 1.0, false, true, 65) } // Duck air -> Duck green!
-        else if (roll < 0.48) { push(0, 'red', 1.2, 0.6, false, true, 70); push(145, 'red', 0.9) } // Tall duck -> normal
+        else if (roll < 0.40) { push(0, 'red', 1.0, 1.0, false, true, 115); push(160, 'green', 1.0, 1.0, false, true, 115) } // Duck air -> Duck green!
+        else if (roll < 0.48) { push(0, 'red', 1.2, 0.6, false, true, 125); push(145, 'red', 0.9) } // Tall duck -> normal
         else if (roll < 0.56) { push(0, 'red', 0.85); push(145, 'red', 1.1) }
         else if (roll < 0.64) { push(0, 'red'); push(130, 'red', 0.9) }
         else if (roll < 0.72) { push(0, 'green', 0.8, 1.2); push(145, 'red', 1.1) } // Wide green -> Tall jump
-        else if (roll < 0.80) { push(0, 'green', 1.0, 1.0, false, true, 65); push(145, 'red', 1.1) } // Duck green -> Tall jump
-        else if (roll < 0.88) { push(0, 'red', 0.75, 1.1, false, true, 60); push(140, 'green', 0.9) } // Duck short -> green
+        else if (roll < 0.80) { push(0, 'green', 1.0, 1.0, false, true, 115); push(145, 'red', 1.1) } // Duck green -> Tall jump
+        else if (roll < 0.88) { push(0, 'red', 0.75, 1.1, false, true, 105); push(140, 'green', 0.9) } // Duck short -> green
         else { push(0, 'red'); push(130, 'green', 1.0, 1.0, false, Math.random() > 0.5) }
 
         // --- COMPLEXITY 2: Triples, first mixed patterns ---
