@@ -287,7 +287,7 @@ export default function Home() {
   // MAIN APP (always renders — entry popup is overlay on top)
   // ========================================================================
   return (
-    <div className="fixed inset-0 w-full bg-white flex flex-col relative overflow-hidden touch-none" style={{ height: '100dvh' }}>
+    <div className="min-h-[100dvh] sm:h-screen w-full bg-[#FAFAFA] text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] relative overflow-hidden flex flex-col fixed inset-0 touch-none">
       {/* GLOBAL PARTICLE BACKGROUND - z-0, covers full length of site */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" style={{ maxHeight: 'calc(100dvh - 80px)' }}>
         <ParticleChaos opacity={0.6} />
@@ -430,28 +430,28 @@ export default function Home() {
           <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col relative w-full">
 
             {/* TAB NAVIGATION - Always visible */}
-            <div className="w-full px-3 sm:px-4 py-1.5 relative z-20 flex-shrink-0">
+            <div className="w-full px-3 sm:px-4 py-1 relative z-20 flex-shrink-0">
               <div className="flex justify-center items-center gap-1 p-0.5 bg-white/60 backdrop-blur-md rounded-xl border border-slate-200/50 shadow-inner">
-                <button onClick={() => setActiveTab('game')} className={`relative px-2 sm:px-3 py-0.5 rounded-lg transition-all duration-200 flex flex-col items-center justify-center gap-[1px] flex-1 ${(activeTab as string) === 'game' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
-                  <div className="flex items-center gap-1">
-                    <svg className="w-3.5 h-3.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                <button onClick={() => setActiveTab('game')} className={`relative px-2 sm:px-3 py-0.5 rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
+                  <div className="flex items-center gap-0.5">
+                    <svg className="w-3 h-3 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                     <span className="text-[10px] sm:text-xs font-black tracking-wide leading-none">trade</span>
                   </div>
                   <span className="text-[7px] sm:text-[8px] font-semibold opacity-70 leading-none">play demo</span>
                 </button>
 
-                <button onClick={() => setActiveTab('profile')} className={`relative px-2 sm:px-3 py-0.5 rounded-lg transition-all duration-200 flex flex-col items-center justify-center gap-[1px] flex-1 ${(activeTab as string) === 'profile' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
-                  <div className="flex items-center gap-1">
-                    <svg className="w-3.5 h-3.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
+                <button onClick={() => setActiveTab('profile')} className={`relative px-2 sm:px-3 py-0.5 rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'profile' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
+                  <div className="flex items-center gap-0.5">
+                    <svg className="w-3 h-3 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
                     <span className="text-[10px] sm:text-xs font-black tracking-wide leading-none">wallet</span>
                   </div>
                   <span className="text-[7px] sm:text-[8px] font-semibold opacity-70 leading-none">profile</span>
                 </button>
 
-                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-2 sm:px-3 flex flex-col items-center justify-center gap-[1px] py-0.5 rounded-lg transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white shadow-[0_0_15px_rgba(240,185,11,0.6)] scale-100 ring-1 ring-[#F0B90B]/80' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)]'}`}>
+                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-2 sm:px-3 flex flex-col items-center justify-center py-0.5 rounded-lg transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white shadow-[0_0_15px_rgba(240,185,11,0.6)] scale-100 ring-1 ring-[#F0B90B]/80' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)]'}`}>
                   {activeTab !== 'leaderboard' && <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-[#F0B90B] to-transparent opacity-20 -translate-x-full animate-[shimmerSweep_2.5s_ease-in-out_infinite]" />}
-                  <div className="flex items-center gap-1 relative z-10">
-                    <svg className={`w-3.5 h-3.5 hidden sm:block transition-transform duration-300 ${(activeTab as string) !== 'leaderboard' ? 'group-hover:scale-110 text-[#F0B90B]' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
+                  <div className="flex items-center gap-0.5 relative z-10">
+                    <svg className={`w-3 h-3 hidden sm:block transition-transform duration-300 ${(activeTab as string) !== 'leaderboard' ? 'group-hover:scale-110 text-[#F0B90B]' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
                       <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
                     </svg>
                     <span className={`${(activeTab as string) !== 'leaderboard' ? 'text-slate-800 group-hover:text-amber-600' : 'text-white'} text-[10px] sm:text-xs font-black tracking-wide leading-none`}>top 33</span>
@@ -479,8 +479,8 @@ export default function Home() {
                 )}
 
                 {/* GAME HINTS — tap to jump blocks */}
-                <div className="w-full px-2 sm:px-3 py-2.5 sm:py-3 relative z-20 flex-shrink-0">
-                  <div className="flex items-stretch gap-1.5 sm:gap-2 mx-auto">
+                <div className="w-full px-2 sm:px-3 py-1.5 sm:py-2 relative z-20 flex-shrink-0">
+                  <div className="flex items-stretch gap-1 sm:gap-2 mx-auto">
                     <div className="flex-1 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 sm:py-2.5 bg-white/60 backdrop-blur-sm rounded-lg border border-slate-200/60 min-w-0 justify-center">
                       <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0052FF]/10 rounded flex items-center justify-center flex-shrink-0">
                         <svg className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-[#0052FF]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
@@ -502,11 +502,11 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Game Canvas — Tall Portrait Format (3:4 ratio) ensures it fits perfectly without overflowing Game Over Box */}
-                <div className="w-full px-2 sm:px-0 mb-3 flex flex-col items-center justify-center relative z-20 flex-shrink-0">
+                {/* Game Canvas — strict 16:9 aspect ratio, responsive constraints */}
+                <div className="w-full px-2 sm:px-0 mb-2 sm:mb-3 flex flex-col items-center justify-center relative z-20 flex-shrink min-h-0">
                   <div
                     className="w-full max-w-[600px] relative shadow-[0_8px_30px_rgba(0,0,0,0.12)] sm:rounded-lg overflow-hidden border-y sm:border-x border-slate-200/50 bg-white mx-auto"
-                    style={{ aspectRatio: '3/4', maxHeight: '53vh' }}
+                    style={{ aspectRatio: '16/9', maxHeight: 'min(42vh, calc(100dvh - 300px))' }}
                   >
                     <div className="absolute inset-0 w-full h-full">
                       <GameEngine
@@ -523,8 +523,8 @@ export default function Home() {
                 </div>
 
                 {/* BOTTOM INFO GRID — Responsive gaps */}
-                <div className="w-full px-2 sm:px-4 pb-[max(2vh,env(safe-area-inset-bottom))] pt-1 flex-shrink-0 flex flex-col relative z-20 justify-center">
-                  <div className="w-full grid grid-cols-2 gap-1.5 sm:gap-2.5 max-w-lg mx-auto">
+                <div className="w-full px-2 sm:px-4 pb-[max(1.5vh,env(safe-area-inset-bottom))] pt-0.5 flex-1 min-h-0 flex flex-col relative z-20 justify-center shrink">
+                  <div className="w-full grid grid-cols-2 gap-1.5 sm:gap-2 max-w-lg mx-auto">
 
                     {/* Liquidation Watch — full width */}
                     <div className="col-span-2 bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl px-2 sm:px-4 py-1.5 sm:py-3 border border-[#F6465D]/15 flex items-center justify-between group hover:border-[#F6465D]/30 transition-colors">
