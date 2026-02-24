@@ -176,7 +176,17 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // @ts-ignore
+    function ({ addUtilities }: any) {
+      addUtilities({
+        '.pb-safe': { paddingBottom: 'env(safe-area-inset-bottom)' },
+        '.pt-safe': { paddingTop: 'env(safe-area-inset-top)' },
+        '.px-safe': { paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' },
+        '.h-screen-safe': { height: 'calc(100vh + env(safe-area-inset-top) + env(safe-area-inset-bottom))' },
+      })
+    }
+  ],
 }
 
 export default config

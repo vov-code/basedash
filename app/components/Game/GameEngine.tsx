@@ -602,10 +602,11 @@ export default function GameEngine({
   const [activeTrail, setActiveTrail] = useState<TrailType>('default')
   const { address } = useWallet()
 
-  // --- Adaptive Screen State — initialize with correct DPR immediately
+  // --- Adaptive Screen State
   const [dims, setDims] = useState(() => {
     // Get initial DPR immediately on client side
     const initialDpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, CFG.MAX_DPR) : 1
+    // Default logical size, will be immediately overwritten by resize observer
     return { w: CFG.WIDTH, h: CFG.HEIGHT, dpr: initialDpr }
   })
 
@@ -699,7 +700,7 @@ export default function GameEngine({
 
     // Ground collision — DEEP FIX: EXACT snap, NO GAP WHATSOEVER
     const groundLevel = CFG.GROUND - CFG.PLAYER_SIZE
-    
+
     // CRITICAL: Snap if within 20px and not moving up fast
     if (p.y >= groundLevel - 20 && p.velocityY >= 0) {
       p.y = groundLevel  // PERFECT - zero gap
@@ -1163,7 +1164,7 @@ export default function GameEngine({
 
     // Jump particles
     spawnJumpDust(e, IS_MOBILE ? 3 : 6)
-    
+
     // Add trail point for jump (physical trail effect)
     p.trail.push({
       x: CFG.PLAYER_X + CFG.PLAYER_SIZE / 2,
@@ -1174,7 +1175,7 @@ export default function GameEngine({
       rotation: p.rotation,
       scale: 1.0
     })
-    
+
     // Sound + haptic
     sfxJump()
     hapticJump()
@@ -1320,59 +1321,35 @@ export default function GameEngine({
   }, [logoLoaded, dims.dpr])
 
   // ========================================================================
-  // EFFECTS — Initialization, keyboard, touch, game loop
+  // RESIZE OBSERVER — Crisp Canvas at any layout size
   // ========================================================================
-
-  // Adaptive Resize Handling — FORCE sync on mount
   useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
     const handleResize = () => {
-      let w = window.innerWidth
-      let h = window.innerHeight
+      if (!container) return
+      const rect = container.getBoundingClientRect()
+      // Use actual displayed CSS size
+      const cssWidth = Math.max(rect.width, 300)
+      const cssHeight = Math.max(rect.height, 200)
 
-      // If we have a container, measure the actual flex-allocated space
-      if (containerRef.current && containerRef.current.parentElement) {
-        const rect = containerRef.current.parentElement.getBoundingClientRect()
-        w = rect.width
-        h = rect.height
-      }
+      const newDpr = Math.min(window.devicePixelRatio || 1, CFG.MAX_DPR)
 
-      // Constrain height directly based on mobile limits
-      const maxMobileH = window.innerHeight * 0.40
-      if (IS_MOBILE && h > maxMobileH) {
-        h = maxMobileH
-      }
-
-      // Constrain width on desktop
-      if (w > 1024) w = 1024
-      // Force roughly 16:9 on desktop - 15% smaller
-      if (!IS_MOBILE && h > w * 0.52) h = w * 0.52
-
-      // Better quality: always use devicePixelRatio, capped at MAX_DPR for full HD
-      const dpr = Math.min(window.devicePixelRatio || 1, CFG.MAX_DPR)
-
-      updateGameConfig(w, h)
-      setDims({ w, h, dpr })
+      setDims(prev => {
+        if (prev.w === cssWidth && prev.h === cssHeight && prev.dpr === newDpr) return prev
+        // IMPORTANT: We keep CFG logical dimensions for gameplay, but store CSS dimensions for canvas rendering
+        return { w: cssWidth, h: cssHeight, dpr: newDpr }
+      })
     }
 
-    // FORCE immediate resize on mount with correct DPR
+    const observer = new ResizeObserver(handleResize)
+    observer.observe(container)
+
+    // Initial call
     handleResize()
 
-    // Additional resize after very short delay to catch any layout shifts
-    const timeoutId = setTimeout(() => {
-      handleResize()
-      // Force canvas re-render after resize
-      const canvas = canvasRef.current
-      if (canvas) {
-        canvas.width = dims.w * dims.dpr
-        canvas.height = dims.h * dims.dpr
-      }
-    }, 30)
-
-    window.addEventListener('resize', handleResize)
-    return () => {
-      clearTimeout(timeoutId)
-      window.removeEventListener('resize', handleResize)
-    }
+    return () => observer.disconnect()
   }, [])
 
   // iOS audio unlock on first touch
@@ -1694,7 +1671,14 @@ export default function GameEngine({
           ctx.scale(demoDpr, demoDpr)
           ctx.imageSmoothingEnabled = true
           ctx.imageSmoothingQuality = 'high'
-          drawFrame(ctx, demoEngine, logoRef.current, logoLoaded)
+          // Draw frame to internal logic size
+          drawFrame(ctx, demoEngine, {
+            w: CFG.WIDTH,
+            h: CFG.HEIGHT,
+            dpr: demoDpr,
+            cssW: dims.w,
+            cssH: dims.h
+          }, logoRef.current, logoLoaded)
         }
       }
 
@@ -1762,20 +1746,25 @@ export default function GameEngine({
       className="game-container relative w-full h-full min-h-[280px] bg-[#FAFBFF] overflow-hidden rounded-[20px] select-none shadow-[inset_0_0_20px_rgba(0,82,255,0.05)]"
       style={{ touchAction: 'none' }}
     >
-      <canvas
-        ref={canvasRef}
-        width={dims.w * dims.dpr}
-        height={dims.h * dims.dpr}
-        className="w-full h-full touch-none block absolute inset-0"
-        onClick={handleAction}
-        tabIndex={0}
-        role="application"
-        aria-label="Base Dash Game Canvas"
-        style={{
-          display: 'block',
-          imageRendering: 'auto'
-        }}
-      />
+      {/* GAME CANVAS — Sharp Rendering Setup */}
+      <div ref={containerRef} className="absolute inset-0 w-full h-full overflow-hidden flex items-center justify-center bg-transparent touch-none">
+        <canvas
+          ref={canvasRef}
+          width={dims.w * dims.dpr}
+          height={dims.h * dims.dpr}
+          className="absolute inset-0 w-full h-full touch-none block"
+          onClick={handleAction}
+          tabIndex={0}
+          role="application"
+          aria-label="Base Dash Game Canvas"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'fill',
+            touchAction: 'none'
+          }}
+        />
+      </div>
 
       {/* ===================== MENU OVERLAY ===================== */}
       {mode === 'menu' && (

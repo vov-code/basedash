@@ -60,8 +60,9 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  minimumScale: 1,
   userScalable: false,
-  themeColor: '#0052FF',
+  themeColor: '#FFFFFF',
   colorScheme: 'light',
   viewportFit: 'cover',
 }
@@ -160,7 +161,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${outfit.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
+      className={`fixed inset-0 overflow-hidden bg-base-white touch-none overscroll-none ${outfit.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
     >
       <head>
         <link rel="stylesheet" href="/onchainkit.css" />
@@ -178,7 +179,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://mainnet.base.org" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://sepolia.base.org" crossOrigin="anonymous" />
       </head>
-      <body className="font-outfit antialiased bg-white text-gray-900">
+      <body className="fixed inset-0 overflow-hidden font-outfit antialiased bg-base-white text-gray-900 touch-none overscroll-none overscroll-y-none">
         <Providers>{children}</Providers>
       </body>
     </html>

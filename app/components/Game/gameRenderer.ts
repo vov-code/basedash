@@ -1214,20 +1214,37 @@ export const drawTutorialHint = (
 // MAIN DRAW COMPOSITE
 // ============================================================================
 
-/**
- * Master draw function — composites all layers in correct order.
- * Called once per animation frame.
+/* *
+ * @param ctx 2D Context
+ * @param e Engine State
+ * @param containerDims { w: logicalW, h: logicalH, dpr: DPR, cssW?: number, cssH?: number }
+ * @param logo Player image ref
+ * @param logoLoaded Is logo loaded
  */
 export const drawFrame = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
+    containerDims: { w: number, h: number, dpr: number, cssW?: number, cssH?: number },
     logo: HTMLImageElement | null,
-    logoLoaded: boolean
+    logoLoaded: boolean = true
 ): void => {
-    const w = getWorld(e.score)
+    const { w, h, dpr, cssW, cssH } = containerDims
+    const wTheme = getWorld(Math.max(0, e.score))
 
+    ctx.save()
+
+    // 1) Apply DPR scale universally
+    ctx.scale(dpr, dpr)
+
+    // 2) Scale to fit CSS dimensions while keeping logical aspect ratio
+    // If css dimensions are provided, scale the entire logical area to fill/fit CSS
+    if (cssW && cssH) {
+        const scaleX = cssW / CFG.WIDTH
+        const scaleY = cssH / CFG.HEIGHT
+        ctx.scale(scaleX, scaleY)
+    }
     // Clear with cached world sky gradient (prevents black background)
-    ctx.fillStyle = getSkyGradient(ctx, w, e.worldIndex)
+    ctx.fillStyle = getSkyGradient(ctx, wTheme, e.worldIndex)
     ctx.fillRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
 
     // Camera shake + zoom (7.4)
@@ -1242,21 +1259,21 @@ export const drawFrame = (
     }
 
     // Background layers
-    drawSky(ctx, e, w)
-    drawClouds(ctx, e, w)
-    drawStars(ctx, e, w)
+    drawSky(ctx, e, wTheme)
+    drawClouds(ctx, e, wTheme)
+    drawStars(ctx, e, wTheme)
 
     // Ground
-    drawGround(ctx, e, w)
-    drawGroundParticles(ctx, e, w)
+    drawGround(ctx, e, wTheme)
+    drawGroundParticles(ctx, e, wTheme)
 
     // Game objects
-    drawCandles(ctx, e, w)
+    drawCandles(ctx, e, wTheme)
     drawPowerUps(ctx, e)
 
     // Player
-    drawTrail(ctx, e, w, logo, logoLoaded)
-    drawPlayer(ctx, e, w, logo, logoLoaded)
+    drawTrail(ctx, e, wTheme, logo, logoLoaded)
+    drawPlayer(ctx, e, wTheme, logo, logoLoaded)
 
     // Effects
     drawParticles(ctx, e)
@@ -1274,7 +1291,7 @@ export const drawFrame = (
     drawTutorialHint(ctx, e)
 
     // UI (canvas-rendered)
-    drawWorldBanner(ctx, e, w)
+    drawWorldBanner(ctx, e, wTheme)
     drawPowerUpIndicators(ctx, e)
 
     // End shake + zoom transform
@@ -1307,7 +1324,7 @@ export const drawFrame = (
     }
 
     // World-specific edge effects (item 7)
-    if (w.name.includes('FLASHCRASH') || e.worldIndex === 7) {
+    if (wTheme.name.includes('FLASHCRASH') || e.worldIndex === 7) {
         // Red static noise strips along edges
         ctx.save()
         ctx.globalAlpha = 0.06 + Math.sin(e.gameTime * 12) * 0.03
@@ -1319,7 +1336,7 @@ export const drawFrame = (
         }
         ctx.restore()
     }
-    if (w.name.includes('REKT') || e.worldIndex === 8) {
+    if (wTheme.name.includes('REKT') || e.worldIndex === 8) {
         // Red vignette
         ctx.save()
         const vig = ctx.createRadialGradient(
