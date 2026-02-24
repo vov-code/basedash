@@ -287,7 +287,7 @@ export default function Home() {
   // MAIN APP (always renders — entry popup is overlay on top)
   // ========================================================================
   return (
-    <div className="min-h-[100dvh] sm:h-screen w-full bg-[#FAFAFA] text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] relative overflow-hidden flex flex-col fixed inset-0 touch-none">
+    <div className="fixed inset-0 w-full h-[100dvh] bg-[#FAFAFA] text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] overflow-hidden flex flex-col touch-none">
       {/* GLOBAL PARTICLE BACKGROUND - z-0, covers full length of site */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" style={{ maxHeight: 'calc(100dvh - 80px)' }}>
         <ParticleChaos opacity={0.6} />
@@ -383,7 +383,7 @@ export default function Home() {
       <div className={`relative z-50 flex flex-col h-full ${!desktopBypass ? 'lg:hidden' : ''}`}>
 
         {/* HEADER - z-[40], relative compact height */}
-        <header className="w-full bg-white/50 backdrop-blur-md relative z-[40] flex-shrink-0" style={{ height: 'max(50px, 7vh)' }}>
+        <header className="w-full bg-white/50 backdrop-blur-md relative z-[40] flex-shrink-0 h-[50px] sm:h-[60px]">
           <div className="mx-auto w-full max-w-3xl px-3 sm:px-4 h-full flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="relative h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 overflow-hidden border-2 border-[#0052FF]/80 rounded p-0.5 bg-white shadow-[0_0_12px_rgba(0,82,255,0.4)] animate-icon-float">
@@ -426,29 +426,29 @@ export default function Home() {
         </header>
 
         {/* MAIN CONTENT - z-[20], under header but above background */}
-        <main className="flex-1 flex flex-col min-h-0 w-full mb-auto relative z-[20]">
-          <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col relative w-full">
+        <main className="flex-1 flex flex-col overflow-hidden h-full min-h-0 w-full relative z-[20]">
+          <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col relative w-full h-full min-h-0">
 
             {/* TAB NAVIGATION - Always visible */}
-            <div className="w-full px-3 sm:px-4 py-1 relative z-20 flex-shrink-0">
+            <div className="w-full px-3 sm:px-4 py-1.5 sm:py-2 relative z-20 flex-shrink-0">
               <div className="flex justify-center items-center gap-1 p-0.5 bg-white/60 backdrop-blur-md rounded-xl border border-slate-200/50 shadow-inner">
-                <button onClick={() => setActiveTab('game')} className={`relative px-2 sm:px-3 py-0.5 rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
+                <button onClick={() => setActiveTab('game')} className={`relative px-2 sm:px-3 h-8 sm:h-9 rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
                   <div className="flex items-center gap-0.5">
                     <svg className="w-3 h-3 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                     <span className="text-[10px] sm:text-xs font-black tracking-wide leading-none">trade</span>
                   </div>
-                  <span className="text-[7px] sm:text-[8px] font-semibold opacity-70 leading-none">play demo</span>
+                  <span className="text-[7px] sm:text-[8px] font-semibold opacity-70 leading-none mt-[1px]">play demo</span>
                 </button>
 
-                <button onClick={() => setActiveTab('profile')} className={`relative px-2 sm:px-3 py-0.5 rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'profile' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
+                <button onClick={() => setActiveTab('profile')} className={`relative px-2 sm:px-3 h-8 sm:h-9 rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'profile' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
                   <div className="flex items-center gap-0.5">
                     <svg className="w-3 h-3 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
                     <span className="text-[10px] sm:text-xs font-black tracking-wide leading-none">wallet</span>
                   </div>
-                  <span className="text-[7px] sm:text-[8px] font-semibold opacity-70 leading-none">profile</span>
+                  <span className="text-[7px] sm:text-[8px] font-semibold opacity-70 leading-none mt-[1px]">profile</span>
                 </button>
 
-                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-2 sm:px-3 flex flex-col items-center justify-center py-0.5 rounded-lg transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white shadow-[0_0_15px_rgba(240,185,11,0.6)] scale-100 ring-1 ring-[#F0B90B]/80' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)]'}`}>
+                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-2 sm:px-3 h-8 sm:h-9 flex flex-col items-center justify-center rounded-lg transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white shadow-[0_0_15px_rgba(240,185,11,0.6)] scale-100 ring-1 ring-[#F0B90B]/80' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)]'}`}>
                   {activeTab !== 'leaderboard' && <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-[#F0B90B] to-transparent opacity-20 -translate-x-full animate-[shimmerSweep_2.5s_ease-in-out_infinite]" />}
                   <div className="flex items-center gap-0.5 relative z-10">
                     <svg className={`w-3 h-3 hidden sm:block transition-transform duration-300 ${(activeTab as string) !== 'leaderboard' ? 'group-hover:scale-110 text-[#F0B90B]' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
@@ -456,7 +456,7 @@ export default function Home() {
                     </svg>
                     <span className={`${(activeTab as string) !== 'leaderboard' ? 'text-slate-800 group-hover:text-amber-600' : 'text-white'} text-[10px] sm:text-xs font-black tracking-wide leading-none`}>top 33</span>
                   </div>
-                  <span className={`${(activeTab as string) !== 'leaderboard' ? 'opacity-70 text-slate-500' : 'opacity-90 text-white'} text-[7px] sm:text-[8px] font-semibold relative z-10 leading-none`}>ranks</span>
+                  <span className={`${(activeTab as string) !== 'leaderboard' ? 'opacity-70 text-slate-500' : 'opacity-90 text-white'} text-[7px] sm:text-[8px] font-semibold relative z-10 leading-none mt-[1px]`}>ranks</span>
                 </button>
               </div>
             </div>
@@ -479,7 +479,7 @@ export default function Home() {
                 )}
 
                 {/* GAME HINTS — tap to jump blocks */}
-                <div className="w-full px-2 sm:px-3 py-1.5 sm:py-2 relative z-20 flex-shrink-0">
+                <div className="w-full px-2 sm:px-3 py-1.5 relative z-20 flex-shrink-0">
                   <div className="flex items-stretch gap-1 sm:gap-2 mx-auto">
                     <div className="flex-1 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 sm:py-2.5 bg-white/60 backdrop-blur-sm rounded-lg border border-slate-200/60 min-w-0 justify-center">
                       <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0052FF]/10 rounded flex items-center justify-center flex-shrink-0">
@@ -502,11 +502,16 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Game Canvas — strict 16:9 aspect ratio, responsive constraints */}
-                <div className="w-full px-2 sm:px-0 mb-2 sm:mb-3 flex flex-col items-center justify-center relative z-20 flex-shrink min-h-0">
+                {/* Game Canvas — strict 16:9 aspect ratio, gracefully shrinking via container queries */}
+                <div className="w-full px-2 sm:px-0 mb-1 sm:mb-2 flex-1 min-h-[150px] relative z-20 flex flex-col items-center justify-center overflow-hidden" style={{ containerType: 'size' }}>
                   <div
-                    className="w-full max-w-[600px] relative shadow-[0_8px_30px_rgba(0,0,0,0.12)] sm:rounded-lg overflow-hidden border-y sm:border-x border-slate-200/50 bg-white mx-auto"
-                    style={{ aspectRatio: '16/9', maxHeight: 'min(42vh, calc(100dvh - 300px))' }}
+                    className="relative w-full shadow-[0_8px_30px_rgba(0,0,0,0.12)] sm:rounded-lg overflow-hidden border-y sm:border-x border-slate-200/50 bg-white"
+                    style={{
+                      aspectRatio: '16/9',
+                      maxHeight: '100%',
+                      maxWidth: 'min(600px, calc(100cqh * 16 / 9))',
+                      margin: '0 auto'
+                    }}
                   >
                     <div className="absolute inset-0 w-full h-full">
                       <GameEngine
@@ -522,8 +527,8 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* BOTTOM INFO GRID — Responsive gaps */}
-                <div className="w-full px-2 sm:px-4 pb-[max(1.5vh,env(safe-area-inset-bottom))] pt-0.5 flex-1 min-h-0 flex flex-col relative z-20 justify-center shrink">
+                {/* BOTTOM INFO GRID — Fixed size chunk to prevent overflow */}
+                <div className="w-full px-2 sm:px-4 pb-[max(10px,env(safe-area-inset-bottom))] pt-0.5 flex-shrink-0 relative z-20">
                   <div className="w-full grid grid-cols-2 gap-1.5 sm:gap-2 max-w-lg mx-auto">
 
                     {/* Liquidation Watch — full width */}
