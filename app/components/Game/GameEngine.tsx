@@ -1313,12 +1313,17 @@ export default function GameEngine({
 
     // High-DPI scaling with smooth gradients
     ctx.setTransform(1, 0, 0, 1, 0, 0)
-    ctx.scale(dims.dpr, dims.dpr)
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = 'high'
 
-    drawFrame(ctx, engineRef.current, logoRef.current, logoLoaded)
-  }, [logoLoaded, dims.dpr])
+    drawFrame(ctx, engineRef.current, {
+      w: CFG.WIDTH,
+      h: CFG.HEIGHT,
+      dpr: dims.dpr,
+      cssW: dims.w,
+      cssH: dims.h
+    }, logoRef.current, logoLoaded)
+  }, [logoLoaded, dims])
 
   // ========================================================================
   // RESIZE OBSERVER — Crisp Canvas at any layout size
@@ -1668,7 +1673,6 @@ export default function GameEngine({
         if (ctx) {
           const demoDpr = Math.min(window.devicePixelRatio || 1, CFG.MAX_DPR)
           ctx.setTransform(1, 0, 0, 1, 0, 0)
-          ctx.scale(demoDpr, demoDpr)
           ctx.imageSmoothingEnabled = true
           ctx.imageSmoothingQuality = 'high'
           // Draw frame to internal logic size
