@@ -5,7 +5,6 @@ import { useReadContract } from 'wagmi'
 import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS, PlayerScore } from '@/app/contracts'
 import { formatAddress, bigIntToNumber } from '@/app/lib/utils'
 import { useWallet } from '@/app/hooks/useWallet'
-import { Identity, Avatar, Name } from '@coinbase/onchainkit/identity'
 
 interface RankMeta {
   label: string
@@ -40,6 +39,21 @@ function Entry({ entry, rank, isSelf, selfRef }: { entry: PlayerScore; rank: num
   const streak = bigIntToNumber(entry.streakDays)
   const meta = RANK_META[rank]
 
+  const [copied, setCopied] = useState(false)
+  const handleCopy = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    navigator.clipboard.writeText(entry.player)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  // Deterministic avatar color based on address
+  const addrStr = entry.player.toLowerCase()
+  const p1 = parseInt(addrStr.slice(2, 4), 16)
+  const p2 = parseInt(addrStr.slice(4, 6), 16)
+  const p3 = parseInt(addrStr.slice(6, 8), 16)
+
   return (
     <div
       ref={isSelf ? selfRef : undefined}
@@ -60,14 +74,23 @@ function Entry({ entry, rank, isSelf, selfRef }: { entry: PlayerScore; rank: num
 
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <Identity
-              address={entry.player as `0x${string}`}
-              className="inline-flex items-center gap-1.5 border border-slate-200/60 bg-white/50 px-2 py-1 rounded-lg shadow-sm"
-              hasCopyAddressOnClick
+            <button
+              onClick={handleCopy}
+              className="inline-flex items-center gap-1.5 border border-slate-200/60 bg-white/50 hover:bg-slate-50 active:scale-95 transition-all text-left px-2 py-1 rounded-lg shadow-sm group"
             >
-              <Avatar className="w-4 h-4 sm:w-5 sm:h-5 bg-blue-100" />
-              <Name className="font-mono text-[10px] sm:text-xs font-bold text-slate-700 truncate min-w-0" />
-            </Identity>
+              <div
+                className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex-shrink-0 shadow-inner"
+                style={{ backgroundColor: `rgb(${p1}, ${p2}, ${p3})`, backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(0,0,0,0.1) 100%)` }}
+              />
+              <span className="font-mono text-[10px] sm:text-xs font-bold text-slate-700 truncate min-w-0 group-hover:text-[#0052FF] transition-colors">
+                {copied ? 'copied!' : formatAddress(entry.player)}
+              </span>
+              {copied ? (
+                <svg className="w-3 h-3 text-[#0ECB81] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+              ) : (
+                <svg className="w-3 h-3 text-slate-400 group-hover:text-[#0052FF] opacity-50 group-hover:opacity-100 transition-all flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+              )}
+            </button>
             {isSelf && (
               <span className="border border-[#0052FF]/20 bg-[#0052FF]/10 px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] lowercase tracking-wider font-black text-[#0052FF]">
                 you

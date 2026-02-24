@@ -1246,46 +1246,42 @@ export const drawFrame = (
     // 2) Scale to prevent squishing and handle variable DOM height safely
     let renderH = CFG.HEIGHT;
     if (cssW && cssH) {
+        // Calculate raw scale factors
         const scaleX = cssW / CFG.WIDTH;
         const scaleY = cssH / CFG.HEIGHT;
-        let scale = scaleX;
 
-        if (CFG.HEIGHT * scale > cssH) {
-            // Container is wide (16:9 shape horizontally). The 4:3 game overflows vertically.
-            const extraH = CFG.HEIGHT * scale - cssH;
+        // Use fit-to-width (Cover horizontally)
+        // Since the canvas explicitly uses width="100%" the CSS handles horizontal,
+        // we just need to tell the game how much logical vertical space exists.
+        const logicalH = cssH / scaleX;
 
-            // User requested: "trim ground height by 10%".
-            const groundH = CFG.HEIGHT - CFG.GROUND; // usually 110px. 10% = 11px logical.
-            const bottomCropPixels = (groundH * 0.10) * scale;
+        // This ensures the 1 logical unit = 1 pixel horizontally,
+        // and physically displays the extra vertical layout logically.
+        ctx.scale(scaleX, scaleX);
 
-            // The rest is trimmed from the sky (top):
-            const topCropPixels = extraH - bottomCropPixels;
+        renderH = logicalH;
 
-            // Offset Y moves the canvas UP to hide the top sky, 
-            // leaving exactly down to the -10% trimmed ground.
-            const offsetY = -(topCropPixels) / scale;
-            ctx.translate(0, offsetY);
+        // Only if the screen is weirdly wide (horizontal desktop) do we crop the bottom/top
+        if (scaleX > scaleY) {
+            const extraH = CFG.HEIGHT - logicalH;
+
+            // Trim ground slightly, mostly sky
+            const bottomCrop = extraH * 0.15;
+            const topCrop = extraH - bottomCrop;
+
+            ctx.translate(0, -topCrop);
+            renderH = CFG.HEIGHT + topCrop; // Render sky higher up
         } else {
-            // Container is tall (9:16)
-            // Zoom in slightly so we cut sky and ground symmetrically, instead of just stretching sky/ground
-            const zoomFactor = 0.55;
-            scale = scaleX + (scaleY - scaleX) * zoomFactor;
+            // For tall phones! We have extra vertical space. 
+            // Center the core gameplay (sky top -> ground bottom) roughly in the middle, slightly biased downwards
+            const extraHeight = logicalH - CFG.HEIGHT;
+            const shiftDown = extraHeight * 0.35; // 35% of extra space is above the sky, 65% is below ground
 
-            // Width overflows because we zoomed, center it horizontally
-            const offsetX = (cssW - CFG.WIDTH * scale) / 2 / scale;
-            ctx.translate(offsetX, 0);
-
-            renderH = cssH / scale;
-            const extraH = renderH - CFG.HEIGHT;
-
-            // Push camera down vertically to balance crop (cuts a bit more sky than ground)
-            const shiftDown = Math.max(0, extraH * 0.4);
             ctx.translate(0, shiftDown);
 
-            // Render more to cover the offset shift
-            renderH += shiftDown * 2;
+            // Render extra chunks to fill out the top/bottom borders flawlessly
+            renderH = logicalH + shiftDown * 2;
         }
-        ctx.scale(scale, scale);
     }
 
     // Clear with cached world sky gradient (prevents black background)
