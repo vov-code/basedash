@@ -710,16 +710,15 @@ export const drawPlayer = (
     const p = e.player
     const rot = p.rotation
 
-    // Consistent center-based positioning
+    // EXACT ground positioning - NO GAP
     let drawY = p.y + PLAYER_HALF
     const heightAboveGround = CFG.GROUND - (p.y + CFG.PLAYER_SIZE)
 
-    // Visual correction: seat cube exactly on ground line (no gap)
-    if (heightAboveGround < 2) {
-        // Firmly seat the cube on the ground - no visual gap
-        drawY = CFG.GROUND - PLAYER_HALF
+    // PERFECT seat on ground - zero tolerance
+    if (heightAboveGround <= 1) {
+        drawY = CFG.GROUND - PLAYER_HALF  // EXACT - no visual gap
     } else {
-        // Prevent corner clipping into ground when rotated or scaled
+        // Airborne - prevent corner clipping
         const boundOffset = PLAYER_HALF * p.scale * (Math.abs(Math.sin(rot)) + Math.abs(Math.cos(rot)))
         const lowestVisualPoint = drawY + boundOffset
         if (lowestVisualPoint > CFG.GROUND) {

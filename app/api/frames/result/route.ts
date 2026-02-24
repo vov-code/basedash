@@ -39,25 +39,101 @@ export async function GET(req: NextRequest) {
 <html>
 <head>
   <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta property="og:title" content="base dash — ${formattedScore} pnl"/>
   <meta property="og:description" content="i scored ${formattedScore} pnl in base dash! can you beat my score?"/>
   <meta property="og:image" content="${ogImageData}"/>
   <meta property="fc:frame" content="vNext"/>
   <meta property="fc:frame:image" content="${ogImageData}"/>
-  <meta property="fc:frame:button:1" content="🎮 play base dash"/>
+  <meta property="fc:frame:button:1" content="🎮 try again"/>
   <meta property="fc:frame:button:1:action" content="link"/>
   <meta property="fc:frame:button:1:target" content="${appUrl}"/>
   <meta property="fc:frame:button:2" content="🏆 leaderboard"/>
   <meta property="fc:frame:button:2:action" content="link"/>
   <meta property="fc:frame:button:2:target" content="${appUrl}?tab=leaderboard"/>
   <title>base dash — ${formattedScore} pnl</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: linear-gradient(180deg, #0A0B14 0%, #1a1b2e 100%);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+    }
+    .container {
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+    h1 {
+      color: #0052FF;
+      letter-spacing: 6px;
+      font-size: 28px;
+      font-weight: 900;
+      margin-bottom: 10px;
+      text-transform: lowercase;
+    }
+    .subtitle {
+      color: #6B7280;
+      letter-spacing: 3px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 30px;
+      text-transform: lowercase;
+    }
+    .score {
+      font-size: 56px;
+      font-weight: 900;
+      margin: 10px 0;
+      text-shadow: 0 0 30px rgba(0, 82, 255, 0.3);
+    }
+    .pnl {
+      color: #0ECB81;
+      letter-spacing: 4px;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 30px;
+      text-transform: lowercase;
+    }
+    .player {
+      color: #6B7280;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 40px;
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: lowercase;
+    }
+    .btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #0052FF 0%, #003EC7 100%);
+      color: #fff;
+      padding: 14px 32px;
+      text-decoration: none;
+      font-weight: 800;
+      letter-spacing: 2px;
+      font-size: 12px;
+      border-radius: 8px;
+      text-transform: lowercase;
+      box-shadow: 0 4px 20px rgba(0, 82, 255, 0.3);
+      transition: transform 0.2s;
+    }
+    .btn:hover {
+      transform: scale(1.05);
+    }
+  </style>
 </head>
-<body style="background:#0A0B14;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui">
-  <div style="text-align:center">
-    <h1 style="color:#0052FF;letter-spacing:6px;font-size:36px">base dash</h1>
-    <p style="font-size:72px;font-weight:900;margin:20px 0">${formattedScore}</p>
-    <p style="color:#0ECB81;letter-spacing:4px">pnl</p>
-    <p style="margin-top:40px"><a href="${appUrl}" style="background:#0052FF;color:#fff;padding:16px 40px;text-decoration:none;font-weight:800;letter-spacing:3px;font-size:14px">play now</a></p>
+<body>
+  <div class="container">
+    <h1>base dash</h1>
+    <p class="subtitle">portfolio result</p>
+    <p class="score">${formattedScore}</p>
+    <p class="pnl">pnl</p>
+    <p class="player">player: ${shortAddr}</p>
+    <a href="${appUrl}" class="btn">🎮 try again</a>
   </div>
 </body>
 </html>`

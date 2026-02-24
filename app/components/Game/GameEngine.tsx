@@ -697,18 +697,17 @@ export default function GameEngine({
     // Apply velocity
     p.y += p.velocityY * dt
 
-    // Ground collision — PERFECT snap with ZERO tolerance
+    // Ground collision — DEEP FIX: EXACT snap, NO GAP WHATSOEVER
     const groundLevel = CFG.GROUND - CFG.PLAYER_SIZE
-    const distToGround = groundLevel - p.y
     
-    // PERFECT snap: if within 8px and moving down or stopped
-    if (distToGround > -8 && distToGround < 8 && p.velocityY >= -50) {
-      p.y = groundLevel  // EXACT snap - ZERO gap
+    // CRITICAL: Snap if within 20px and not moving up fast
+    if (p.y >= groundLevel - 20 && p.velocityY >= 0) {
+      p.y = groundLevel  // PERFECT - zero gap
       p.velocityY = 0
       p.onGround = true
       p.coyoteTimer = CFG.COYOTE
       p.jumpCount = 0
-      p.rotation = 0  // Reset rotation
+      p.rotation = 0
     } else {
       p.onGround = false
     }
@@ -1434,17 +1433,28 @@ export default function GameEngine({
     const handleVisibility = () => {
       if (document.hidden && mode === 'playing') {
         setMode('paused')
+        // Stop music when hidden
+        if (isMusicPlaying) {
+          stopBackgroundMusic()
+          setMusicEnabled(false)
+        }
       } else if (!document.hidden && mode === 'paused') {
         // Resume audio context when returning to tab
         const ctx = getAudioCtx()
         if (ctx && ctx.state === 'suspended') {
           ctx.resume().catch(() => { /* ignore */ })
         }
+        // Auto-resume music if it was playing before
+        if (musicEnabled && soundEnabled) {
+          setTimeout(() => {
+            startBackgroundMusic()
+          }, 300)
+        }
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [mode])
+  }, [mode, musicEnabled, soundEnabled])
 
   // Keyboard controls
   useEffect(() => {
