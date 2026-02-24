@@ -88,7 +88,7 @@ function Entry({ entry, rank, isSelf, selfRef }: { entry: PlayerScore; rank: num
       </div>
 
       <div className="ml-3 sm:ml-4 flex-shrink-0 text-right">
-        <p className="font-mono text-lg sm:text-xl font-black text-slate-900 tracking-tight">{score.toLocaleString()}</p>
+        <p className="font-mono text-lg sm:text-xl font-black text-slate-900 tracking-tight">${score.toLocaleString()}</p>
         <p className="text-[9px] sm:text-[10px] font-bold lowercase tracking-widest text-[#0ECB81] mt-0.5">pnl</p>
       </div>
     </div>

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 /**
- * Farcaster Frame API — generates OG-compatible HTML for sharing game results.
- * Query params: score, address
- * Returns HTML with fc:frame meta tags for Warpcast embed (item 10).
+ * Farcaster Frame API — Game Over style result page
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -14,44 +12,19 @@ export async function GET(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin
   const formattedScore = Number(score).toLocaleString()
 
-  // Simple SVG-based OG image (rendered inline as data URI for maximum compatibility)
-  const svgImage = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-      <defs>
-        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#0A0B14"/>
-          <stop offset="100%" style="stop-color:#1a1b2e"/>
-        </linearGradient>
-      </defs>
-      <rect width="1200" height="630" fill="url(#bg)"/>
-      <rect x="40" y="40" width="1120" height="550" rx="24" fill="none" stroke="#0052FF" stroke-width="3" opacity="0.4"/>
-      <text x="600" y="120" font-family="system-ui,sans-serif" font-size="42" font-weight="900" fill="#0052FF" text-anchor="middle" letter-spacing="8">base dash</text>
-      <text x="600" y="180" font-family="system-ui,sans-serif" font-size="20" font-weight="700" fill="#6B7280" text-anchor="middle" letter-spacing="4">portfolio result</text>
-      <text x="600" y="320" font-family="system-ui,sans-serif" font-size="96" font-weight="900" fill="#FFFFFF" text-anchor="middle">${formattedScore}</text>
-      <text x="600" y="370" font-family="system-ui,sans-serif" font-size="24" font-weight="700" fill="#0ECB81" text-anchor="middle" letter-spacing="6">pnl</text>
-      <text x="600" y="440" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#6B7280" text-anchor="middle">player: ${shortAddr}</text>
-      <text x="600" y="540" font-family="system-ui,sans-serif" font-size="28" font-weight="800" fill="#F0B90B" text-anchor="middle">can you beat this score?</text>
-    </svg>`
-
-  const ogImageData = `data:image/svg+xml;base64,${Buffer.from(svgImage).toString('base64')}`
-
   const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta property="og:title" content="base dash — ${formattedScore} pnl"/>
-  <meta property="og:description" content="i scored ${formattedScore} pnl in base dash! can you beat my score?"/>
-  <meta property="og:image" content="${ogImageData}"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+  <meta property="og:title" content="base dash — $${formattedScore}"/>
+  <meta property="og:description" content="portfolio result"/>
   <meta property="fc:frame" content="vNext"/>
-  <meta property="fc:frame:image" content="${ogImageData}"/>
+  <meta property="fc:frame:image" content="${appUrl}/og-image.svg"/>
   <meta property="fc:frame:button:1" content="🎮 try again"/>
   <meta property="fc:frame:button:1:action" content="link"/>
   <meta property="fc:frame:button:1:target" content="${appUrl}"/>
-  <meta property="fc:frame:button:2" content="🏆 leaderboard"/>
-  <meta property="fc:frame:button:2:action" content="link"/>
-  <meta property="fc:frame:button:2:target" content="${appUrl}?tab=leaderboard"/>
-  <title>base dash — ${formattedScore} pnl</title>
+  <title>base dash — $${formattedScore}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -61,78 +34,81 @@ export async function GET(req: NextRequest) {
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: 'JetBrains Mono', monospace;
       padding: 20px;
+      overflow: hidden;
     }
     .container {
       text-align: center;
-      max-width: 400px;
+      max-width: 380px;
       width: 100%;
     }
-    h1 {
-      color: #0052FF;
-      letter-spacing: 6px;
-      font-size: 28px;
-      font-weight: 900;
-      margin-bottom: 10px;
-      text-transform: lowercase;
-    }
-    .subtitle {
+    .label {
       color: #6B7280;
       letter-spacing: 3px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
-      margin-bottom: 30px;
+      margin-bottom: 15px;
       text-transform: lowercase;
     }
     .score {
-      font-size: 56px;
+      font-size: 48px;
       font-weight: 900;
       margin: 10px 0;
       text-shadow: 0 0 30px rgba(0, 82, 255, 0.3);
+      font-family: 'JetBrains Mono', monospace;
     }
     .pnl {
       color: #0ECB81;
       letter-spacing: 4px;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
-      margin-bottom: 30px;
+      margin-bottom: 25px;
       text-transform: lowercase;
     }
     .player {
       color: #6B7280;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
-      margin-bottom: 40px;
+      margin-bottom: 30px;
       font-family: 'JetBrains Mono', monospace;
       text-transform: lowercase;
+      background: rgba(255,255,255,0.05);
+      padding: 8px 16px;
+      border-radius: 8px;
+      display: inline-block;
     }
     .btn {
       display: inline-block;
       background: linear-gradient(135deg, #0052FF 0%, #003EC7 100%);
       color: #fff;
-      padding: 14px 32px;
+      padding: 14px 40px;
       text-decoration: none;
       font-weight: 800;
       letter-spacing: 2px;
       font-size: 12px;
-      border-radius: 8px;
+      border-radius: 10px;
       text-transform: lowercase;
       box-shadow: 0 4px 20px rgba(0, 82, 255, 0.3);
-      transition: transform 0.2s;
+      transition: all 0.2s;
+      font-family: 'JetBrains Mono', monospace;
     }
     .btn:hover {
       transform: scale(1.05);
+      box-shadow: 0 6px 25px rgba(0, 82, 255, 0.4);
+    }
+    .btn:active {
+      transform: scale(0.98);
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>base dash</h1>
-    <p class="subtitle">portfolio result</p>
-    <p class="score">${formattedScore}</p>
+    <p class="label">portfolio result</p>
+    <p class="score">$${formattedScore}</p>
     <p class="pnl">pnl</p>
-    <p class="player">player: ${shortAddr}</p>
+    <p class="player">${shortAddr}</p>
+    <br/>
     <a href="${appUrl}" class="btn">🎮 try again</a>
   </div>
 </body>

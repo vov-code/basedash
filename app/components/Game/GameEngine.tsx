@@ -229,7 +229,7 @@ function unlockAudioOnTouch(): void {
   }).catch(() => { /* ignore */ })
 }
 
-function playTone(freq: number, duration: number, type: OscillatorType = 'square', volume = 0.12) {
+function playTone(freq: number, duration: number, type: OscillatorType = 'square', volume = 0.08) {
   const ctx = getAudioCtx()
   if (!ctx) return
 
@@ -284,7 +284,7 @@ function startBackgroundMusic(): void {
 
   try {
     musicGain = ctx.createGain()
-    musicGain.gain.value = 0.25 // Lowered volume per request
+    musicGain.gain.value = 0.35 // Music louder
     musicGain.connect(ctx.destination)
 
     // Minimal percussion: soft tick on 0,4,8,12
