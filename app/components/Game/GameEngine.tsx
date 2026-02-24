@@ -1713,7 +1713,7 @@ export default function GameEngine({
       if (demoRafRef.current) cancelAnimationFrame(demoRafRef.current)
       demoRafRef.current = null
     }
-  }, [mode, logoLoaded])
+  }, [mode, logoLoaded, dims])
 
   // 3.1 — Compute near-record diff & 3.4 delayed retry button
   useEffect(() => {
