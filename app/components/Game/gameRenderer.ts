@@ -1243,45 +1243,12 @@ export const drawFrame = (
     // 1) Apply DPR scale universally
     ctx.scale(dpr, dpr)
 
-    // 2) Scale to prevent squishing and handle variable DOM height safely
+    // 2) Scale safely to prevent squishing
     let renderH = CFG.HEIGHT;
-    if (cssW && cssH) {
-        // Calculate raw scale factors
+    if (cssW) {
+        // Calculate raw scale factor based on width
         const scaleX = cssW / CFG.WIDTH;
-        const scaleY = cssH / CFG.HEIGHT;
-
-        // Use fit-to-width (Cover horizontally)
-        // Since the canvas explicitly uses width="100%" the CSS handles horizontal,
-        // we just need to tell the game how much logical vertical space exists.
-        const logicalH = cssH / scaleX;
-
-        // This ensures the 1 logical unit = 1 pixel horizontally,
-        // and physically displays the extra vertical layout logically.
         ctx.scale(scaleX, scaleX);
-
-        renderH = logicalH;
-
-        // Only if the screen is weirdly wide (horizontal desktop) do we crop the bottom/top
-        if (scaleX > scaleY) {
-            const extraH = CFG.HEIGHT - logicalH;
-
-            // Trim ground slightly, mostly sky
-            const bottomCrop = extraH * 0.15;
-            const topCrop = extraH - bottomCrop;
-
-            ctx.translate(0, -topCrop);
-            renderH = CFG.HEIGHT + topCrop; // Render sky higher up
-        } else {
-            // For tall phones! We have extra vertical space. 
-            // Center the core gameplay (sky top -> ground bottom) roughly in the middle, slightly biased downwards
-            const extraHeight = logicalH - CFG.HEIGHT;
-            const shiftDown = extraHeight * 0.35; // 35% of extra space is above the sky, 65% is below ground
-
-            ctx.translate(0, shiftDown);
-
-            // Render extra chunks to fill out the top/bottom borders flawlessly
-            renderH = logicalH + shiftDown * 2;
-        }
     }
 
     // Clear with cached world sky gradient (prevents black background)

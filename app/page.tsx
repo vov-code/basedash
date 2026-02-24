@@ -502,9 +502,12 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Game Canvas — Fills space precisely to eliminate gaps */}
-                <div className="w-full px-0 sm:px-0 mb-2 sm:mb-3 flex-1 min-h-[250px] relative z-20 flex flex-col items-center justify-center fade-in">
-                  <div className="relative w-full h-full max-w-[600px] shadow-[0_8px_30px_rgba(0,0,0,0.12)] sm:rounded-[20px] overflow-hidden border-y sm:border-x border-[#0052FF]/10 bg-white mx-auto">
+                {/* Game Canvas — Fills space safely, strictly 16:9 */}
+                <div className="w-full px-1 sm:px-0 mb-2 sm:mb-3 flex-1 min-h-[250px] relative z-20 flex flex-col items-center justify-center fade-in">
+                  <div
+                    className="relative w-full max-w-[600px] max-h-full sm:rounded-[20px] overflow-hidden border-y sm:border-x border-[#0052FF]/10 bg-white mx-auto shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
+                    style={{ aspectRatio: '16/9', maxHeight: 'calc(100vh - 280px)' }}
+                  >
                     <GameEngine
                       storageKey="basedash_highscore_v2"
                       onScoreSubmit={handleScoreSubmit}
