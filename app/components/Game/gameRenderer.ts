@@ -63,10 +63,11 @@ const getSkyGradient = (
 const getGroundGradient = (
     ctx: CanvasRenderingContext2D,
     w: WorldTheme,
-    worldIdx: number
+    worldIdx: number,
+    renderH: number = CFG.HEIGHT
 ): CanvasGradient => {
     if (cachedGroundGrad && cachedGroundWorldIdx === worldIdx) return cachedGroundGrad
-    const g = ctx.createLinearGradient(0, CFG.GROUND, 0, CFG.HEIGHT)
+    const g = ctx.createLinearGradient(0, CFG.GROUND, 0, renderH)
     g.addColorStop(0, w.groundTop)
     g.addColorStop(0.5, w.groundTop)
     g.addColorStop(1, '#FFFFFF')
@@ -208,12 +209,13 @@ export const drawStars = (
 export const drawGround = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
-    w: WorldTheme
+    w: WorldTheme,
+    renderH: number
 ): void => {
-    const groundH = CFG.HEIGHT - CFG.GROUND
+    const groundH = renderH - CFG.GROUND
 
     // Ground gradient
-    const gGrad = ctx.createLinearGradient(0, CFG.GROUND, 0, CFG.HEIGHT)
+    const gGrad = ctx.createLinearGradient(0, CFG.GROUND, 0, renderH)
     gGrad.addColorStop(0, w.groundTop)
     gGrad.addColorStop(0.4, w.groundTop)
     gGrad.addColorStop(1, '#FFFFFF')
@@ -245,7 +247,7 @@ export const drawGround = (
     ctx.save()
     ctx.fillStyle = w.accent + '25'
     ctx.globalAlpha = 0.6
-    drawFloorPattern(ctx, e, w, fOff)
+    drawFloorPattern(ctx, e, w, fOff, renderH)
     ctx.restore()
 }
 
@@ -254,22 +256,23 @@ const drawFloorPattern = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
     w: WorldTheme,
-    fOff: number
+    fOff: number,
+    renderH: number
 ): void => {
     const pattern = w.floorPattern
 
     if (pattern === 'grid' || pattern === 'diagonal') {
         // Simple 3D tech grid (fast to render)
         for (let x = -fOff; x < CFG.WIDTH + 60; x += 50) {
-            ctx.fillRect(x, CFG.GROUND, 1, CFG.HEIGHT - CFG.GROUND)
-            for (let y = CFG.GROUND; y < CFG.HEIGHT; y += 30) {
+            ctx.fillRect(x, CFG.GROUND, 1, renderH - CFG.GROUND)
+            for (let y = CFG.GROUND; y < renderH; y += 30) {
                 ctx.fillRect(x, y, 40, 1)
             }
         }
     } else if (pattern === 'dots' || pattern === 'hex' || pattern === 'circuit') {
         // Constellation dots
         for (let x = -fOff; x < CFG.WIDTH + 60; x += 30) {
-            for (let y = CFG.GROUND + 15; y < CFG.HEIGHT; y += 25) {
+            for (let y = CFG.GROUND + 15; y < renderH; y += 25) {
                 ctx.globalAlpha = 0.3 + Math.sin(e.gameTime * 2 + x * 0.05 + y * 0.03) * 0.15
                 ctx.beginPath()
                 ctx.arc(x, y, 2, 0, TWO_PI)
@@ -278,7 +281,7 @@ const drawFloorPattern = (
         }
     } else if (pattern === 'lines' || pattern === 'chevron' || pattern === 'waves') {
         // Speed lines
-        for (let y = CFG.GROUND + 12; y < CFG.HEIGHT; y += 18) {
+        for (let y = CFG.GROUND + 12; y < renderH; y += 18) {
             ctx.globalAlpha = 0.3
             ctx.fillRect(0, y, CFG.WIDTH, 1)
         }
@@ -1111,7 +1114,8 @@ export const drawNearMissText = (
 /** Draw horizontal speed lines on tier change */
 export const drawSpeedLines = (
     ctx: CanvasRenderingContext2D,
-    e: EngineState
+    e: EngineState,
+    renderH: number
 ): void => {
     if (e.speedLinesTimer <= 0) return
     const alpha = clamp(e.speedLinesTimer / 1.5, 0, 1)
@@ -1123,7 +1127,7 @@ export const drawSpeedLines = (
     ctx.lineWidth = 1.5
 
     for (let i = 0; i < lineCount; i++) {
-        const y = (CFG.HEIGHT / (lineCount + 1)) * (i + 1)
+        const y = (renderH / (lineCount + 1)) * (i + 1)
         const progress = (1 - alpha) * CFG.WIDTH
         const startX = CFG.WIDTH / 2 - progress * 0.5
         const endX = CFG.WIDTH / 2 + progress * 0.5
@@ -1142,7 +1146,8 @@ export const drawSpeedLines = (
 /** Draw blue border glow when combo hits x5 milestones */
 export const drawComboPulse = (
     ctx: CanvasRenderingContext2D,
-    e: EngineState
+    e: EngineState,
+    renderH: number
 ): void => {
     if (e.comboPulseTimer <= 0) return
     const alpha = clamp(e.comboPulseTimer / 0.5, 0, 1)
@@ -1152,12 +1157,12 @@ export const drawComboPulse = (
     ctx.globalAlpha = alpha * 0.6
     ctx.strokeStyle = '#0052FF'
     ctx.lineWidth = thickness
-    ctx.strokeRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
+    ctx.strokeRect(0, 0, CFG.WIDTH, renderH)
     // Inner glow
     ctx.globalAlpha = alpha * 0.2
     ctx.strokeStyle = '#88CCFF'
     ctx.lineWidth = thickness * 2
-    ctx.strokeRect(2, 2, CFG.WIDTH - 4, CFG.HEIGHT - 4)
+    ctx.strokeRect(2, 2, CFG.WIDTH - 4, renderH - 4)
     ctx.restore()
 }
 
@@ -1236,23 +1241,31 @@ export const drawFrame = (
     // 1) Apply DPR scale universally
     ctx.scale(dpr, dpr)
 
-    // 2) Scale to fit CSS dimensions while keeping logical aspect ratio
-    // If css dimensions are provided, scale the entire logical area to fill/fit CSS
+    // 2) Scale to prevent squishing and handle variable DOM height safely
+    let renderH = CFG.HEIGHT;
     if (cssW && cssH) {
-        const scaleX = cssW / CFG.WIDTH
-        const scaleY = cssH / CFG.HEIGHT
-        ctx.scale(scaleX, scaleY)
+        const scale = cssW / CFG.WIDTH;
+        if (CFG.HEIGHT * scale > cssH) {
+            // Container is wide (shorter than expected 16:9 ratio) -> center vertically
+            const offsetY = (cssH - CFG.HEIGHT * scale) / 2 / scale;
+            ctx.translate(0, offsetY);
+        } else {
+            // Container is tall (taller than 16:9 ratio) -> extend renderer logically
+            renderH = cssH / scale;
+        }
+        ctx.scale(scale, scale);
     }
+
     // Clear with cached world sky gradient (prevents black background)
     ctx.fillStyle = getSkyGradient(ctx, wTheme, e.worldIndex)
-    ctx.fillRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
+    ctx.fillRect(0, 0, CFG.WIDTH, renderH)
 
     // Camera shake + zoom (7.4)
     ctx.save()
     applyShake(ctx, e)
     if (e.cameraZoom < 1) {
         const cx = CFG.WIDTH / 2
-        const cy = CFG.HEIGHT / 2
+        const cy = renderH / 2
         ctx.translate(cx, cy)
         ctx.scale(e.cameraZoom, e.cameraZoom)
         ctx.translate(-cx, -cy)
@@ -1264,7 +1277,7 @@ export const drawFrame = (
     drawStars(ctx, e, wTheme)
 
     // Ground
-    drawGround(ctx, e, wTheme)
+    drawGround(ctx, e, wTheme, renderH)
     drawGroundParticles(ctx, e, wTheme)
 
     // Game objects
@@ -1282,10 +1295,10 @@ export const drawFrame = (
     drawNearMissText(ctx, e)
 
     // Speed lines (7.2)
-    drawSpeedLines(ctx, e)
+    drawSpeedLines(ctx, e, renderH)
 
     // Combo pulse border (7.3)
-    drawComboPulse(ctx, e)
+    drawComboPulse(ctx, e, renderH)
 
     // Tutorial hint (6.3)
     drawTutorialHint(ctx, e)
@@ -1303,7 +1316,7 @@ export const drawFrame = (
         ctx.save()
         ctx.globalAlpha = flashAlpha
         ctx.fillStyle = '#FFFFFF'
-        ctx.fillRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
+        ctx.fillRect(0, 0, CFG.WIDTH, renderH)
         ctx.restore()
     }
 
@@ -1314,12 +1327,12 @@ export const drawFrame = (
         ctx.globalAlpha = pulse
         ctx.strokeStyle = '#FFD700'
         ctx.lineWidth = 4 + Math.sin(e.gameTime * 8) * 2
-        ctx.strokeRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
+        ctx.strokeRect(0, 0, CFG.WIDTH, renderH)
         // Inner golden glow
         ctx.globalAlpha = pulse * 0.3
         ctx.strokeStyle = '#FFA500'
         ctx.lineWidth = 8
-        ctx.strokeRect(2, 2, CFG.WIDTH - 4, CFG.HEIGHT - 4)
+        ctx.strokeRect(2, 2, CFG.WIDTH - 4, renderH - 4)
         ctx.restore()
     }
 
@@ -1329,7 +1342,7 @@ export const drawFrame = (
         ctx.save()
         ctx.globalAlpha = 0.06 + Math.sin(e.gameTime * 12) * 0.03
         ctx.fillStyle = '#FF3050'
-        for (let y = 0; y < CFG.HEIGHT; y += 4) {
+        for (let y = 0; y < renderH; y += 4) {
             const w1 = 3 + Math.random() * 8
             ctx.fillRect(0, y, w1, 2)
             ctx.fillRect(CFG.WIDTH - w1, y, w1, 2)
@@ -1340,13 +1353,13 @@ export const drawFrame = (
         // Red vignette
         ctx.save()
         const vig = ctx.createRadialGradient(
-            CFG.WIDTH / 2, CFG.HEIGHT / 2, CFG.WIDTH * 0.3,
-            CFG.WIDTH / 2, CFG.HEIGHT / 2, CFG.WIDTH * 0.7
+            CFG.WIDTH / 2, renderH / 2, CFG.WIDTH * 0.3,
+            CFG.WIDTH / 2, renderH / 2, CFG.WIDTH * 0.7
         )
         vig.addColorStop(0, 'rgba(255,0,0,0)')
         vig.addColorStop(1, 'rgba(255,0,0,0.08)')
         ctx.fillStyle = vig
-        ctx.fillRect(0, 0, CFG.WIDTH, CFG.HEIGHT)
+        ctx.fillRect(0, 0, CFG.WIDTH, renderH)
         ctx.restore()
     }
 }

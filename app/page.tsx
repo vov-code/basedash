@@ -502,12 +502,12 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Game Canvas — Full HD quality, proper for iPhone (no squash) */}
-                <div className="w-full px-0 mb-2 sm:mb-3 flex flex-col items-center justify-center relative z-20 flex-shrink-0" style={{
-                  height: '38vh',
-                  maxHeight: '280px'
-                }}>
-                  <div className="w-full relative shadow-[0_8px_30px_rgba(0,0,0,0.12)] sm:rounded-lg overflow-hidden border-y sm:border-x border-slate-200/50 flex-shrink-0 bg-white h-full">
+                {/* Game Canvas — Full HD quality, 16:9 aspect ratio restored */}
+                <div className="w-full px-2 sm:px-0 mb-2 sm:mb-3 flex flex-col items-center justify-center relative z-20 flex-shrink-0">
+                  <div
+                    className="w-full max-w-[600px] relative shadow-[0_8px_30px_rgba(0,0,0,0.12)] sm:rounded-lg overflow-hidden border-y sm:border-x border-slate-200/50 flex-shrink-0 bg-white"
+                    style={{ aspectRatio: '16/9', maxHeight: '42vh' }}
+                  >
                     <GameEngine
                       storageKey="basedash_highscore_v2"
                       onScoreSubmit={handleScoreSubmit}
