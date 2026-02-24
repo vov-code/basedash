@@ -453,32 +453,6 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* TAB NAVIGATION — Compact */}
-                <div className="w-full px-2 sm:px-4 mt-1 sm:mt-2 mb-[1vh] sm:mb-[2vh] relative z-20 flex-shrink-0">
-                  <div className="flex items-center justify-center p-1 bg-slate-100/80 backdrop-blur rounded-xl max-w-[240px] mx-auto border border-slate-200/50">
-                    <button
-                      onClick={() => setActiveTab('game')}
-                      className={`flex-1 py-1.5 sm:py-2 px-3 rounded-lg text-[10px] sm:text-[11px] font-black tracking-wider uppercase transition-all duration-300 ${activeTab === 'game'
-                        ? 'bg-white text-[#0052FF] shadow-[0_2px_10px_rgba(0,0,0,0.05)]'
-                        : 'text-slate-500 hover:text-slate-700'
-                        }`}
-                      style={{ fontFamily: 'var(--font-mono)' }}
-                    >
-                      Play
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('leaderboard')}
-                      className={`flex-1 py-1.5 sm:py-2 px-3 rounded-lg text-[10px] sm:text-[11px] font-black tracking-wider uppercase transition-all duration-300 ${activeTab === 'leaderboard'
-                        ? 'bg-white text-[#0052FF] shadow-[0_2px_10px_rgba(0,0,0,0.05)]'
-                        : 'text-slate-500 hover:text-slate-700'
-                        }`}
-                      style={{ fontFamily: 'var(--font-mono)' }}
-                    >
-                      Top 33
-                    </button>
-                  </div>
-                </div>
-
                 {/* Game Canvas — Adaptive height based on screen, max 45vh, min 30vh */}
                 <div className="w-full px-0 mb-[1.5vh] sm:mb-[2.5vh] flex flex-col items-center justify-center relative z-20 flex-shrink-0" style={{
                   height: 'clamp(32vh, 42vh, 45vh)'
