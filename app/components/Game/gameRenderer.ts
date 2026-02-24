@@ -1248,12 +1248,20 @@ export const drawFrame = (
         const scaleY = cssH / CFG.HEIGHT;
         let scale = scaleX;
 
-        if (CFG.HEIGHT * scaleX > cssH) {
-            // Container is wide (shorter than expected 4:3) -> crop top and bottom
+        if (CFG.HEIGHT * scale > cssH) {
+            // Container is wide (16:9 shape horizontally). The 4:3 game overflows vertically.
             const extraH = CFG.HEIGHT * scale - cssH;
-            // Shift up: negative offset. Instead of equal top/bottom crop, crop 80% top, 20% bottom.
-            const offsetH = extraH * 0.8;
-            const offsetY = -offsetH / scale;
+
+            // User requested: "trim ground height by 10%".
+            const groundH = CFG.HEIGHT - CFG.GROUND; // usually 110px. 10% = 11px logical.
+            const bottomCropPixels = (groundH * 0.10) * scale;
+
+            // The rest is trimmed from the sky (top):
+            const topCropPixels = extraH - bottomCropPixels;
+
+            // Offset Y moves the canvas UP to hide the top sky, 
+            // leaving exactly down to the -10% trimmed ground.
+            const offsetY = -(topCropPixels) / scale;
             ctx.translate(0, offsetY);
         } else {
             // Container is tall (9:16)

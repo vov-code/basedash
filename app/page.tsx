@@ -400,7 +400,7 @@ export default function Home() {
               {!isConnected ? (
                 <button
                   onClick={handleConnect}
-                  className="h-8 sm:h-9 w-8 sm:w-9 flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-[#0052FF] to-[#0040CC] text-white rounded-md shadow-[0_4px_14px_rgba(0,82,255,0.35)] hover:shadow-[0_6px_20px_rgba(0,82,255,0.45)] transition-all transform hover:-translate-y-0.5 active:scale-95"
+                  className="h-8 sm:h-9 w-8 sm:w-9 aspect-square min-w-[32px] min-h-[32px] sm:min-w-[36px] sm:min-h-[36px] flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-[#0052FF] to-[#0040CC] text-white rounded-md shadow-[0_4px_14px_rgba(0,82,255,0.35)] hover:shadow-[0_6px_20px_rgba(0,82,255,0.45)] transition-all transform hover:-translate-y-0.5 active:scale-95"
                 >
                   <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -430,9 +430,9 @@ export default function Home() {
           <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col relative w-full">
 
             {/* TAB NAVIGATION - Always visible */}
-            <div className="w-full px-3 sm:px-4 py-1.5 sm:py-2 relative z-20 flex-shrink-0">
+            <div className="w-full px-3 sm:px-4 py-1.5 relative z-20 flex-shrink-0">
               <div className="flex justify-center items-center gap-1 p-0.5 bg-white/60 backdrop-blur-md rounded-xl border border-slate-200/50 shadow-inner">
-                <button onClick={() => setActiveTab('game')} className={`relative px-2 sm:px-3 py-1 rounded-lg transition-all duration-200 flex flex-col items-center justify-center gap-[2px] flex-1 ${(activeTab as string) === 'game' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
+                <button onClick={() => setActiveTab('game')} className={`relative px-2 sm:px-3 py-0.5 rounded-lg transition-all duration-200 flex flex-col items-center justify-center gap-[1px] flex-1 ${(activeTab as string) === 'game' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
                   <div className="flex items-center gap-1">
                     <svg className="w-3.5 h-3.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                     <span className="text-[10px] sm:text-xs font-black tracking-wide leading-none">trade</span>
@@ -440,7 +440,7 @@ export default function Home() {
                   <span className="text-[7px] sm:text-[8px] font-semibold opacity-70 leading-none">play demo</span>
                 </button>
 
-                <button onClick={() => setActiveTab('profile')} className={`relative px-2 sm:px-3 py-1 rounded-lg transition-all duration-200 flex flex-col items-center justify-center gap-[2px] flex-1 ${(activeTab as string) === 'profile' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
+                <button onClick={() => setActiveTab('profile')} className={`relative px-2 sm:px-3 py-0.5 rounded-lg transition-all duration-200 flex flex-col items-center justify-center gap-[1px] flex-1 ${(activeTab as string) === 'profile' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
                   <div className="flex items-center gap-1">
                     <svg className="w-3.5 h-3.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
                     <span className="text-[10px] sm:text-xs font-black tracking-wide leading-none">wallet</span>
@@ -448,7 +448,7 @@ export default function Home() {
                   <span className="text-[7px] sm:text-[8px] font-semibold opacity-70 leading-none">profile</span>
                 </button>
 
-                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-2 sm:px-3 flex flex-col items-center justify-center gap-[2px] py-1 rounded-lg transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white shadow-[0_0_15px_rgba(240,185,11,0.6)] scale-100 ring-1 ring-[#F0B90B]/80' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)]'}`}>
+                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-2 sm:px-3 flex flex-col items-center justify-center gap-[1px] py-0.5 rounded-lg transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white shadow-[0_0_15px_rgba(240,185,11,0.6)] scale-100 ring-1 ring-[#F0B90B]/80' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)]'}`}>
                   {activeTab !== 'leaderboard' && <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-[#F0B90B] to-transparent opacity-20 -translate-x-full animate-[shimmerSweep_2.5s_ease-in-out_infinite]" />}
                   <div className="flex items-center gap-1 relative z-10">
                     <svg className={`w-3.5 h-3.5 hidden sm:block transition-transform duration-300 ${(activeTab as string) !== 'leaderboard' ? 'group-hover:scale-110 text-[#F0B90B]' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
@@ -502,11 +502,11 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Game Canvas — 16:9 aspect ratio restored for cinematic landscape view */}
-                <div className="w-full px-2 sm:px-0 mb-2 sm:mb-3 flex flex-col items-center justify-center relative z-20 flex-shrink-0">
+                {/* Game Canvas — Tall Portrait Format (3:4 ratio) ensures it fits perfectly without overflowing Game Over Box */}
+                <div className="w-full px-2 sm:px-0 mb-3 flex flex-col items-center justify-center relative z-20 flex-shrink-0">
                   <div
                     className="w-full max-w-[600px] relative shadow-[0_8px_30px_rgba(0,0,0,0.12)] sm:rounded-lg overflow-hidden border-y sm:border-x border-slate-200/50 bg-white mx-auto"
-                    style={{ aspectRatio: '16/9', maxHeight: '45vh' }}
+                    style={{ aspectRatio: '3/4', maxHeight: '53vh' }}
                   >
                     <div className="absolute inset-0 w-full h-full">
                       <GameEngine
@@ -648,10 +648,10 @@ export default function Home() {
         </main>
 
         {/* FOOTER - z-[40], solid white background */}
-        <footer className="mt-auto bg-white relative z-[40] flex-shrink-0" style={{ height: '32px', minHeight: '32px' }}>
-          <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 h-full flex items-center justify-between pb-0">
-            <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400/80 font-mono leading-none flex items-center m-0 p-0 transform translate-y-[1px]">© {new Date().getFullYear()} base dash</span>
-            <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400/80 font-mono leading-none flex items-center m-0 p-0 transform translate-y-[1px]">built by <span className="font-black text-[#0052FF] ml-1">vov</span></span>
+        <footer className="mt-auto bg-white relative z-[40] flex-shrink-0" style={{ height: '32px', minHeight: '32px', paddingBottom: '0', marginBottom: '0' }}>
+          <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 h-full flex items-center justify-between pb-0 m-0">
+            <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400/80 font-mono leading-none m-0 p-0">© {new Date().getFullYear()} base dash</span>
+            <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400/80 font-mono leading-none m-0 p-0">built by <span className="font-black text-[#0052FF] ml-0.5">vov</span></span>
           </div>
         </footer>
       </div>

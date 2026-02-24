@@ -1791,9 +1791,9 @@ export default function GameEngine({
 
       {/* ===================== MENU OVERLAY ===================== */}
       {mode === 'menu' && (
-        <div className="game-overlay flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
+        <div className="game-overlay flex items-center justify-center" style={{ containerType: 'size', background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
           <div className="w-full max-w-[180px] border border-white/40 bg-white/50 backdrop-blur-md px-4 py-4 sm:px-5 sm:py-6 shadow-[0_24px_80px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.9)] relative flex flex-col items-center gap-3 sm:gap-4 rounded-[20px]"
-            style={{ animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
+            style={{ transform: 'scale(min(1, calc(100cqh / 260px)))', transformOrigin: 'center', animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
 
             {/* Best Score Display — Premium */}
             <div className="w-full bg-gradient-to-br from-[#FFFBEB] to-[#FFF3CC] px-4 py-2.5 sm:py-3 border border-[#F0B90B]/30 text-center rounded-2xl shadow-[0_4px_12px_rgba(240,185,11,0.15)]"
@@ -1829,9 +1829,10 @@ export default function GameEngine({
 
       {/* ===================== PAUSED OVERLAY ===================== */}
       {mode === 'paused' && (
-        <div className="game-overlay bg-black/20 backdrop-blur-[2px]">
+        <div className="game-overlay bg-black/20 backdrop-blur-[2px]" style={{ containerType: 'size' }}>
           <div className="w-full h-full flex items-center justify-center p-4">
-            <div className="w-full max-w-[240px] border-2 border-[#0A0B14] bg-white px-5 py-6 shadow-none mx-auto text-center rounded-2xl">
+            <div className="w-full max-w-[240px] border-2 border-[#0A0B14] bg-white px-5 py-6 shadow-none mx-auto text-center rounded-2xl"
+              style={{ transform: 'scale(min(1, calc(100cqh / 240px)))', transformOrigin: 'center' }}>
               <h2 className="text-xl font-black text-[#0A0B14] mb-2 tracking-widest lowercase" style={{ fontFamily: 'var(--font-mono)' }}>paused</h2>
               <p className="text-slate-500 text-[10px] mb-5 font-bold tracking-widest lowercase">take a breath</p>
               <button
@@ -1847,9 +1848,10 @@ export default function GameEngine({
 
       {/* ===================== GAME OVER OVERLAY ===================== */}
       {mode === 'gameover' && (
-        <div className="game-overlay" style={{ background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', animation: 'deathFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}>
+        <div className="game-overlay" style={{ containerType: 'size', background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', animation: 'deathFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}>
           <div className="w-full h-full flex items-center justify-center p-1 sm:p-2">
-            <div className="w-full max-w-[280px] rounded-xl bg-white border border-[#0A0B14]/20 shadow-2xl px-2 py-1.5 sm:py-2 mx-auto relative overflow-hidden">
+            <div className="w-full max-w-[280px] rounded-xl bg-white border border-[#0A0B14]/20 shadow-2xl px-2 py-1.5 sm:py-2 mx-auto relative overflow-hidden"
+              style={{ transform: 'scale(min(1, calc(100cqh / 280px)))', transformOrigin: 'center' }}>
 
               <div className="flex items-center justify-center gap-1 mb-1.5">
                 {isNewRecord && (
