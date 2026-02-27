@@ -1045,16 +1045,20 @@ export default function GameEngine({
     }
   }, [])
 
-  // Auto-pause on visibility change
+  // Auto-pause on visibility change and reset clock
   useEffect(() => {
     const handleVisibility = () => {
       if (document.hidden && mode === 'playing') {
         setMode('paused')
       }
+      // Clear out the massive delta buildup by signaling physics loops
+      if (!document.hidden) {
+        window.dispatchEvent(new Event('baseresume'))
+      }
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [mode])
+  }, [mode, setMode])
 
   // Keyboard controls
   useEffect(() => {
@@ -1097,8 +1101,14 @@ export default function GameEngine({
     let frameCount = 0
     let lastFpsUpdate = performance.now()
 
+    // Reset loop time completely when waking up the tab
+    const onResume = () => { prev = performance.now(); acc = 0 }
+    window.addEventListener('baseresume', onResume)
+
     const loop = (t: number) => {
-      const dt = Math.min(CFG.MAX_DELTA, (t - prev) / 1000)
+      // Extremely aggressive cap on delta time. If the tab slept, discard huge time jumps entirely.
+      const rawDt = (t - prev) / 1000
+      const dt = Math.min(rawDt, 0.05) // Cap max step to 50ms safely
       prev = t
       acc += dt
 
@@ -1137,6 +1147,7 @@ export default function GameEngine({
     rafRef.current = requestAnimationFrame(loop)
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      window.removeEventListener('baseresume', onResume)
     }
   }, [mode, update, draw])
 
@@ -1426,7 +1437,7 @@ export default function GameEngine({
 
             {/* Hint Text */}
             <div className="text-center" style={{ animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both', animationDelay: '0.25s' }}>
-              <p className="text-[7px] font-bold text-slate-500 lowercase tracking-[0.22em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>tap or space to start</p>
+              <p className="text-[9px] font-medium text-slate-500 tracking-wide" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Tap or space to start</p>
             </div>
 
           </div>
@@ -1439,13 +1450,13 @@ export default function GameEngine({
           <div className="w-full h-full flex items-center justify-center p-4">
             <div className="w-full max-w-[240px] border-2 border-[#0A0B14] bg-white px-5 py-6 shadow-none mx-auto text-center rounded-2xl"
               style={{ transform: 'scale(min(1, calc(100cqh / 240px)))', transformOrigin: 'center' }}>
-              <h2 className="text-xl font-black text-[#0A0B14] mb-2 tracking-widest lowercase" style={{ fontFamily: 'var(--font-mono)' }}>paused</h2>
-              <p className="text-slate-500 text-[10px] mb-5 font-bold tracking-widest lowercase">take a breath</p>
+              <h2 className="text-xl font-bold text-[#0A0B14] mb-2 tracking-wide" style={{ fontFamily: 'var(--font-mono)' }}>Paused</h2>
+              <p className="text-slate-500 text-[11px] mb-5 font-medium tracking-wide">Take a breath</p>
               <button
                 onClick={() => setMode('playing')}
-                className="w-full bg-[#0052FF] px-4 py-3 text-[11px] font-black text-white hover:bg-[#0040CC] border-2 border-[#0052FF] transition-colors rounded-xl tracking-widest lowercase"
+                className="w-full bg-[#0052FF] px-4 py-3 text-[12px] font-semibold text-white hover:bg-[#0040CC] border-2 border-[#0052FF] transition-colors rounded-xl tracking-wide"
               >
-                resume
+                Resume
               </button>
             </div>
           </div>

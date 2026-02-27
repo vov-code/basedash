@@ -158,41 +158,39 @@ export default function Home() {
 
           <div className="relative z-20 text-center px-6 max-w-[340px] w-full"
             style={{ opacity: 0, animation: 'fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both' }}>
-            <h2 className="text-[15px] font-bold text-slate-700 tracking-tight mb-10 leading-relaxed"
+            <h2 className="text-[16px] font-medium text-slate-700 tracking-wide mb-10 leading-relaxed"
               style={{ fontFamily: 'var(--font-mono)', opacity: 0, animation: 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both' }}>
-              ready to trade like<br /><span className="text-[#0052FF] font-black">it&#39;s your first day again?</span>
+              ready to trade like<br /><span className="text-[#0052FF] font-semibold">it&#39;s your first day again?</span>
             </h2>
 
             <div className="flex gap-2" style={{ opacity: 0, animation: 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both' }}>
               <button
                 onClick={handleEnter}
-                className="flex-1 py-2.5 text-white font-bold tracking-[0.12em] text-[11px] transition-all duration-200 hover:scale-105 active:scale-95 bg-[#0ECB81] relative overflow-hidden group cursor-pointer rounded-md"
+                className="flex-1 py-2.5 text-white font-semibold tracking-wide text-[12px] transition-all duration-200 hover:scale-105 active:scale-95 bg-[#0ECB81] relative overflow-hidden group cursor-pointer rounded-md uppercase"
                 style={{
                   fontFamily: 'var(--font-mono)',
                   boxShadow: '0 4px 12px rgba(14,203,129,0.25)',
-                  textTransform: 'lowercase'
                 }}
               >
-                <span className="relative z-10">yes</span>
+                <span className="relative z-10">Yes</span>
                 <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-200" />
               </button>
               <button
                 onClick={handleEnter}
-                className="flex-1 py-2.5 text-white font-bold tracking-[0.12em] text-[11px] transition-all duration-200 hover:scale-105 active:scale-95 bg-[#F6465D] relative overflow-hidden group cursor-pointer rounded-md"
+                className="flex-1 py-2.5 text-white font-semibold tracking-wide text-[12px] transition-all duration-200 hover:scale-105 active:scale-95 bg-[#F6465D] relative overflow-hidden group cursor-pointer rounded-md uppercase"
                 style={{
                   fontFamily: 'var(--font-mono)',
                   boxShadow: '0 4px 12px rgba(246,70,93,0.25)',
-                  textTransform: 'lowercase'
                 }}
               >
-                <span className="relative z-10">yes</span>
+                <span className="relative z-10">Yes</span>
                 <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-200" />
               </button>
             </div>
 
-            <p className="mt-8 text-[9px] text-slate-400/60 tracking-widest animate-pulse"
-              style={{ fontFamily: 'var(--font-mono)', textTransform: 'lowercase', opacity: 0, animation: 'fadeIn 0.6s ease 0.9s both' }}>
-              auto-enter soon
+            <p className="mt-8 text-[10px] text-slate-400 tracking-widest animate-pulse"
+              style={{ fontFamily: 'var(--font-mono)', opacity: 0, animation: 'fadeIn 0.6s ease 0.9s both' }}>
+              AUTO-ENTER SOON
             </p>
           </div>
         </div>
