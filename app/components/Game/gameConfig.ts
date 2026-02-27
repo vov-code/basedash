@@ -367,13 +367,13 @@ export const CFG = {
     HEIGHT: 540,
     GROUND: 430,
 
-    PLAYER_X: 180,
+    PLAYER_X: 324, // Shifted ~15% right from 180 for better reaction time
     PLAYER_SIZE: 52, // Increased from 42 for better visibility
     HITBOX_FRAC: 0.12,  // 12% inset each side — fairly tight for precision dodging
     HITBOX: 6,          // computed at runtime from HITBOX_FRAC × PLAYER_SIZE
 
     STEP: 1 / 60,
-    MAX_DELTA: 0.033,
+    MAX_DELTA: 0.04,  // Tightly bound maximum delta to prevent physics explosions on lag
     UI_RATE: 1 / 10,
 
     GRAVITY_UP: 2100,   // Adjusted for larger player

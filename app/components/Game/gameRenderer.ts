@@ -742,7 +742,7 @@ export const drawPlayer = (
         const sx = CFG.PLAYER_X + PLAYER_HALF - sw / 2
         const sy = CFG.GROUND - sh + 0.5
         ctx.beginPath()
-        ctx.roundRect(sx, sy, sw, sh, sh / 2)
+        ctx.rect(sx, sy, sw, sh)
         ctx.fill()
         ctx.restore()
     }
@@ -1096,10 +1096,6 @@ export const drawNearMissText = (
 
     ctx.save()
     ctx.globalAlpha = alpha * 0.9
-    // Minimal white text with subtle shadow
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
-    ctx.shadowBlur = 8
-    ctx.shadowOffsetY = 2
     ctx.fillStyle = '#FFFFFF'
     ctx.font = `700 ${CFG.WIDTH < 600 ? 13 : 11}px "JetBrains Mono", monospace`
     ctx.textAlign = 'center'
@@ -1246,27 +1242,28 @@ export const drawFrame = (
     // 2) Scale dynamically to prevent squishing and handle variable DOM height safely
     let renderH = CFG.HEIGHT;
     if (cssW && cssH && cssW > 0 && cssH > 0) {
-        // Force the logical 960 width to fit into the CSS width
+        // Force width to fit
         const scaleX = cssW / CFG.WIDTH;
         ctx.scale(scaleX, scaleX);
 
-        // This means the logical height of the available screen is:
+        // Find available logical height
         const logicalH = cssH / scaleX;
         renderH = logicalH;
 
         if (logicalH > CFG.HEIGHT) {
-            // Tall vertical screen (mobile). We have extra logical height.
-            // Shift camera down so the player isn't stuck at the top of the screen.
+            // iPhone/Portrait: Extra height available.
+            // We drop the camera slightly, but increase renderH so the sky and ground expand to fill the void.
             const shiftDown = (logicalH - CFG.HEIGHT) * 0.40;
             ctx.translate(0, shiftDown);
-            // Render extra background to cover the translated shift
+
+            // Crucial fix: expand the bounds of draw areas to fill the bottom gap!
             renderH += shiftDown;
         } else if (logicalH < CFG.HEIGHT) {
-            // Ultra-wide display. We have LESS vertical space than 540.
-            // Shift up slightly to keep the ground visible instead of chopping off the player's legs.
+            // Ultra-wide display (desktop). We have LESS vertical space than 540.
             const shiftUp = (CFG.HEIGHT - logicalH) * 0.2;
             ctx.translate(0, -shiftUp);
-            renderH += shiftUp;
+            // Ensure render height covers full internal canvas memory regardless of crop
+            renderH = CFG.HEIGHT + shiftUp;
         }
     }
 
@@ -1350,30 +1347,5 @@ export const drawFrame = (
         ctx.restore()
     }
 
-    // World-specific edge effects (item 7)
-    if (wTheme.name.includes('FLASHCRASH') || e.worldIndex === 7) {
-        // Red static noise strips along edges
-        ctx.save()
-        ctx.globalAlpha = 0.06 + Math.sin(e.gameTime * 12) * 0.03
-        ctx.fillStyle = '#FF3050'
-        for (let y = 0; y < renderH; y += 4) {
-            const w1 = 3 + Math.random() * 8
-            ctx.fillRect(0, y, w1, 2)
-            ctx.fillRect(CFG.WIDTH - w1, y, w1, 2)
-        }
-        ctx.restore()
-    }
-    if (wTheme.name.includes('REKT') || e.worldIndex === 8) {
-        // Red vignette
-        ctx.save()
-        const vig = ctx.createRadialGradient(
-            CFG.WIDTH / 2, renderH / 2, CFG.WIDTH * 0.3,
-            CFG.WIDTH / 2, renderH / 2, CFG.WIDTH * 0.7
-        )
-        vig.addColorStop(0, 'rgba(255,0,0,0)')
-        vig.addColorStop(1, 'rgba(255,0,0,0.08)')
-        ctx.fillStyle = vig
-        ctx.fillRect(0, 0, CFG.WIDTH, renderH)
-        ctx.restore()
-    }
+    // World-specific edge effects disabled for performance
 }

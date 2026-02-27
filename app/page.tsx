@@ -18,163 +18,7 @@ import { ConnectWallet, Wallet } from '@coinbase/onchainkit/wallet'
 import { Avatar, Name } from '@coinbase/onchainkit/identity'
 import Leaderboard from './components/Leaderboard/Leaderboard'
 
-// ============================================================================
-// PARTICLE BACKGROUND — Minimalist Crypto Network
-// ============================================================================
-
-function ParticleChaos({ opacity = 0.4 }: { opacity?: number }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    let animId: number
-    let w = window.innerWidth
-    let h = window.innerHeight
-
-    // Detect low-end devices
-    const isLowEnd = typeof navigator !== 'undefined' && (
-      navigator.hardwareConcurrency !== undefined && navigator.hardwareConcurrency <= 2 ||
-      (navigator as any).deviceMemory !== undefined && (navigator as any).deviceMemory < 4
-    )
-
-    const updateSize = () => {
-      w = window.innerWidth
-      h = window.innerHeight
-      canvas.width = w
-      canvas.height = h
-    }
-    updateSize()
-
-    interface Bar {
-      x: number
-      y: number
-      bodyH: number
-      wickH: number
-      isGreen: boolean
-      speed: number
-      alpha: number
-    }
-
-    // Scrolling candlestick bars — the signature look (enhanced visibility)
-    const barCount = isLowEnd ? 20 : 40
-    const bars: Bar[] = []
-    for (let i = 0; i < barCount; i++) {
-      const isGreen = Math.random() > 0.45
-      bars.push({
-        x: Math.random() * w * 1.5,
-        y: h * 0.15 + Math.random() * h * 0.7,
-        bodyH: 15 + Math.random() * 40,
-        wickH: 8 + Math.random() * 18,
-        isGreen,
-        speed: 0.2 + Math.random() * 0.4,
-        alpha: 0.08 + Math.random() * 0.06,
-      })
-    }
-
-    // Price line data points
-    const pricePoints = 60
-    const priceData: number[] = []
-    let pp = h * 0.5
-    for (let i = 0; i < pricePoints; i++) {
-      pp += (Math.random() - 0.48) * 8
-      pp = Math.max(h * 0.25, Math.min(h * 0.75, pp))
-      priceData.push(pp)
-    }
-
-    let tick = 0
-
-    const draw = () => {
-      if (document.hidden) { animId = requestAnimationFrame(draw); return }
-      ctx.clearRect(0, 0, w, h)
-      tick++
-
-      // === SCROLLING CANDLESTICK BARS ===
-      const barW = isLowEnd ? 6 : 8
-      for (const bar of bars) {
-        bar.x -= bar.speed
-        if (bar.x < -barW * 2) {
-          bar.x = w + barW * 2 + Math.random() * 60
-          bar.y = h * 0.15 + Math.random() * h * 0.7
-          bar.isGreen = Math.random() > 0.45
-          bar.bodyH = 10 + Math.random() * 30
-          bar.wickH = 5 + Math.random() * 15
-          bar.alpha = 0.03 + Math.random() * 0.04
-        }
-
-        const color = bar.isGreen ? '#0ECB81' : '#F6465D'
-
-        // Wick — sharp line
-        ctx.globalAlpha = bar.alpha * opacity * 1.5
-        ctx.strokeStyle = color
-        ctx.lineWidth = 1.5
-        ctx.lineCap = 'butt'
-        ctx.beginPath()
-        ctx.moveTo(bar.x, bar.y - bar.wickH)
-        ctx.lineTo(bar.x, bar.y + bar.bodyH + bar.wickH)
-        ctx.stroke()
-
-        // Body — Sharp terminal block
-        ctx.fillStyle = color
-        ctx.fillRect(bar.x - barW / 2, bar.y, barW, bar.bodyH)
-
-        // Inner bright streak for "neon screen" effect
-        ctx.fillStyle = '#FFFFFF'
-        ctx.globalAlpha = bar.alpha * opacity * 0.4
-        ctx.fillRect(bar.x - barW / 4 + 0.5, bar.y, barW / 2, bar.bodyH)
-        ctx.globalAlpha = 1
-      }
-
-      // === FLOATING PRICE LINE ===
-      ctx.globalAlpha = opacity * 0.08
-      ctx.strokeStyle = '#0052FF'
-      ctx.lineWidth = 1.5
-      ctx.beginPath()
-      const segW = w / (pricePoints - 1)
-      const timeOff = tick * 0.3
-      for (let i = 0; i < pricePoints; i++) {
-        const idx = (i + Math.floor(timeOff)) % pricePoints
-        const px = i * segW
-        const py = priceData[idx] + Math.sin(tick * 0.01 + i * 0.2) * 5
-        if (i === 0) ctx.moveTo(px, py)
-        else ctx.lineTo(px, py)
-      }
-      ctx.stroke()
-
-      // Price line glow
-      ctx.globalAlpha = opacity * 0.03
-      ctx.lineWidth = 4
-      ctx.stroke()
-
-      // === SUBTLE GRID DOTS ===
-      if (!isLowEnd) {
-        ctx.globalAlpha = opacity * 0.04
-        ctx.fillStyle = '#0052FF'
-        const dotGap = 40
-        for (let gx = 0; gx < w; gx += dotGap) {
-          for (let gy = 0; gy < h; gy += dotGap) {
-            ctx.fillRect(gx, gy, 1, 1)
-          }
-        }
-      }
-
-      animId = requestAnimationFrame(draw)
-    }
-
-    draw()
-    const handleResize = () => updateSize()
-    window.addEventListener('resize', handleResize)
-    return () => {
-      cancelAnimationFrame(animId)
-      window.removeEventListener('resize', handleResize)
-    }
-  }, [opacity])
-
-  return <canvas ref={canvasRef} className={`absolute inset-0 pointer-events-none w-full h-full ${opacity === 0.6 ? 'z-[2]' : 'z-[1]'}`} style={{ maskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)' }} suppressHydrationWarning />
-}
+import ParticleChaos from './components/Background/ParticleChaos'
 
 // ============================================================================
 // MAIN PAGE
@@ -463,7 +307,7 @@ export default function Home() {
 
             {/* GAME TAB */}
             {activeTab === 'game' && (
-              <div className="flex flex-col h-full w-full overflow-hidden">
+              <div className="flex flex-col flex-1 w-full min-h-0">
                 {/* CONNECT WALLET BANNER - with spacing from header and canvas */}
                 {!isConnected && (
                   <div className="p-2.5 sm:p-3 mt-1 mb-1 bg-gradient-to-r from-[#0052FF]/5 via-[#0052FF]/8 to-[#0052FF]/5 flex items-center justify-center gap-2 flex-shrink-0">
@@ -481,29 +325,29 @@ export default function Home() {
                 {/* GAME HINTS — tap to jump blocks */}
                 <div className="w-full px-2 sm:px-3 py-1.5 relative z-20 flex-shrink-0">
                   <div className="flex items-stretch gap-1 sm:gap-2 mx-auto">
-                    <div className="flex-1 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 sm:py-2.5 bg-white/60 backdrop-blur-sm rounded-lg border border-slate-200/60 min-w-0 justify-center">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0052FF]/10 rounded flex items-center justify-center flex-shrink-0">
-                        <svg className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-[#0052FF]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
+                    <div className="flex-1 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 sm:py-2.5 bg-white/60 backdrop-blur-sm rounded-lg border border-slate-200/60 min-w-0 justify-center shadow-sm">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0052FF]/10 rounded flex items-center justify-center flex-shrink-0">
+                        <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0052FF]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
                       </div>
-                      <span className="text-[7px] sm:text-[8px] font-mono font-bold text-slate-500 lowercase tracking-wider truncate text-center">tap to jump</span>
+                      <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-600 lowercase tracking-wider truncate text-center">tap to jump</span>
                     </div>
-                    <div className="flex-1 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 sm:py-2.5 bg-white/60 backdrop-blur-sm rounded-lg border border-[#F6465D]/15 min-w-0 justify-center">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#F6465D]/10 rounded flex items-center justify-center flex-shrink-0">
-                        <svg className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-[#F6465D]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                    <div className="flex-1 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 sm:py-2.5 bg-white/60 backdrop-blur-sm rounded-lg border border-[#F6465D]/15 min-w-0 justify-center shadow-sm">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#F6465D]/10 rounded flex items-center justify-center flex-shrink-0">
+                        <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#F6465D]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       </div>
-                      <span className="text-[7px] sm:text-[8px] font-mono font-bold text-slate-500 lowercase tracking-wider truncate text-center">dodge <span className="text-[#F6465D]">red</span></span>
+                      <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-600 lowercase tracking-wider truncate text-center">dodge <span className="text-[#F6465D]">red</span></span>
                     </div>
-                    <div className="flex-1 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 sm:py-2.5 bg-white/60 backdrop-blur-sm rounded-lg border border-[#0ECB81]/15 min-w-0 justify-center">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0ECB81]/10 rounded flex items-center justify-center flex-shrink-0">
-                        <svg className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-[#0ECB81]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                    <div className="flex-1 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 sm:py-2.5 bg-white/60 backdrop-blur-sm rounded-lg border border-[#0ECB81]/15 min-w-0 justify-center shadow-sm">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0ECB81]/10 rounded flex items-center justify-center flex-shrink-0">
+                        <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0ECB81]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                       </div>
-                      <span className="text-[7px] sm:text-[8px] font-mono font-bold text-slate-500 lowercase tracking-wider truncate text-center">collect <span className="text-[#0ECB81]">green</span></span>
+                      <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-600 lowercase tracking-wider truncate text-center">collect <span className="text-[#0ECB81]">green</span></span>
                     </div>
                   </div>
                 </div>
 
-                {/* Game Canvas — Fills space safely, expanding height dynamically */}
-                <div className="w-full px-0 sm:px-0 mb-2 sm:mb-3 flex-1 min-h-[250px] relative z-20 flex flex-col items-center justify-center fade-in">
+                {/* Game Canvas — Fixed relative proportion but can shrink to fit */}
+                <div className="w-full px-0 sm:px-0 mt-1 sm:mt-2 mb-1 sm:mb-2 flex-shrink h-[42vh] sm:h-[48vh] min-h-[180px] max-h-[450px] relative z-20 flex flex-col items-center justify-center fade-in">
                   <div
                     className="relative w-full h-full max-w-[600px] sm:rounded-[20px] overflow-hidden border-y sm:border-x border-[#0052FF]/10 bg-white mx-auto shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
                   >
@@ -519,64 +363,88 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* BOTTOM INFO GRID — Fixed size chunk to prevent overflow */}
-                <div className="w-full px-2 sm:px-4 pb-[max(10px,env(safe-area-inset-bottom))] pt-0.5 flex-shrink-0 relative z-20">
-                  <div className="w-full grid grid-cols-2 gap-1.5 sm:gap-2 max-w-lg mx-auto">
+                {/* BOTTOM INFO GRID — Dynamic Stretching to Footer */}
+                <div className="w-full px-2 sm:px-4 pb-2.5 sm:pb-4 pt-2 sm:pt-3 flex-[2] relative z-20 flex flex-col min-h-0">
+                  <div className="w-full h-full grid grid-cols-2 grid-rows-[1.08fr_1fr_1fr] gap-2.5 sm:gap-3 max-w-lg mx-auto">
 
                     {/* Liquidation Watch — full width */}
-                    <div className="col-span-2 bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl px-2 sm:px-4 py-1.5 sm:py-3 border border-[#F6465D]/15 flex items-center justify-between group hover:border-[#F6465D]/30 transition-colors">
-                      <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-                        <div className="relative flex-shrink-0">
-                          <div className="w-1.5 h-1.5 bg-[#F6465D] rounded-full" />
-                          <div className="absolute inset-0 w-1.5 h-1.5 bg-[#F6465D] rounded-full animate-ping opacity-40" />
+                    <div className="col-span-2 flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-3.5 py-2.5 sm:px-4 sm:py-3.5 border border-[#F6465D]/15 flex items-center justify-between group hover:border-[#F6465D]/30 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(246,70,93,0.1)] transition-all duration-300 relative overflow-hidden">
+                      <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-[#F6465D]/5 to-transparent pointer-events-none" />
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0 z-10 w-full justify-between">
+                        <div className="flex flex-col min-w-0 justify-center">
+                          <div className="flex items-center gap-1.5 mb-1 sm:mb-1.5">
+                            <div className="w-1.5 h-1.5 bg-[#F6465D] rounded-full animate-pulse shadow-[0_0_8px_rgba(246,70,93,0.6)] flex-shrink-0" />
+                            <span className="text-[11px] sm:text-[12px] font-mono font-black tracking-widest uppercase text-slate-800 leading-none">Liquidation Watch</span>
+                          </div>
+                          <span className="text-[9px] sm:text-[10px] font-mono text-slate-500 lowercase leading-none">live market feed</span>
                         </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-[9px] sm:text-[10px] font-mono font-black text-slate-800 lowercase tracking-wider truncate text-center sm:text-left leading-tight">liquidation watch</span>
-                          <span className="text-[7.5px] sm:text-[8px] font-mono text-slate-400 lowercase leading-tight">don&apos;t get rekt</span>
+                        <div className="flex flex-col items-end z-10 flex-shrink-0">
+                          <span className="text-[10px] sm:text-[11px] font-mono font-bold text-[#F6465D] uppercase tracking-wider leading-none px-2 py-1 bg-[#F6465D]/10 rounded-md border border-[#F6465D]/20">High Risk</span>
+                          <span className="text-[8px] sm:text-[9px] font-mono text-slate-400 lowercase mt-1.5 text-right leading-none">volatility active</span>
                         </div>
                       </div>
-                      <span className="text-[7.5px] sm:text-[8px] font-mono font-bold text-[#F6465D] lowercase px-1.5 py-0.5 bg-[#F6465D]/8 rounded-md border border-[#F6465D]/15 flex-shrink-0 leading-tight">high risk</span>
                     </div>
 
                     {/* Chain Status */}
-                    <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl p-1.5 sm:p-2 border border-[#0052FF]/10 flex flex-col gap-1 hover:border-[#0052FF]/25 transition-colors min-h-0 justify-center items-center sm:items-start text-center sm:text-left">
-                      <span className="text-[7px] font-mono font-bold text-slate-400 lowercase tracking-widest leading-none">network</span>
-                      <div className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 bg-[#0052FF] rounded-full animate-pulse flex-shrink-0" />
-                        <span className="text-[11px] sm:text-[13px] font-black font-mono text-slate-800 lowercase leading-none truncate">base</span>
+                    <div className="flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-3.5 py-2.5 sm:p-4 border border-[#0052FF]/10 flex flex-col justify-between group hover:border-[#0052FF]/25 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(0,82,255,0.08)] transition-all duration-300 relative overflow-hidden">
+                      <div className="absolute -right-2 -top-2 w-16 h-16 bg-[#0052FF]/5 rounded-full blur-2xl group-hover:bg-[#0052FF]/10 transition-colors" />
+                      <div className="flex items-center justify-between w-full z-10">
+                        <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">Network</span>
+                        <div className="w-1.5 h-1.5 bg-[#0052FF] rounded-full animate-pulse shadow-[0_0_8px_rgba(0,82,255,0.6)] flex-shrink-0" />
                       </div>
-                      <span className="text-[7px] font-mono text-[#0ECB81] lowercase truncate leading-none">● main live</span>
+                      <div className="flex flex-col z-10 mt-1 sm:mt-2">
+                        <span className="text-[12px] sm:text-[14px] font-black font-mono text-slate-800 leading-none tracking-tight">Base L2</span>
+                        <span className="text-[9px] sm:text-[10px] font-mono text-[#0052FF] lowercase mt-1 tracking-wider">optimistic</span>
+                      </div>
                     </div>
 
                     {/* Volatility */}
-                    <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl p-1.5 sm:p-2 border border-[#F0B90B]/10 flex flex-col gap-1 hover:border-[#F0B90B]/25 transition-colors min-h-0 justify-center items-center sm:items-start text-center sm:text-left">
-                      <span className="text-[7px] font-mono font-bold text-slate-400 lowercase tracking-widest leading-none">volatility</span>
-                      <div className="flex items-center gap-1">
-                        <svg className="w-2.5 h-2.5 text-[#F0B90B] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" /></svg>
-                        <span className="text-[10px] sm:text-[13px] font-black font-mono text-[#F0B90B] lowercase leading-none truncate">extreme</span>
+                    <div className="flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-3.5 py-2.5 sm:p-4 border border-[#F0B90B]/10 flex flex-col justify-between group hover:border-[#F0B90B]/25 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(240,185,11,0.08)] transition-all duration-300 relative overflow-hidden">
+                      <div className="absolute -right-2 -bottom-2 w-16 h-16 bg-[#F0B90B]/5 rounded-full blur-2xl group-hover:bg-[#F0B90B]/10 transition-colors" />
+                      <div className="flex items-center justify-between w-full z-10">
+                        <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">Risk Lvl</span>
+                        <span className="text-[10px] sm:text-[11px] font-mono font-black text-[#F0B90B]">100X</span>
                       </div>
-                      <div className="w-[80%] sm:w-full h-0.5 bg-slate-100 rounded-full overflow-hidden flex-shrink-0">
-                        <div className="h-full bg-gradient-to-r from-[#F0B90B] to-[#F6465D] rounded-full" style={{ width: '85%', animation: 'pulse 2s ease-in-out infinite' }} />
+                      <div className="flex flex-col gap-1.5 sm:gap-2 z-10 mt-1 sm:mt-2">
+                        <span className="text-[12px] sm:text-[14px] font-black font-mono text-slate-800 leading-none tracking-tight">Degen Mode</span>
+                        <div className="w-full h-[3px] sm:h-[4px] bg-slate-100 rounded-full overflow-hidden flex-shrink-0">
+                          <div className="h-full bg-gradient-to-r from-[#F0B90B] to-[#F6465D] w-[85%] rounded-full relative">
+                            <div className="absolute inset-0 bg-white/50 animate-[shimmer_2s_infinite]" />
+                          </div>
+                        </div>
                       </div>
                     </div>
 
                     {/* On-Chain Scores */}
-                    <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl p-1.5 sm:p-2 border border-slate-200/60 flex flex-col gap-1 hover:border-[#0052FF]/20 transition-colors min-h-0 justify-center items-center sm:items-start text-center sm:text-left">
-                      <span className="text-[7px] font-mono font-bold text-slate-400 lowercase tracking-widest leading-none">scoring</span>
-                      <span className="text-[9px] font-mono font-bold text-slate-700 lowercase leading-tight truncate">on-chain</span>
-                      <span className="text-[7px] font-mono text-slate-400 lowercase truncate leading-none">saved to base</span>
+                    <div className="flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-3.5 py-2.5 sm:p-4 border border-slate-200/60 flex flex-col justify-between group hover:border-[#0ECB81]/20 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(14,203,129,0.08)] transition-all duration-300 relative overflow-hidden">
+                      <div className="absolute -left-2 -bottom-2 w-16 h-16 bg-[#0ECB81]/5 rounded-full blur-2xl group-hover:bg-[#0ECB81]/10 transition-colors" />
+                      <div className="flex items-center justify-between w-full z-10">
+                        <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">Security</span>
+                        <span className="text-[10px] sm:text-[11px] font-mono font-black text-[#0ECB81] uppercase">OK</span>
+                      </div>
+                      <div className="flex flex-col z-10 mt-1 sm:mt-2">
+                        <span className="text-[12px] sm:text-[14px] font-black font-mono text-slate-800 leading-none tracking-tight">On-Chain</span>
+                        <span className="text-[9px] sm:text-[10px] font-mono text-slate-400 lowercase mt-1 tracking-wider w-full overflow-hidden text-ellipsis whitespace-nowrap">verified</span>
+                      </div>
                     </div>
 
                     {/* Rewards */}
-                    <div className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl p-1.5 sm:p-2 border border-[#8B5CF6]/15 flex flex-col gap-1 hover:border-[#8B5CF6]/30 transition-colors min-h-0 justify-center items-center sm:items-start text-center sm:text-left">
-                      <span className="text-[7px] font-mono font-bold text-slate-400 lowercase tracking-widest leading-none">rewards</span>
-                      <span className="text-[9px] font-mono font-black text-[#8B5CF6] lowercase leading-tight truncate">soon</span>
-                      <span className="text-[7px] font-mono text-slate-400 lowercase truncate leading-none">score-to-earn</span>
+                    <div className="flex-1 bg-gradient-to-br from-white/80 to-[#8B5CF6]/5 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-3.5 py-2.5 sm:p-4 border border-[#8B5CF6]/15 flex flex-col justify-between group hover:border-[#8B5CF6]/30 hover:to-[#8B5CF6]/10 hover:shadow-[0_8px_30px_rgba(139,92,246,0.1)] transition-all duration-300 relative overflow-hidden">
+                      <div className="absolute right-0 top-0 w-20 h-20 bg-[#8B5CF6]/10 blur-2xl pointer-events-none" />
+                      <div className="flex items-center justify-between w-full relative z-10">
+                        <span className="text-[9px] sm:text-[10px] font-mono font-bold text-[#8B5CF6]/70 uppercase tracking-widest">Award Pool</span>
+                        <div className="w-1.5 h-1.5 bg-[#8B5CF6] rounded-full animate-ping shadow-[0_0_8px_rgba(139,92,246,0.6)] flex-shrink-0" />
+                      </div>
+                      <div className="flex flex-col relative z-10 mt-1 sm:mt-2">
+                        <span className="text-[12px] sm:text-[14px] font-black font-mono text-[#8B5CF6] leading-none tracking-tight">Rewards</span>
+                        <span className="text-[9px] sm:text-[10px] font-mono text-[#8B5CF6]/70 lowercase mt-1 tracking-wider animate-[pulse_2s_infinite] w-full overflow-hidden text-ellipsis whitespace-nowrap">coming soon</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             )}
+
 
             {/* LEADERBOARD TAB */}
             {activeTab === 'leaderboard' && <Leaderboard />}
@@ -645,8 +513,8 @@ export default function Home() {
         </main>
 
         {/* FOOTER - z-[40], solid white background */}
-        <footer className="mt-auto bg-white relative z-[40] flex-shrink-0" style={{ height: '32px', minHeight: '32px', paddingBottom: '0', marginBottom: '0' }}>
-          <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 h-full flex items-center justify-between pb-0 m-0">
+        <footer className="mt-auto bg-white relative z-[40] flex-shrink-0 w-full flex items-center h-[32px] sm:h-[40px] pb-[env(safe-area-inset-bottom)] pb-0">
+          <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 flex items-center justify-between h-full">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400/80 font-mono leading-none m-0 p-0">© {new Date().getFullYear()} base dash</span>
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400/80 font-mono leading-none m-0 p-0">built by <span className="font-black text-[#0052FF] ml-0.5">vov</span></span>
           </div>

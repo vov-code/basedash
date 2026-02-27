@@ -39,6 +39,8 @@ import {
 import { drawFrame } from './gameRenderer'
 import { useWallet } from '@/app/hooks/useWallet'
 import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS } from '@/app/contracts'
+import { useAudioEngine } from '@/app/hooks/useAudioEngine'
+import { useGameStore } from '@/app/store/gameStore'
 
 // ============================================================================
 // PARTICLE SPAWNER HELPERS
@@ -174,359 +176,6 @@ interface GameEngineProps {
 }
 
 // ============================================================================
-// SOUND EFFECTS — Web Audio API generated tones (no external files)
-// ============================================================================
-
-let audioCtx: AudioContext | null = null
-let audioInitialized = false
-let musicOscillators: OscillatorNode[] = []
-let musicGain: GainNode | null = null
-let isMusicPlaying = false
-
-function getAudioCtx(): AudioContext | null {
-  if (typeof window === 'undefined') return null
-  if (!audioCtx) {
-    try {
-      audioCtx = new AudioContext()
-      audioInitialized = true
-    } catch (error) {
-      console.warn('Audio context not supported:', error)
-      return null
-    }
-  }
-  return audioCtx
-}
-
-/** Initialize audio context on user interaction */
-function initAudio(): boolean {
-  const ctx = getAudioCtx()
-  if (!ctx) return false
-
-  try {
-    // Resume audio context if suspended (iOS requires user gesture)
-    if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => { /* ignore resume errors */ })
-    }
-    return true
-  } catch (error) {
-    console.warn('Failed to initialize audio:', error)
-    return false
-  }
-}
-
-/** iOS Safari audio unlock — call once on first touchstart */
-function unlockAudioOnTouch(): void {
-  if (audioInitialized && audioCtx && audioCtx.state === 'running') return
-  const ctx = getAudioCtx()
-  if (!ctx) return
-  ctx.resume().then(() => {
-    // Play a silent buffer to fully unlock
-    const buf = ctx.createBuffer(1, 1, 22050)
-    const src = ctx.createBufferSource()
-    src.buffer = buf
-    src.connect(ctx.destination)
-    src.start(0)
-  }).catch(() => { /* ignore */ })
-}
-
-function playTone(freq: number, duration: number, type: OscillatorType = 'square', volume = 0.08) {
-  const ctx = getAudioCtx()
-  if (!ctx) return
-
-  try {
-    // Check if context is in a playable state
-    if (ctx.state === 'closed') return
-
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-
-    osc.type = type
-    osc.frequency.setValueAtTime(freq, ctx.currentTime)
-
-    gain.gain.setValueAtTime(volume, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration)
-
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-
-    osc.start(ctx.currentTime)
-    osc.stop(ctx.currentTime + duration)
-  } catch (error) {
-    // Silently fail - audio is not critical
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('Tone playback error:', error)
-    }
-  }
-}
-
-/**
- * 8-bit chiptune background music — 4 channel sequencer
- * Channels: kick (noise), bass (square), lead (square), hi-hat (noise)
- * 16-step pattern at ~140 BPM, pentatonic scale
- */
-let musicIntervalId: ReturnType<typeof setInterval> | null = null
-let musicStep = 0
-export let activeWorldIndex = 0 // Track globally for the audio sequencer
-
-function startBackgroundMusic(): void {
-  if (!initAudio() || isMusicPlaying) return
-
-  const ctx = getAudioCtx()
-  if (!ctx) return
-
-  // Resume audio context if suspended (happens after tab switch)
-  if (ctx.state === 'suspended') {
-    ctx.resume().catch(() => { /* ignore */ })
-  }
-
-  // Stop any existing music first to prevent layering
-  stopBackgroundMusic()
-
-  try {
-    musicGain = ctx.createGain()
-    musicGain.gain.value = 0.35 // Music louder
-    musicGain.connect(ctx.destination)
-
-    // Minimal percussion: soft tick on 0,4,8,12
-    const tickBeat = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-
-    musicStep = 0
-
-    const playStep = () => {
-      // Stop music when tab is hidden to prevent layering
-      if (document.hidden) return
-      if (!ctx || ctx.state === 'closed' || !musicGain) return
-      try {
-        const now = ctx.currentTime
-        const s = musicStep % 16
-
-        // Dynamically change music based on current world tracker (Item 8)
-        const currentWorld = activeWorldIndex
-
-        // Base Ambient/Chill sequences (Pentatonic/Lydian vibes)
-        let melodyNotes = [329.63, 0, 392.00, 0, 440.00, 0, 329.63, 0, 293.66, 0, 261.63, 0, 329.63, 0, 261.63, 0] // E G A E D C E C
-        let padNotes = [130.81, 130.81, 130.81, 130.81, 164.81, 164.81, 164.81, 164.81, 174.61, 174.61, 174.61, 174.61, 146.83, 146.83, 146.83, 146.83] // C E F D (deep bass drone)
-        let waveType: OscillatorType = 'sine'
-        let padType: OscillatorType = 'triangle'
-
-        // World-dependent music variations - Gets faster & more complex
-        if (currentWorld >= 8) {
-          // Intense trance synth (deep in the matrix)
-          melodyNotes = [659.25, 587.33, 523.25, 587.33, 659.25, 783.99, 659.25, 523.25, 880.00, 783.99, 659.25, 587.33, 523.25, 587.33, 659.25, 523.25]
-          padNotes = [261.63, 261.63, 261.63, 261.63, 329.63, 329.63, 329.63, 329.63, 349.23, 349.23, 349.23, 349.23, 293.66, 293.66, 293.66, 293.66]
-          waveType = 'sawtooth'
-          padType = 'square'
-        } else if (currentWorld >= 5) {
-          // Upbeat tech chill
-          melodyNotes = [440.00, 392.00, 329.63, 0, 523.25, 440.00, 392.00, 0, 349.23, 293.66, 261.63, 0, 392.00, 329.63, 261.63, 0]
-          padNotes = [220.00, 0, 220.00, 0, 261.63, 0, 261.63, 0, 293.66, 0, 293.66, 0, 261.63, 0, 261.63, 0]
-          waveType = 'square'
-          padType = 'triangle'
-        } else if (currentWorld >= 2) {
-          // Double time chill synth
-          melodyNotes = [329.63, 392.00, 440.00, 523.25, 440.00, 392.00, 329.63, 293.66, 261.63, 293.66, 329.63, 392.00, 329.63, 293.66, 261.63, 0]
-          padNotes = [164.81, 164.81, 164.81, 164.81, 220.00, 220.00, 220.00, 220.00, 174.61, 174.61, 174.61, 174.61, 130.81, 130.81, 130.81, 130.81]
-          waveType = 'triangle'
-          padType = 'sine'
-        }
-
-        // Lead melody
-        if (melodyNotes[s] > 0) {
-          const leadOsc = ctx.createOscillator()
-          const leadGain = ctx.createGain()
-          leadOsc.type = waveType
-          leadOsc.frequency.setValueAtTime(melodyNotes[s], now)
-          // Lower volume for chill
-          leadGain.gain.setValueAtTime(0.025, now)
-          leadGain.gain.exponentialRampToValueAtTime(0.001, now + (waveType === 'sine' ? 0.45 : 0.25))
-          leadOsc.connect(leadGain)
-          leadGain.connect(musicGain!)
-          leadOsc.start(now)
-          leadOsc.stop(now + 0.5)
-        }
-
-        // Pad bass
-        if (padNotes[s] > 0) {
-          const padOsc = ctx.createOscillator()
-          const padGain = ctx.createGain()
-          padOsc.type = padType
-          padOsc.frequency.setValueAtTime(padNotes[s], now)
-          padGain.gain.setValueAtTime(0.035, now)
-          padGain.gain.exponentialRampToValueAtTime(0.001, now + (padType === 'sine' ? 0.8 : 0.4))
-          padOsc.connect(padGain)
-          padGain.connect(musicGain!)
-          padOsc.start(now)
-          padOsc.stop(now + 0.9)
-        }
-
-        // Soft tick — gentle ambient click 
-        if (tickBeat[s]) {
-          const tickOsc = ctx.createOscillator()
-          const tickG = ctx.createGain()
-          tickOsc.type = 'sine'
-          tickOsc.frequency.setValueAtTime(400, now) // Lower pitched tick
-          tickG.gain.setValueAtTime(0.015, now)
-          tickG.gain.exponentialRampToValueAtTime(0.001, now + 0.04)
-          tickOsc.connect(tickG)
-          tickG.connect(musicGain!)
-          tickOsc.start(now)
-          tickOsc.stop(now + 0.05)
-        }
-
-        musicStep++
-      } catch { /* ignore */ }
-    }
-
-    // Base tempo: accelerates aggressively per world tier
-    const stepDuration = Math.max(80, 188 * Math.pow(0.92, activeWorldIndex))
-    musicIntervalId = setInterval(playStep, stepDuration)
-    playStep()
-
-    isMusicPlaying = true
-  } catch (error) {
-    console.warn('Failed to start background music:', error)
-  }
-}
-
-function stopBackgroundMusic(): void {
-  if (!musicGain || !isMusicPlaying) return
-
-  try {
-    // Clear arpeggio interval
-    if (musicIntervalId) {
-      clearInterval(musicIntervalId)
-      musicIntervalId = null
-    }
-
-    // Fade out
-    const ctx = getAudioCtx()
-    if (ctx && musicGain) {
-      musicGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1)
-    }
-
-    // Stop oscillators
-    musicOscillators.forEach((osc) => {
-      try {
-        osc.stop(ctx?.currentTime ? ctx.currentTime + 0.5 : 0)
-      } catch { /* ignore */ }
-    })
-    musicOscillators = []
-
-    isMusicPlaying = false
-  } catch (error) {
-    console.warn('Failed to stop background music:', error)
-  }
-}
-
-/** Play a celebratory fanfare for new record */
-function playNewRecordFanfare(): void {
-  const ctx = getAudioCtx()
-  if (!ctx) return
-
-  try {
-    const now = ctx.currentTime
-    const fanfare = [523.25, 659.25, 783.99, 1046.50] // C5 E5 G5 C6
-
-    fanfare.forEach((freq, i) => {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-
-      osc.type = 'triangle'
-      osc.frequency.setValueAtTime(freq, now + i * 0.12)
-
-      gain.gain.setValueAtTime(0, now + i * 0.12)
-      gain.gain.linearRampToValueAtTime(0.15, now + i * 0.12 + 0.05)
-      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.4)
-
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-
-      osc.start(now + i * 0.12)
-      osc.stop(now + i * 0.12 + 0.5)
-    })
-  } catch (error) {
-    console.warn('Failed to play fanfare:', error)
-  }
-}
-
-let globalSoundMuted = false
-
-function sfxJump() {
-  if (globalSoundMuted || !initAudio()) return
-  // Warm ascending arpeggio — like opening a long position
-  playTone(392, 0.04, 'sine', 0.04)
-  setTimeout(() => playTone(494, 0.05, 'sine', 0.035), 20)
-  setTimeout(() => playTone(587, 0.06, 'triangle', 0.025), 45)
-  setTimeout(() => playTone(784, 0.08, 'sine', 0.015), 70)
-}
-
-function sfxDeath() {
-  if (globalSoundMuted || !initAudio()) return
-  // Crystalline wind-chime descend — position closed gracefully
-  playTone(880, 0.08, 'sine', 0.05)
-  setTimeout(() => playTone(698, 0.10, 'sine', 0.04), 40)
-  setTimeout(() => playTone(523, 0.14, 'triangle', 0.035), 90)
-  setTimeout(() => playTone(392, 0.18, 'sine', 0.025), 150)
-  setTimeout(() => playTone(262, 0.25, 'sine', 0.015), 220)
-}
-
-function sfxCollect() {
-  if (globalSoundMuted || !initAudio()) return
-  // Bubbly pop + sparkle tail — profit locked in
-  playTone(1047, 0.03, 'sine', 0.06)
-  playTone(1319, 0.04, 'triangle', 0.045)
-  setTimeout(() => playTone(1568, 0.06, 'sine', 0.03), 25)
-  setTimeout(() => playTone(2093, 0.08, 'sine', 0.015), 55)
-}
-
-/** 4.3 — Combo sound: pitch rises by semitone per level, capped at 1 octave */
-function sfxCombo(comboLevel: number) {
-  if (globalSoundMuted || !initAudio()) return
-  const semitone = Math.pow(2, 1 / 12)
-  const steps = Math.min(comboLevel, 12)
-  const baseFreq = 440 * Math.pow(semitone, steps)
-  playTone(baseFreq, 0.06, 'sine', 0.09)
-  setTimeout(() => playTone(baseFreq * 2, 0.04, 'triangle', 0.04), 30)  // overtone
-}
-
-/** Near-miss whoosh */
-function sfxNearMiss() {
-  if (globalSoundMuted || !initAudio()) return
-  playTone(200, 0.15, 'sawtooth', 0.04)
-  playTone(1200, 0.08, 'sine', 0.06)
-}
-
-/** Market cycle change fanfare */
-function sfxMarketChange(isBull: boolean) {
-  if (globalSoundMuted || !initAudio()) return
-  if (isBull) {
-    playTone(523, 0.08, 'sine', 0.06)
-    setTimeout(() => playTone(659, 0.08, 'sine', 0.06), 80)
-    setTimeout(() => playTone(784, 0.10, 'sine', 0.05), 160)
-  } else {
-    playTone(440, 0.08, 'sine', 0.06)
-    setTimeout(() => playTone(370, 0.10, 'sine', 0.06), 80)
-    setTimeout(() => playTone(330, 0.12, 'sawtooth', 0.04), 160)
-  }
-}
-
-/** Rug pull alarm */
-function sfxRugPull() {
-  if (globalSoundMuted || !initAudio()) return
-  playTone(800, 0.10, 'square', 0.08)
-  setTimeout(() => playTone(600, 0.10, 'square', 0.08), 120)
-  setTimeout(() => playTone(800, 0.10, 'square', 0.06), 240)
-}
-
-function sfxPowerUp() {
-  if (globalSoundMuted || !initAudio()) return
-  playTone(660, 0.08, 'sine', 0.10)
-  setTimeout(() => playTone(880, 0.08, 'sine', 0.08), 60)
-  setTimeout(() => playTone(1100, 0.10, 'sine', 0.06), 120)
-  setTimeout(() => playTone(1320, 0.12, 'triangle', 0.05), 180)
-}
-
-// ============================================================================
 // HAPTIC HELPERS
 // ============================================================================
 
@@ -581,8 +230,8 @@ export default function GameEngine({
   submitTxHash,
 }: GameEngineProps) {
   // --- React state ---
-  const [mode, setMode] = useState<GameMode>('menu')
-  const [score, setScore] = useState(0)
+  const { score, setScore, mode, setMode, soundEnabled, setSoundEnabled } = useGameStore()
+
   const [best, setBest] = useState(0)
   const [combo, setCombo] = useState(0)
   const [worldName, setWorldName] = useState(WORLDS[0].name)
@@ -596,11 +245,31 @@ export default function GameEngine({
   const [gameStats, setGameStats] = useState<GameStats | null>(null)
   const [connectingWallet, setConnectingWallet] = useState(false)
   const [isNewRecord, setIsNewRecord] = useState(false)
-  const [musicEnabled, setMusicEnabled] = useState(false)
   const [deathMessage, setDeathMessage] = useState('rekt!')
-  const [soundEnabled, setSoundEnabled] = useState(true)
   const [activeTrail, setActiveTrail] = useState<TrailType>('default')
   const { address } = useWallet()
+
+  // --- Audio Engine ---
+  const {
+    sfxDoubleJump: sfxJump,
+    sfxCollect,
+    sfxHit: sfxDeath,
+    sfxCombo,
+    sfxPowerup: sfxPowerUp,
+    sfxMilestone: sfxMarketChange,
+    sfxDash: sfxNearMiss,
+    sfxLevelUp: playNewRecordFanfare,
+    startBackgroundMusic,
+    stopBackgroundMusic
+  } = useAudioEngine(soundEnabled)
+
+  useEffect(() => {
+    if (!soundEnabled || mode !== 'playing') {
+      stopBackgroundMusic()
+    } else if (mode === 'playing') {
+      startBackgroundMusic()
+    }
+  }, [soundEnabled, mode, startBackgroundMusic, stopBackgroundMusic])
 
   // --- Adaptive Screen State
   const [dims, setDims] = useState(() => {
@@ -770,6 +439,10 @@ export default function GameEngine({
 
     // Flash decay
     p.flash = Math.max(0, p.flash - dt * 4)
+
+    // Ensure scale is always valid (prevent NaN disappearance)
+    if (isNaN(p.scale) || !isFinite(p.scale)) p.scale = 1;
+    if (isNaN(p.y) || !isFinite(p.y)) p.y = CFG.GROUND - CFG.PLAYER_SIZE;
 
     // Invincibility
     p.invincible = Math.max(0, p.invincible - dt)
@@ -985,14 +658,6 @@ export default function GameEngine({
           case 'whale_mode':
             e.whaleTimer = POWERUP_CONFIG.TYPES.whale_mode.duration
             e.slowdownTimer = Math.max(e.slowdownTimer, POWERUP_CONFIG.TYPES.whale_mode.duration)
-            // Whale mode: pitch-shift music down (item 4/5)
-            try {
-              const ctx = getAudioCtx()
-              if (ctx && musicGain) {
-                // We can't change playbackRate of setInterval, but we can slow the gain envelope
-                musicGain.gain.setValueAtTime(0.18, ctx.currentTime)
-              }
-            } catch { /* ignore */ }
             break
         }
 
@@ -1026,13 +691,7 @@ export default function GameEngine({
     if (e.whaleTimer > 0) {
       e.whaleTimer -= dt
       if (e.whaleTimer <= 0) {
-        // Restore music volume after whale mode (item 4)
-        try {
-          const ctx = getAudioCtx()
-          if (ctx && musicGain) {
-            musicGain.gain.setValueAtTime(0.25, ctx.currentTime)
-          }
-        } catch { /* ignore */ }
+        // Whale mode ends
       }
     }
 
@@ -1220,13 +879,7 @@ export default function GameEngine({
     setNearRecordDiff(null)
     setRetryVisible(false)
     setMode('playing')
-
-    // Start background music on first game start
-    if (!musicEnabled && soundEnabled) {
-      startBackgroundMusic()
-      setMusicEnabled(true)
-    }
-  }, [musicEnabled, activeTrail, soundEnabled])
+  }, [activeTrail])
 
   // ========================================================================
   // INPUT HANDLERS
@@ -1368,13 +1021,6 @@ export default function GameEngine({
     return () => observer.disconnect()
   }, [])
 
-  // iOS audio unlock on first touch
-  useEffect(() => {
-    const handler = () => { unlockAudioOnTouch(); document.removeEventListener('touchstart', handler) }
-    document.addEventListener('touchstart', handler, { once: true, passive: true })
-    return () => document.removeEventListener('touchstart', handler)
-  }, [])
-
   // Load logo image
   useEffect(() => {
     setTimeout(() => setLoading(false), 200)
@@ -1389,29 +1035,7 @@ export default function GameEngine({
     const saved = Number(localStorage.getItem(storageKey) || 0)
     highScoreRef.current = isFinite(saved) ? saved : 0
     setBest(highScoreRef.current)
-
-    const muted = localStorage.getItem('bd_muted') === '1'
-    setSoundEnabled(!muted)
-    globalSoundMuted = muted
-
-    // Auto-start music if not muted and not yet started, but wait for user gesture inside startGame usually
   }, [storageKey])
-
-  // Sync sound mute state across lifecycle
-  useEffect(() => {
-    // Prevent overriding from initial default false->true flip before mount reads localStorage
-    if (globalSoundMuted !== !soundEnabled) {
-      globalSoundMuted = !soundEnabled
-      localStorage.setItem('bd_muted', soundEnabled ? '0' : '1')
-      if (!soundEnabled && isMusicPlaying) {
-        stopBackgroundMusic()
-        setMusicEnabled(false)
-      } else if (soundEnabled && mode === 'playing' && !isMusicPlaying) {
-        startBackgroundMusic()
-        setMusicEnabled(true)
-      }
-    }
-  }, [soundEnabled, mode])
 
   // Cleanup background music on unmount
   useEffect(() => {
@@ -1421,32 +1045,16 @@ export default function GameEngine({
     }
   }, [])
 
-  // Auto-pause on visibility change + resume audio on return
+  // Auto-pause on visibility change
   useEffect(() => {
     const handleVisibility = () => {
       if (document.hidden && mode === 'playing') {
         setMode('paused')
-        // Stop music when hidden
-        if (isMusicPlaying) {
-          stopBackgroundMusic()
-        }
-      } else if (!document.hidden && mode === 'paused') {
-        // Resume audio context when returning to tab
-        const ctx = getAudioCtx()
-        if (ctx && ctx.state === 'suspended') {
-          ctx.resume().catch(() => { /* ignore */ })
-        }
-        // Resume music after short delay
-        setTimeout(() => {
-          if (soundEnabled && !isMusicPlaying) {
-            startBackgroundMusic()
-          }
-        }, 200)
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [mode, soundEnabled, isMusicPlaying])
+  }, [mode])
 
   // Keyboard controls
   useEffect(() => {
@@ -1503,8 +1111,8 @@ export default function GameEngine({
         updates++
       }
 
-      // Update global audio tracker
-      activeWorldIndex = engineRef.current.worldIndex
+      // Discard excess accumulated time to avoid carrying huge deficit from tab switches or lag spikes
+      acc = acc % CFG.STEP
 
       // Skip rendering if tab is hidden
       if (document.visibilityState !== 'hidden') {
@@ -1578,6 +1186,10 @@ export default function GameEngine({
         dp.velocityY += dGrav * CFG.STEP
         dp.velocityY = Math.min(dp.velocityY, CFG.MAX_FALL)
         dp.y += dp.velocityY * CFG.STEP
+
+        // Ensure scale validation in demo loop as well
+        if (isNaN(dp.scale) || !isFinite(dp.scale)) dp.scale = 1;
+        if (isNaN(dp.y) || !isFinite(dp.y)) dp.y = CFG.GROUND - CFG.PLAYER_SIZE;
 
         // EXACT ground collision with landing squash
         if (dp.y >= CFG.GROUND - CFG.PLAYER_SIZE) {
