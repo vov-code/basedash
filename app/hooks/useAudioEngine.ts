@@ -24,6 +24,7 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
     const fxNodeRef = useRef<GainNode | null>(null)
     const bgmOscRef = useRef<OscillatorNode | null>(null)
     const bgmGainRef = useRef<GainNode | null>(null)
+    const bgmIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const toneCacheRef = useRef<Map<string, AudioBuffer>>(new Map())
 
     const initAudio = useCallback(() => {
@@ -31,21 +32,20 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             const AudioContext = window.AudioContext || (window as any).webkitAudioContext
             audioCtxRef.current = new AudioContext()
 
-            // Compressor for smoother sound limiting
+            // Limiter compressor — keeps everything punchy without clipping
             const compressor = audioCtxRef.current.createDynamicsCompressor()
-            compressor.threshold.value = -12
-            compressor.knee.value = 40
-            compressor.ratio.value = 12
-            compressor.attack.value = 0
-            compressor.release.value = 0.25
+            compressor.threshold.value = -8
+            compressor.knee.value = 6
+            compressor.ratio.value = 8
+            compressor.attack.value = 0.002
+            compressor.release.value = 0.15
             compressor.connect(audioCtxRef.current.destination)
 
             masterGainRef.current = audioCtxRef.current.createGain()
-            // Turn down master slightly for headroom
-            masterGainRef.current.gain.value = 0.5
+            masterGainRef.current.gain.value = 0.55
             masterGainRef.current.connect(compressor)
 
-            // No delay effect for cleaner retro sound
+            // Tiny slapback delay — gives sounds character without echo
             fxNodeRef.current = audioCtxRef.current.createGain()
             fxNodeRef.current.gain.value = 0
             fxNodeRef.current.connect(masterGainRef.current)
@@ -55,47 +55,35 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         }
     }, [])
 
-    const playTone = useCallback((freq: number, type: OscillatorType = 'sine', vol = 0.1, dur = 0.1, slideFreq?: number) => {
+    // === CORE TONE PLAYER (with offline cache) ===
+    const playTone = useCallback((freq: number, type: OscillatorType = 'square', vol = 0.1, dur = 0.1, slideFreq?: number) => {
         if (!soundEnabled) return
         initAudio()
         const ctx = audioCtxRef.current
         const master = masterGainRef.current
-        const fx = fxNodeRef.current
-        if (!ctx || !master || !fx || !toneCacheRef.current) return
+        if (!ctx || !master || !toneCacheRef.current) return
 
-        // Cache Key
-        const cacheKey = `${freq}-${type}-${dur}-${slideFreq || 'none'}`
+        const cacheKey = `${freq}-${type}-${dur}-${slideFreq || 'x'}`
 
-        // FUNCTION to play the buffer once we have it
         const playBuffer = (buffer: AudioBuffer) => {
             const source = ctx.createBufferSource()
             source.buffer = buffer
-
             const gain = ctx.createGain()
             gain.gain.value = vol
-
             source.connect(gain)
             gain.connect(master)
-
-            // Send to delay FX
-            const fxSend = ctx.createGain()
-            fxSend.gain.value = 0.8
-            gain.connect(fxSend)
-            fxSend.connect(fx)
-
             source.start(ctx.currentTime)
         }
 
-        // 1. CACHE HIT
+        // Cache hit
         if (toneCacheRef.current.has(cacheKey)) {
             playBuffer(toneCacheRef.current.get(cacheKey)!)
             return
         }
 
-        // 2. CACHE MISS — Render offline (Costs CPU ONCE, then never again)
+        // Cache miss — render offline
         const OfflineContext = window.OfflineAudioContext || (window as any).webkitOfflineAudioContext
-        // Render slightly longer to catch the tail
-        const renderLen = dur + 0.1
+        const renderLen = dur + 0.15
         const offlineCtx = new OfflineContext(1, ctx.sampleRate * renderLen, ctx.sampleRate)
 
         const osc = offlineCtx.createOscillator()
@@ -107,10 +95,11 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             osc.frequency.exponentialRampToValueAtTime(slideFreq, dur)
         }
 
-        // Bell/Chime envelope
+        // Punchy chip-tune envelope: fast attack, shaped decay
         gain.gain.setValueAtTime(0, 0)
-        gain.gain.linearRampToValueAtTime(1.0, 0.02)
-        gain.gain.exponentialRampToValueAtTime(0.001, dur)
+        gain.gain.linearRampToValueAtTime(1.0, 0.008)     // 8ms attack — SNAPPY
+        gain.gain.setValueAtTime(0.85, 0.008)              // tiny sustain dip
+        gain.gain.exponentialRampToValueAtTime(0.001, dur)  // smooth tail
 
         osc.connect(gain)
         gain.connect(offlineCtx.destination)
@@ -125,119 +114,171 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
     }, [soundEnabled, initAudio])
 
-    // Fast, Clean Plucks (Filtered to be smooth/relaxing)
-    const sfxJump = useCallback(() => playTone(300.00, 'sine', 0.08, 0.1, 440), [playTone]) // Clean jump
-    const sfxDoubleJump = useCallback(() => playTone(400.00, 'triangle', 0.08, 0.12, 550), [playTone])
-    const sfxDash = useCallback(() => playTone(200.00, 'sine', 0.1, 0.15, 80), [playTone]) // Swoosh down
+    // =====================================================================
+    // SFX — ICONIC DEGEN SOUNDS (addictive, memorable, chip-tune with soul)
+    // =====================================================================
 
-    // Fast clean coin sound
+    // JUMP — Rising "bwip!" (square wave chirp, very Geometry Dash)
+    const sfxJump = useCallback(() => {
+        playTone(280, 'square', 0.08, 0.08, 560)  // fast octave rise
+    }, [playTone])
+
+    // DOUBLE JUMP — Higher "bweeep!" (triangle harmonic, satisfying pitch shift)
+    const sfxDoubleJump = useCallback(() => {
+        playTone(420, 'square', 0.07, 0.1, 840)
+        setTimeout(() => playTone(630, 'triangle', 0.04, 0.06), 30) // sparkle layer
+    }, [playTone])
+
+    // DASH — "Woooosh" swoosh (descending saw, feels fast)
+    const sfxDash = useCallback(() => {
+        playTone(300, 'sawtooth', 0.08, 0.12, 100)
+    }, [playTone])
+
+    // COLLECT — Iconic "ding-ding!" (two quick notes, instant dopamine)
     const sfxCollect = useCallback(() => {
-        playTone(880.00, 'sine', 0.06, 0.05)
-        setTimeout(() => playTone(1318.51, 'sine', 0.08, 0.1), 40)
+        playTone(988, 'square', 0.06, 0.04)       // B5 high ping
+        setTimeout(() => playTone(1319, 'square', 0.08, 0.08), 50)  // E6 resolution
     }, [playTone])
 
-    // Fast ascending clean scale
+    // POWERUP — Ascending fanfare "do-re-mi-FA!" (gets you hyped)
     const sfxPowerup = useCallback(() => {
-        [440, 554.37, 659.25, 880].forEach((freq, i) => {
-            setTimeout(() => playTone(freq, 'triangle', 0.06, 0.08), i * 30)
+        const fanfare = [523, 659, 784, 1047] // C5-E5-G5-C6 major chord arpeggio
+        fanfare.forEach((freq, i) => {
+            setTimeout(() => playTone(freq, 'square', 0.06 + i * 0.02, 0.08 + i * 0.02), i * 40)
         })
     }, [playTone])
 
-    // Clean death (descending sine)
+    // DEATH — "wah-wah-waaah" descending (sad trombone chip-tune, memorable)
     const sfxHit = useCallback(() => {
-        playTone(200.00, 'sine', 0.15, 0.25, 50.00)
+        playTone(440, 'square', 0.12, 0.12, 220)    // first drop
+        setTimeout(() => playTone(330, 'square', 0.1, 0.15, 110), 120) // deeper drop
+        setTimeout(() => playTone(165, 'sawtooth', 0.15, 0.4, 55), 250) // final bass groan
     }, [playTone])
 
-    const sfxSelect = useCallback(() => playTone(659.25, 'sine', 0.08, 0.1, 880), [playTone])
+    // SELECT — Quick "blip" (clean UI feedback)
+    const sfxSelect = useCallback(() => {
+        playTone(784, 'square', 0.05, 0.06, 1047)  // G5 to C6
+    }, [playTone])
 
-    // Fast pinging combo
+    // COMBO — Rising pentatonic scale (higher combo = higher pitch = more hype)
     const sfxCombo = useCallback((combo: number) => {
-        const pentatonic = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00]
-        const note = pentatonic[Math.min(combo, pentatonic.length - 1)]
-        playTone(note, 'sine', 0.06, 0.08)
-        setTimeout(() => playTone(note * 1.5, 'sine', 0.08, 0.1), 40)
+        // Pentatonic minor — sounds "degen" and eastern
+        const scale = [262, 311, 349, 415, 466, 523, 622, 698, 831, 932, 1047]
+        const note = scale[Math.min(combo, scale.length - 1)]
+        playTone(note, 'square', 0.06, 0.06)
+        setTimeout(() => playTone(note * 1.5, 'triangle', 0.05, 0.08), 35) // harmonic overlay
     }, [playTone])
 
+    // MILESTONE — Victory jingle "da-da-da-DUM!" (sticks in your head)
     const sfxMilestone = useCallback(() => {
-        playTone(523.25, 'triangle', 0.08, 0.1)
-        setTimeout(() => playTone(659.25, 'triangle', 0.08, 0.1), 100)
-        setTimeout(() => playTone(783.99, 'triangle', 0.1, 0.15), 200)
-        setTimeout(() => playTone(1046.50, 'triangle', 0.12, 0.2), 300)
-    }, [playTone])
-
-    const sfxLevelUp = useCallback(() => {
-        [261.63, 329.63, 392.00, 523.25].forEach((freq, i) => {
-            setTimeout(() => playTone(freq, 'triangle', 0.08, 0.1), i * 60)
+        const jingle = [
+            { f: 523, d: 60 },   // C
+            { f: 659, d: 60 },   // E
+            { f: 784, d: 60 },   // G
+            { f: 1047, d: 180 }, // C (high, held longer)
+        ]
+        let t = 0
+        jingle.forEach(({ f, d }, i) => {
+            setTimeout(() => playTone(f, 'square', 0.07 + i * 0.015, d / 1000 + 0.05), t)
+            t += d
         })
     }, [playTone])
 
-    // Background Music (Relaxing, Hypnotic Spa Melody)
+    // LEVEL UP — Quick ascending arpeggio burst
+    const sfxLevelUp = useCallback(() => {
+        const burst = [262, 330, 392, 523, 659]
+        burst.forEach((freq, i) => {
+            setTimeout(() => playTone(freq, 'square', 0.06, 0.07), i * 35)
+        })
+    }, [playTone])
+
+    // =====================================================================
+    // BGM — HYPNOTIC DEGEN LO-FI ARPEGGIO (addictive loop)
+    // =====================================================================
+    // Minor key, fast 16th note pulse, slight detune for warmth
+    // Inspired by: cookie clicker + geometry dash + crypto vibes
+
     const startBackgroundMusic = useCallback(() => {
         if (!soundEnabled) return
         initAudio()
         const ctx = audioCtxRef.current
         const master = masterGainRef.current
-        const fx = fxNodeRef.current
-        if (!ctx || !master || !fx || bgmOscRef.current) return
+        if (!ctx || !master || bgmOscRef.current) return
 
         if (ctx.state === 'suspended') ctx.resume()
 
-        const osc = ctx.createOscillator()
+        // Two detuned oscillators for thick analog sound
+        const osc1 = ctx.createOscillator()
+        const osc2 = ctx.createOscillator()
         const gain = ctx.createGain()
-        osc.type = 'sine'
+        const filter = ctx.createBiquadFilter()
 
-        // Very soft constant presence
+        osc1.type = 'square'
+        osc2.type = 'sawtooth'
+        osc2.detune.value = 7  // Subtle detune — analog warmth
+
+        // Lo-pass filter — keeps it mellow and non-fatiguing
+        filter.type = 'lowpass'
+        filter.frequency.value = 1800
+        filter.Q.value = 1.5
+
         gain.gain.setValueAtTime(0, ctx.currentTime)
-        gain.gain.linearRampToValueAtTime(0.015, ctx.currentTime + 3)
+        gain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 2) // Fade in over 2 seconds
 
-        osc.connect(gain)
+        osc1.connect(filter)
+        osc2.connect(filter)
+        filter.connect(gain)
         gain.connect(master)
-        gain.connect(fx) // send through delay to make it super washed out
 
-        // Use a very subtle chorus-like slow vibrato for relaxing vibe
-        const vibrato = ctx.createOscillator()
-        vibrato.type = 'sine'
-        vibrato.frequency.value = 0.2 // 0.2Hz slow wobble
-        const vibratoGain = ctx.createGain()
-        vibratoGain.gain.value = 2 // +/- 2Hz pitch drift
-        vibrato.connect(vibratoGain)
-        vibratoGain.connect(osc.frequency)
-        vibrato.start()
+        osc1.start()
+        osc2.start()
 
-        osc.start()
-
-        bgmOscRef.current = osc
+        bgmOscRef.current = osc1
         bgmGainRef.current = gain
 
-        // Use a fast, plucky, hypnotic synthwave arpeggio
-        // Fast 'degen' energy, but soft 'relaxing' sine notes with delay
-        const notes = [
-            220.00, 261.63, 329.63, 440.00, // Am
-            174.61, 220.00, 261.63, 349.23, // F
-            130.81, 164.81, 196.00, 261.63, // C
-            196.00, 246.94, 293.66, 392.00  // G
+        // === HYPNOTIC ARPEGGIO PATTERN ===
+        // Am → F → C → G (classic degen loop, minor → resolved, very addictive)
+        // Each chord as 4 ascending 16th-notes
+        const pattern = [
+            // Am chord: A C E A
+            220.00, 261.63, 329.63, 440.00,
+            // F chord: F A C F  
+            174.61, 220.00, 261.63, 349.23,
+            // C chord: C E G C
+            261.63, 329.63, 392.00, 523.25,
+            // Em chord: E G B E (darker resolution — more degen)
+            164.81, 196.00, 246.94, 329.63,
         ]
+
         let noteIdx = 0
-        let nextNoteTime = ctx.currentTime + 0.1
+        let nextNoteTime = ctx.currentTime + 0.3
+
+        // BPM ~140 = 16ths at 0.107s each (fast, hypnotic pulse)
+        const NOTE_INTERVAL = 0.107
 
         const schedulePattern = () => {
             if (!bgmOscRef.current || !audioCtxRef.current) return
 
-            // Schedule ahead by 0.5 seconds
             while (nextNoteTime < audioCtxRef.current.currentTime + 0.5) {
-                osc.frequency.setValueAtTime(notes[noteIdx], nextNoteTime)
+                const note = pattern[noteIdx]
 
-                // Fast plucky envelope (Synthwave Arp style) - LOUDER BGM
-                gain.gain.setValueAtTime(0.0, nextNoteTime)
-                gain.gain.linearRampToValueAtTime(0.08, nextNoteTime + 0.01) // louder sharp attack
-                gain.gain.exponentialRampToValueAtTime(0.001, nextNoteTime + 0.18) // slightly longer decay
+                osc1.frequency.setValueAtTime(note, nextNoteTime)
+                osc2.frequency.setValueAtTime(note, nextNoteTime)
 
-                noteIdx = (noteIdx + 1) % notes.length
+                // Envelope: plucky attack, clean decay (like a kalimba)
+                gain.gain.setValueAtTime(0.01, nextNoteTime)
+                gain.gain.linearRampToValueAtTime(0.065, nextNoteTime + 0.008)  // snap attack
+                gain.gain.exponentialRampToValueAtTime(0.015, nextNoteTime + 0.09) // quick decay
 
-                // Fast 16th notes (approx 100 BPM)
-                nextNoteTime += 0.15
+                // Every 4th note (new chord) — accent slightly louder
+                if (noteIdx % 4 === 0) {
+                    gain.gain.linearRampToValueAtTime(0.08, nextNoteTime + 0.008)
+                }
+
+                noteIdx = (noteIdx + 1) % pattern.length
+                nextNoteTime += NOTE_INTERVAL
             }
-            setTimeout(schedulePattern, 200)
+            bgmIntervalRef.current = setTimeout(schedulePattern, 180)
         }
         schedulePattern()
 
@@ -247,9 +288,13 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         if (bgmOscRef.current && bgmGainRef.current && audioCtxRef.current) {
             const ct = audioCtxRef.current.currentTime
             bgmGainRef.current.gain.linearRampToValueAtTime(0, ct + 0.5)
-            bgmOscRef.current.stop(ct + 0.5)
+            bgmOscRef.current.stop(ct + 0.6)
             bgmOscRef.current = null
             bgmGainRef.current = null
+        }
+        if (bgmIntervalRef.current) {
+            clearTimeout(bgmIntervalRef.current)
+            bgmIntervalRef.current = null
         }
     }, [])
 

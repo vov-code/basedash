@@ -743,22 +743,20 @@ export default function GameEngine({
       if (gp.x < -10) gp.x = CFG.WIDTH + rand(5, 30)
     }
 
-    // --- Update particles (effects) ---
-    e.particles = e.particles.filter(pt => {
+    // --- Update particles (effects) — in-place mutation (no GC) ---
+    let writeIdx = 0
+    for (let i = 0; i < e.particles.length; i++) {
+      const pt = e.particles[i]
       pt.life -= dt
-      if (pt.life <= 0) return false
+      if (pt.life <= 0) continue
       pt.x += pt.vx * dt
       pt.y += pt.vy * dt
       pt.vy += pt.gravity * dt
       pt.vx *= pt.friction
       pt.rotation += pt.rotationSpeed * dt
-      return true
-    })
-
-    // Cap particle count
-    if (e.particles.length > CFG.PARTICLE_LIMIT) {
-      e.particles = e.particles.slice(-CFG.PARTICLE_LIMIT)
+      e.particles[writeIdx++] = pt
     }
+    e.particles.length = Math.min(writeIdx, CFG.PARTICLE_LIMIT)
 
     // --- Screen shake ---
     if (e.shakeTimer > 0) {
@@ -791,25 +789,7 @@ export default function GameEngine({
       }
     }
 
-    // Trail particles during jump (physical flight trail)
-    if (!p.onGround && e.alive && e.trailTimer <= 0) {
-      e.trailTimer = 0.05  // Add trail point every 50ms
-
-      // Object Pool Cursor logic
-      let tIdx = p.trail.findIndex(t => t.life <= 0)
-      if (tIdx === -1) tIdx = 0 // overwrite if full
-
-      const pt = p.trail[tIdx]
-      if (pt) {
-        pt.x = CFG.PLAYER_X + CFG.PLAYER_SIZE / 2
-        pt.y = p.y + CFG.PLAYER_SIZE / 2
-        pt.life = 0.35
-        pt.alpha = 0.5
-        pt.size = CFG.PLAYER_SIZE * 0.7
-        pt.rotation = p.rotation
-        pt.scale = 0.9
-      }
-    }
+    // Trail spawn is handled at line 455 (single source of truth)
     if (e.trailTimer > 0) e.trailTimer -= dt
 
     // --- Clean up player trail particles (handled in line 464 for performance) ---
@@ -1592,7 +1572,9 @@ export default function GameEngine({
                 <button
                   onClick={() => {
                     const encodedAddr = address ? `&address=${address}` : ''
-                    const shareUrl = `${window.location.origin}/api/frames/result?score=${deathScore}${encodedAddr}`
+                    const statsParams = gameStats ? `&time=${Math.floor(gameStats.timeSurvived)}&dodged=${gameStats.candlesDodged}&buys=${gameStats.greensCollected}&jumps=${gameStats.totalJumps}` : ''
+                    const comboParam = gameStats?.maxCombo ? `&combo=${gameStats.maxCombo}` : ''
+                    const shareUrl = `${window.location.origin}/api/frames/result?score=${deathScore}${encodedAddr}${statsParams}${comboParam}`
                     const shareText = `I scored ${formatMarketCap(deathScore)} PNL in Base Dash! 🎮`
                     if (navigator.share) {
                       navigator.share({ title: 'Base Dash Score', text: shareText, url: shareUrl }).catch(() => { })

@@ -626,6 +626,7 @@ export const drawTrail = (
 
     for (let i = 0; i < e.player.trail.length; i++) {
         const t = e.player.trail[i]
+        if (t.life <= 0 || t.alpha <= 0) continue // Skip dead trail points
         const trailAlpha = t.alpha * t.life
 
         if (trailType === 'default') {
