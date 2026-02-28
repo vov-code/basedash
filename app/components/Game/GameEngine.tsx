@@ -497,6 +497,9 @@ export default function GameEngine({
           const pts = CFG.RED_SCORE * Math.max(1, e.combo) * e.scoreMultiplier
           e.score += Math.round(pts)
           e.scorePulse = 1
+        } else if (c.kind === 'green' && !c.collected) {
+          e.combo = 0
+          e.comboPulse = 0
         }
       }
     }

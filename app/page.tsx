@@ -274,31 +274,31 @@ export default function Home() {
             {/* TAB NAVIGATION - Always visible */}
             <div className="w-full px-3 sm:px-4 py-1.5 sm:py-2 relative z-20 flex-shrink-0">
               <div className="flex justify-center items-center gap-1 p-0.5 bg-white/60 backdrop-blur-md rounded-xl border border-slate-200/50 shadow-inner">
-                <button onClick={() => setActiveTab('game')} className={`relative px-2 sm:px-3 h-[30px] sm:h-[34px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
+                <button onClick={() => setActiveTab('game')} className={`relative px-1.5 sm:px-2 h-[26px] sm:h-[28px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
                   <div className="flex items-center gap-0.5">
-                    <svg className="w-3 h-3 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                    <span className="text-[10px] sm:text-xs font-black tracking-wide leading-none">trade</span>
+                    <svg className="w-2.5 h-2.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                    <span className="text-[9px] sm:text-[10px] font-black tracking-wide leading-none">trade</span>
                   </div>
-                  <span className="text-[7px] sm:text-[8px] font-semibold opacity-70 leading-none mt-[1px]">play demo</span>
+                  <span className="text-[6px] sm:text-[7px] font-semibold opacity-70 leading-none mt-[1px]">play demo</span>
                 </button>
 
-                <button onClick={() => setActiveTab('profile')} className={`relative px-2 sm:px-3 h-[30px] sm:h-[34px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'profile' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
+                <button onClick={() => setActiveTab('profile')} className={`relative px-1.5 sm:px-2 h-[26px] sm:h-[28px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'profile' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
                   <div className="flex items-center gap-0.5">
-                    <svg className="w-3 h-3 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
-                    <span className="text-[10px] sm:text-xs font-black tracking-wide leading-none">wallet</span>
+                    <svg className="w-2.5 h-2.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
+                    <span className="text-[9px] sm:text-[10px] font-black tracking-wide leading-none">wallet</span>
                   </div>
-                  <span className="text-[7px] sm:text-[8px] font-semibold opacity-70 leading-none mt-[1px]">profile</span>
+                  <span className="text-[6px] sm:text-[7px] font-semibold opacity-70 leading-none mt-[1px]">profile</span>
                 </button>
 
-                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-2 sm:px-3 h-[30px] sm:h-[34px] flex flex-col items-center justify-center rounded-lg transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white shadow-[0_0_15px_rgba(240,185,11,0.6)] scale-100 ring-1 ring-[#F0B90B]/80' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)]'}`}>
+                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-1.5 sm:px-2 h-[26px] sm:h-[28px] flex flex-col items-center justify-center rounded-lg transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white shadow-[0_0_15px_rgba(240,185,11,0.6)] scale-100 ring-1 ring-[#F0B90B]/80' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)]'}`}>
                   {activeTab !== 'leaderboard' && <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-[#F0B90B] to-transparent opacity-20 -translate-x-full animate-[shimmerSweep_2.5s_ease-in-out_infinite]" />}
                   <div className="flex items-center gap-0.5 relative z-10">
-                    <svg className={`w-3 h-3 hidden sm:block transition-transform duration-300 ${(activeTab as string) !== 'leaderboard' ? 'group-hover:scale-110 text-[#F0B90B]' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
+                    <svg className={`w-2.5 h-2.5 hidden sm:block transition-transform duration-300 ${(activeTab as string) !== 'leaderboard' ? 'group-hover:scale-110 text-[#F0B90B]' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
                       <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
                     </svg>
-                    <span className={`${(activeTab as string) !== 'leaderboard' ? 'text-slate-800 group-hover:text-amber-600' : 'text-white'} text-[10px] sm:text-xs font-black tracking-wide leading-none`}>top 33</span>
+                    <span className={`${(activeTab as string) !== 'leaderboard' ? 'text-slate-800 group-hover:text-amber-600' : 'text-white'} text-[9px] sm:text-[10px] font-black tracking-wide leading-none`}>top 33</span>
                   </div>
-                  <span className={`${(activeTab as string) !== 'leaderboard' ? 'opacity-70 text-slate-500' : 'opacity-90 text-white'} text-[7px] sm:text-[8px] font-semibold relative z-10 leading-none mt-[1px]`}>ranks</span>
+                  <span className={`${(activeTab as string) !== 'leaderboard' ? 'opacity-70 text-slate-500' : 'opacity-90 text-white'} text-[6px] sm:text-[7px] font-semibold relative z-10 leading-none mt-[1px]`}>ranks</span>
                 </button>
               </div>
             </div>
@@ -366,7 +366,7 @@ export default function Home() {
                   <div className="w-full h-full grid grid-cols-2 grid-rows-[1.08fr_1fr_1fr] gap-2.5 sm:gap-3 max-w-lg mx-auto">
 
                     {/* Liquidation Watch — full width */}
-                    <div className="col-span-2 flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-3.5 py-2.5 sm:px-4 sm:py-3.5 border border-[#F6465D]/15 flex items-center justify-between group hover:border-[#F6465D]/30 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(246,70,93,0.1)] transition-all duration-300 relative overflow-hidden">
+                    <div className="col-span-2 flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-2.5 py-1.5 sm:px-3 sm:py-2.5 border border-[#F6465D]/15 flex items-center justify-between group hover:border-[#F6465D]/30 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(246,70,93,0.1)] transition-all duration-300 relative overflow-hidden">
                       <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-[#F6465D]/5 to-transparent pointer-events-none" />
                       <div className="flex items-center gap-2 sm:gap-3 min-w-0 z-10 w-full justify-between">
                         <div className="flex flex-col min-w-0 justify-center">
@@ -384,7 +384,7 @@ export default function Home() {
                     </div>
 
                     {/* Chain Status */}
-                    <div className="flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-3.5 py-2.5 sm:p-4 border border-[#0052FF]/10 flex flex-col justify-between group hover:border-[#0052FF]/25 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(0,82,255,0.08)] transition-all duration-300 relative overflow-hidden">
+                    <div className="flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-2.5 py-1.5 sm:p-3 border border-[#0052FF]/10 flex flex-col justify-between group hover:border-[#0052FF]/25 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(0,82,255,0.08)] transition-all duration-300 relative overflow-hidden">
                       <div className="absolute -right-2 -top-2 w-16 h-16 bg-[#0052FF]/5 rounded-full blur-2xl group-hover:bg-[#0052FF]/10 transition-colors" />
                       <div className="flex items-center justify-between w-full z-10">
                         <span className="text-[9px] sm:text-[10px] text-slate-400 tracking-wide uppercase font-medium">Network</span>
@@ -397,7 +397,7 @@ export default function Home() {
                     </div>
 
                     {/* Volatility */}
-                    <div className="flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-3.5 py-2.5 sm:p-4 border border-[#F0B90B]/10 flex flex-col justify-between group hover:border-[#F0B90B]/25 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(240,185,11,0.08)] transition-all duration-300 relative overflow-hidden">
+                    <div className="flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-2.5 py-1.5 sm:p-3 border border-[#F0B90B]/10 flex flex-col justify-between group hover:border-[#F0B90B]/25 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(240,185,11,0.08)] transition-all duration-300 relative overflow-hidden">
                       <div className="absolute -right-2 -bottom-2 w-16 h-16 bg-[#F0B90B]/5 rounded-full blur-2xl group-hover:bg-[#F0B90B]/10 transition-colors" />
                       <div className="flex items-center justify-between w-full z-10">
                         <span className="text-[9px] sm:text-[10px] text-slate-400 tracking-wide uppercase font-medium">Risk Level</span>
@@ -414,7 +414,7 @@ export default function Home() {
                     </div>
 
                     {/* On-Chain Scores */}
-                    <div className="flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-3.5 py-2.5 sm:p-4 border border-slate-200/60 flex flex-col justify-between group hover:border-[#0ECB81]/20 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(14,203,129,0.08)] transition-all duration-300 relative overflow-hidden">
+                    <div className="flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-2.5 py-1.5 sm:p-3 border border-slate-200/60 flex flex-col justify-between group hover:border-[#0ECB81]/20 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(14,203,129,0.08)] transition-all duration-300 relative overflow-hidden">
                       <div className="absolute -left-2 -bottom-2 w-16 h-16 bg-[#0ECB81]/5 rounded-full blur-2xl group-hover:bg-[#0ECB81]/10 transition-colors" />
                       <div className="flex items-center justify-between w-full z-10">
                         <span className="text-[9px] sm:text-[10px] text-slate-400 tracking-wide uppercase font-medium">Security</span>
@@ -427,7 +427,7 @@ export default function Home() {
                     </div>
 
                     {/* Rewards */}
-                    <div className="flex-1 bg-gradient-to-br from-white/80 to-[#8B5CF6]/5 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-3.5 py-2.5 sm:p-4 border border-[#8B5CF6]/15 flex flex-col justify-between group hover:border-[#8B5CF6]/30 hover:to-[#8B5CF6]/10 hover:shadow-[0_8px_30px_rgba(139,92,246,0.1)] transition-all duration-300 relative overflow-hidden">
+                    <div className="flex-1 bg-gradient-to-br from-white/80 to-[#8B5CF6]/5 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-2.5 py-1.5 sm:p-3 border border-[#8B5CF6]/15 flex flex-col justify-between group hover:border-[#8B5CF6]/30 hover:to-[#8B5CF6]/10 hover:shadow-[0_8px_30px_rgba(139,92,246,0.1)] transition-all duration-300 relative overflow-hidden">
                       <div className="absolute right-0 top-0 w-20 h-20 bg-[#8B5CF6]/10 blur-2xl pointer-events-none" />
                       <div className="flex items-center justify-between w-full relative z-10">
                         <span className="text-[9px] sm:text-[10px] text-[#8B5CF6]/70 tracking-wide uppercase font-medium">Award Pool</span>
@@ -511,8 +511,8 @@ export default function Home() {
         </main>
 
         {/* FOOTER - z-[40], solid white background */}
-        <footer className="mt-auto bg-white relative z-[40] flex-shrink-0 w-full flex items-center h-[32px] sm:h-[40px] pb-[env(safe-area-inset-bottom)] pb-0">
-          <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 flex items-center justify-between h-full">
+        <footer className="mt-auto bg-white relative z-[40] flex-shrink-0 w-full flex flex-col justify-center min-h-[32px] sm:min-h-[40px] pb-[env(safe-area-inset-bottom)]">
+          <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 flex items-center justify-between h-[32px] sm:h-[40px]">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400/80 font-mono leading-none m-0 p-0">© {new Date().getFullYear()} base dash</span>
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400/80 font-mono leading-none m-0 p-0">built by <span className="font-black text-[#0052FF] ml-0.5">vov</span></span>
           </div>
