@@ -42,28 +42,13 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
             masterGainRef.current = audioCtxRef.current.createGain()
             // Turn down master slightly for headroom
-            masterGainRef.current.gain.value = 0.35
+            masterGainRef.current.gain.value = 0.5
             masterGainRef.current.connect(compressor)
 
-            // Lush delay effect for all SFX
+            // No delay effect for cleaner retro sound
             fxNodeRef.current = audioCtxRef.current.createGain()
-            fxNodeRef.current.gain.value = 0.35
-
-            const delay = audioCtxRef.current.createDelay()
-            delay.delayTime.value = 0.33 // 330ms hypnotic delay
-            const feedback = audioCtxRef.current.createGain()
-            feedback.gain.value = 0.35 // 35% delay feedback
-
-            // LP filter to dampen echoes
-            const filter = audioCtxRef.current.createBiquadFilter()
-            filter.type = 'lowpass'
-            filter.frequency.value = 2000
-
-            fxNodeRef.current.connect(delay)
-            delay.connect(filter)
-            filter.connect(feedback)
-            feedback.connect(delay)
-            delay.connect(masterGainRef.current)
+            fxNodeRef.current.gain.value = 0
+            fxNodeRef.current.connect(masterGainRef.current)
         }
         if (audioCtxRef.current.state === 'suspended') {
             audioCtxRef.current.resume()
@@ -140,49 +125,49 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
     }, [soundEnabled, initAudio])
 
-    // Fast, Arcade Retro SFX (Filtered to be smooth/relaxing)
-    const sfxJump = useCallback(() => playTone(220.00, 'square', 0.1, 0.1, 440), [playTone]) // Classic jump
-    const sfxDoubleJump = useCallback(() => playTone(330.00, 'square', 0.12, 0.12, 660), [playTone])
-    const sfxDash = useCallback(() => playTone(150.00, 'sawtooth', 0.15, 0.15, 50), [playTone]) // Swoosh down
+    // Fast, Clean Plucks (Filtered to be smooth/relaxing)
+    const sfxJump = useCallback(() => playTone(300.00, 'sine', 0.08, 0.1, 440), [playTone]) // Clean jump
+    const sfxDoubleJump = useCallback(() => playTone(400.00, 'triangle', 0.08, 0.12, 550), [playTone])
+    const sfxDash = useCallback(() => playTone(200.00, 'sine', 0.1, 0.15, 80), [playTone]) // Swoosh down
 
-    // Fast 8-bit coin sound
+    // Fast clean coin sound
     const sfxCollect = useCallback(() => {
-        playTone(880.00, 'square', 0.1, 0.05)
-        setTimeout(() => playTone(1318.51, 'square', 0.15, 0.1), 40)
+        playTone(880.00, 'sine', 0.06, 0.05)
+        setTimeout(() => playTone(1318.51, 'sine', 0.08, 0.1), 40)
     }, [playTone])
 
-    // Fast ascending retro scale
+    // Fast ascending clean scale
     const sfxPowerup = useCallback(() => {
         [440, 554.37, 659.25, 880].forEach((freq, i) => {
-            setTimeout(() => playTone(freq, 'square', 0.15, 0.08), i * 30)
+            setTimeout(() => playTone(freq, 'triangle', 0.06, 0.08), i * 30)
         })
     }, [playTone])
 
-    // Classic arcade death (descending sawtooth)
+    // Clean death (descending sine)
     const sfxHit = useCallback(() => {
-        playTone(150.00, 'sawtooth', 0.3, 0.25, 40.00)
+        playTone(200.00, 'sine', 0.15, 0.25, 50.00)
     }, [playTone])
 
-    const sfxSelect = useCallback(() => playTone(659.25, 'triangle', 0.2, 0.1, 880), [playTone])
+    const sfxSelect = useCallback(() => playTone(659.25, 'sine', 0.08, 0.1, 880), [playTone])
 
     // Fast pinging combo
     const sfxCombo = useCallback((combo: number) => {
         const pentatonic = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00]
         const note = pentatonic[Math.min(combo, pentatonic.length - 1)]
-        playTone(note, 'square', 0.1, 0.08)
-        setTimeout(() => playTone(note * 1.5, 'square', 0.12, 0.1), 40)
+        playTone(note, 'sine', 0.06, 0.08)
+        setTimeout(() => playTone(note * 1.5, 'sine', 0.08, 0.1), 40)
     }, [playTone])
 
     const sfxMilestone = useCallback(() => {
-        playTone(523.25, 'square', 0.15, 0.1)
-        setTimeout(() => playTone(659.25, 'square', 0.15, 0.1), 100)
-        setTimeout(() => playTone(783.99, 'square', 0.15, 0.15), 200)
-        setTimeout(() => playTone(1046.50, 'square', 0.2, 0.2), 300)
+        playTone(523.25, 'triangle', 0.08, 0.1)
+        setTimeout(() => playTone(659.25, 'triangle', 0.08, 0.1), 100)
+        setTimeout(() => playTone(783.99, 'triangle', 0.1, 0.15), 200)
+        setTimeout(() => playTone(1046.50, 'triangle', 0.12, 0.2), 300)
     }, [playTone])
 
     const sfxLevelUp = useCallback(() => {
         [261.63, 329.63, 392.00, 523.25].forEach((freq, i) => {
-            setTimeout(() => playTone(freq, 'square', 0.2, 0.1), i * 60)
+            setTimeout(() => playTone(freq, 'triangle', 0.08, 0.1), i * 60)
         })
     }, [playTone])
 
@@ -242,10 +227,10 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             while (nextNoteTime < audioCtxRef.current.currentTime + 0.5) {
                 osc.frequency.setValueAtTime(notes[noteIdx], nextNoteTime)
 
-                // Fast plucky envelope (Synthwave Arp style)
+                // Fast plucky envelope (Synthwave Arp style) - LOUDER BGM
                 gain.gain.setValueAtTime(0.0, nextNoteTime)
-                gain.gain.linearRampToValueAtTime(0.04, nextNoteTime + 0.01) // sharp attack
-                gain.gain.exponentialRampToValueAtTime(0.001, nextNoteTime + 0.12) // fast decay
+                gain.gain.linearRampToValueAtTime(0.08, nextNoteTime + 0.01) // louder sharp attack
+                gain.gain.exponentialRampToValueAtTime(0.001, nextNoteTime + 0.18) // slightly longer decay
 
                 noteIdx = (noteIdx + 1) % notes.length
 

@@ -59,15 +59,6 @@ export default function ParticleChaos({ opacity = 0.4 }: ParticleChaosProps) {
             })
         }
 
-        // Price line data points
-        const pricePoints = 60
-        const priceData: number[] = []
-        let pp = h * 0.5
-        for (let i = 0; i < pricePoints; i++) {
-            pp += (Math.random() - 0.48) * 8
-            pp = Math.max(h * 0.25, Math.min(h * 0.75, pp))
-            priceData.push(pp)
-        }
 
         let tick = 0
 

@@ -477,8 +477,13 @@ export default function GameEngine({
     // Update trail locally
     for (let i = 0; i < p.trail.length; i++) {
       if (p.trail[i].life > 0) {
-        p.trail[i].life -= dt * 3
-        p.trail[i].alpha -= dt * 1.5
+        if (p.onGround) {
+          p.trail[i].life = 0
+          p.trail[i].alpha = 0
+        } else {
+          p.trail[i].life -= dt * 3
+          p.trail[i].alpha -= dt * 1.5
+        }
       }
     }
 
