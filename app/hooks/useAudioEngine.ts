@@ -24,6 +24,7 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
     const fxNodeRef = useRef<GainNode | null>(null)
     const bgmOscRef = useRef<OscillatorNode | null>(null)
     const bgmGainRef = useRef<GainNode | null>(null)
+    const toneCacheRef = useRef<Map<string, AudioBuffer>>(new Map())
 
     const initAudio = useCallback(() => {
         if (!audioCtxRef.current) {
@@ -75,33 +76,68 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         const ctx = audioCtxRef.current
         const master = masterGainRef.current
         const fx = fxNodeRef.current
-        if (!ctx || !master || !fx) return
+        if (!ctx || !master || !fx || !toneCacheRef.current) return
 
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.type = type
+        // Cache Key
+        const cacheKey = `${freq}-${type}-${dur}-${slideFreq || 'none'}`
 
-        osc.frequency.setValueAtTime(freq, ctx.currentTime)
-        if (slideFreq) {
-            osc.frequency.exponentialRampToValueAtTime(slideFreq, ctx.currentTime + dur)
+        // FUNCTION to play the buffer once we have it
+        const playBuffer = (buffer: AudioBuffer) => {
+            const source = ctx.createBufferSource()
+            source.buffer = buffer
+
+            const gain = ctx.createGain()
+            gain.gain.value = vol
+
+            source.connect(gain)
+            gain.connect(master)
+
+            // Send to delay FX
+            const fxSend = ctx.createGain()
+            fxSend.gain.value = 0.8
+            gain.connect(fxSend)
+            fxSend.connect(fx)
+
+            source.start(ctx.currentTime)
         }
 
-        // Bell/Chime envelope (sharp attack, exponential decay)
-        gain.gain.setValueAtTime(0, ctx.currentTime)
-        gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 0.02)
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
+        // 1. CACHE HIT
+        if (toneCacheRef.current.has(cacheKey)) {
+            playBuffer(toneCacheRef.current.get(cacheKey)!)
+            return
+        }
+
+        // 2. CACHE MISS — Render offline (Costs CPU ONCE, then never again)
+        const OfflineContext = window.OfflineAudioContext || (window as any).webkitOfflineAudioContext
+        // Render slightly longer to catch the tail
+        const renderLen = dur + 0.1
+        const offlineCtx = new OfflineContext(1, ctx.sampleRate * renderLen, ctx.sampleRate)
+
+        const osc = offlineCtx.createOscillator()
+        const gain = offlineCtx.createGain()
+        osc.type = type
+
+        osc.frequency.setValueAtTime(freq, 0)
+        if (slideFreq) {
+            osc.frequency.exponentialRampToValueAtTime(slideFreq, dur)
+        }
+
+        // Bell/Chime envelope
+        gain.gain.setValueAtTime(0, 0)
+        gain.gain.linearRampToValueAtTime(1.0, 0.02)
+        gain.gain.exponentialRampToValueAtTime(0.001, dur)
 
         osc.connect(gain)
-        gain.connect(master)
+        gain.connect(offlineCtx.destination)
 
-        // Send signal to the delay FX for that spa-like vibe
-        const fxSend = ctx.createGain()
-        fxSend.gain.value = 0.8
-        gain.connect(fxSend)
-        fxSend.connect(fx)
+        osc.start(0)
+        osc.stop(dur + 0.1)
 
-        osc.start(ctx.currentTime)
-        osc.stop(ctx.currentTime + dur + 0.1)
+        offlineCtx.startRendering().then((renderedBuffer) => {
+            toneCacheRef.current!.set(cacheKey, renderedBuffer)
+            playBuffer(renderedBuffer)
+        }).catch(err => console.error("Audio offline render failed", err))
+
     }, [soundEnabled, initAudio])
 
     // Sweeter FM-like plucks for actions

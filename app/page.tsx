@@ -19,6 +19,8 @@ import { Avatar, Name } from '@coinbase/onchainkit/identity'
 import Leaderboard from './components/Leaderboard/Leaderboard'
 
 import ParticleChaos from './components/Background/ParticleChaos'
+import { Header } from './components/UI/Header'
+import { DashboardGrid } from './components/UI/DashboardGrid'
 
 // ============================================================================
 // MAIN PAGE
@@ -131,10 +133,10 @@ export default function Home() {
   // MAIN APP (always renders — entry popup is overlay on top)
   // ========================================================================
   return (
-    <div className="fixed inset-0 w-full h-[100dvh] bg-[#FAFAFA] text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] overflow-hidden flex flex-col touch-none">
+    <div className="fixed inset-0 w-full h-[100dvh] bg-[#FAFAFA] text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] overflow-hidden flex flex-col">
       {/* GLOBAL PARTICLE BACKGROUND - z-0, covers full length of site */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" style={{ maxHeight: 'calc(100dvh - 80px)' }}>
-        <ParticleChaos opacity={0.6} />
+        <ParticleChaos />
       </div>
 
       {/* HEADER BACKGROUND BLUR AND GRID */}
@@ -221,51 +223,19 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Content layer - mobile/tablet only - z-50 */}
-      <div className={`relative z-50 flex flex-col h-full ${!desktopBypass ? 'lg:hidden' : ''}`}>
+      {/* 
+        CRITICAL FIX: 
+        1. Remove touch-none from global to allow scrolling on Wallet/Leaderboard.
+        2. Set min-h-[100dvh] so it takes up exactly the visible browser screen
+      */}
+      <div className="absolute inset-0 z-10 flex flex-col h-[100dvh] overflow-hidden lg:hidden select-none">
 
-        {/* HEADER - z-[40], relative compact height */}
-        <header className="w-full bg-white/50 backdrop-blur-md relative z-[40] flex-shrink-0 h-[46px] sm:h-[56px]">
-          <div className="mx-auto w-full max-w-3xl px-3 sm:px-4 h-full flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="relative h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 overflow-hidden border-2 border-[#0052FF]/80 rounded p-0.5 bg-white shadow-[0_0_12px_rgba(0,82,255,0.4)] animate-icon-float">
-                <Image src="/base-logo.png" alt="base dash logo" fill className="object-cover" priority />
-              </div>
-              <div className="block whitespace-nowrap flex items-center">
-                <span className="font-black text-[15px] sm:text-[17px] tracking-tight leading-none text-slate-800">
-                  base dash
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {!isConnected ? (
-                <button
-                  onClick={handleConnect}
-                  className="h-7 sm:h-8 w-7 sm:w-8 aspect-square min-w-[28px] min-h-[28px] sm:min-w-[32px] sm:min-h-[32px] flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-[#0052FF] to-[#0040CC] text-white rounded-md shadow-[0_4px_14px_rgba(0,82,255,0.35)] hover:shadow-[0_6px_20px_rgba(0,82,255,0.45)] transition-all transform hover:-translate-y-0.5 active:scale-95"
-                >
-                  <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </button>
-              ) : (
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.75 sm:py-1 bg-[#f0fdf4] border border-[#bbf7d0] rounded-lg shadow-sm">
-                    <span className="w-1.5 h-1.5 bg-[#22c55e] rounded-full animate-pulse" />
-                    <span className="font-mono text-[8px] sm:text-[9px] font-bold text-[#15803d]">
-                      {address?.slice(0, 4)}..{address?.slice(-4)}
-                    </span>
-                  </div>
-                  <button onClick={() => disconnectWallet()} className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors" title="Disconnect">
-                    <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </header>
+        <Header
+          isConnected={isConnected}
+          address={address ?? null}
+          handleConnect={handleConnect}
+          disconnectWallet={disconnectWallet}
+        />
 
         {/* MAIN CONTENT - z-[20], under header but above background */}
         <main className="flex-1 flex flex-col overflow-hidden h-full min-h-0 w-full relative z-[20]">
@@ -347,7 +317,7 @@ export default function Home() {
                 {/* Game Canvas — Fixed relative proportion but can shrink to fit */}
                 <div className="w-full px-0 sm:px-0 mt-0.5 sm:mt-1 mb-0.5 sm:mb-1 flex-shrink h-[37vh] sm:h-[45vh] lg:h-[48vh] min-h-[170px] max-h-[450px] relative z-20 flex flex-col items-center justify-center fade-in">
                   <div
-                    className="relative w-full h-full max-w-[600px] sm:rounded-[20px] overflow-hidden border-y sm:border-x border-[#0052FF]/10 bg-white mx-auto shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
+                    className="relative w-full h-full max-w-[600px] sm:rounded-[20px] overflow-hidden border-y sm:border-x border-[#0052FF]/10 bg-white mx-auto shadow-[0_8px_30px_rgba(0,0,0,0.12)] touch-none"
                   >
                     <GameEngine
                       storageKey="basedash_highscore_v2"
@@ -361,84 +331,9 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* BOTTOM INFO GRID — Dynamic Stretching to Footer */}
                 <div className="w-full px-2 sm:px-4 pb-2.5 sm:pb-4 pt-1 sm:pt-2 flex-[2] relative z-20 flex flex-col min-h-[160px]">
-                  <div className="w-full h-full grid grid-cols-2 grid-rows-[1.08fr_1fr_1fr] gap-2.5 sm:gap-3 max-w-lg mx-auto">
-
-                    {/* Liquidation Watch — full width */}
-                    <div className="col-span-2 flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-2.5 py-1.5 sm:px-3 sm:py-2.5 border border-[#F6465D]/15 flex items-center justify-between group hover:border-[#F6465D]/30 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(246,70,93,0.1)] transition-all duration-300 relative overflow-hidden">
-                      <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-[#F6465D]/5 to-transparent pointer-events-none" />
-                      <div className="flex items-center gap-2 sm:gap-3 min-w-0 z-10 w-full justify-between">
-                        <div className="flex flex-col min-w-0 justify-center">
-                          <div className="flex items-center gap-1.5 mb-1 sm:mb-1.5">
-                            <div className="w-1.5 h-1.5 bg-[#F6465D] rounded-full animate-pulse shadow-[0_0_8px_rgba(246,70,93,0.6)] flex-shrink-0" />
-                            <span className="text-[11px] sm:text-[12px] font-medium tracking-wide text-slate-700 leading-none">Liquidation Watch</span>
-                          </div>
-                          <span className="text-[9px] sm:text-[10px] text-slate-500 leading-none">Live Market Feed</span>
-                        </div>
-                        <div className="flex flex-col items-end z-10 flex-shrink-0">
-                          <span className="text-[10px] sm:text-[11px] font-semibold text-[#F6465D] tracking-wide leading-none px-2 py-1 bg-[#F6465D]/10 rounded-md border border-[#F6465D]/20">High Risk</span>
-                          <span className="text-[8px] sm:text-[9px] text-slate-400 mt-1.5 text-right leading-none">Volatility Active</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Chain Status */}
-                    <div className="flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-2.5 py-1.5 sm:p-3 border border-[#0052FF]/10 flex flex-col justify-between group hover:border-[#0052FF]/25 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(0,82,255,0.08)] transition-all duration-300 relative overflow-hidden">
-                      <div className="absolute -right-2 -top-2 w-16 h-16 bg-[#0052FF]/5 rounded-full blur-2xl group-hover:bg-[#0052FF]/10 transition-colors" />
-                      <div className="flex items-center justify-between w-full z-10">
-                        <span className="text-[9px] sm:text-[10px] text-slate-400 tracking-wide uppercase font-medium">Network</span>
-                        <div className="w-1.5 h-1.5 bg-[#0052FF] rounded-full animate-pulse shadow-[0_0_8px_rgba(0,82,255,0.6)] flex-shrink-0" />
-                      </div>
-                      <div className="flex flex-col z-10 mt-1 sm:mt-2">
-                        <span className="text-[13px] sm:text-[15px] font-semibold text-slate-800 leading-none tracking-tight">Base L2</span>
-                        <span className="text-[9px] sm:text-[10px] text-[#0052FF] mt-1">Optimistic</span>
-                      </div>
-                    </div>
-
-                    {/* Volatility */}
-                    <div className="flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-2.5 py-1.5 sm:p-3 border border-[#F0B90B]/10 flex flex-col justify-between group hover:border-[#F0B90B]/25 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(240,185,11,0.08)] transition-all duration-300 relative overflow-hidden">
-                      <div className="absolute -right-2 -bottom-2 w-16 h-16 bg-[#F0B90B]/5 rounded-full blur-2xl group-hover:bg-[#F0B90B]/10 transition-colors" />
-                      <div className="flex items-center justify-between w-full z-10">
-                        <span className="text-[9px] sm:text-[10px] text-slate-400 tracking-wide uppercase font-medium">Risk Level</span>
-                        <span className="text-[10px] sm:text-[11px] font-bold text-[#F0B90B]">100X</span>
-                      </div>
-                      <div className="flex flex-col gap-1.5 sm:gap-2 z-10 mt-1 sm:mt-2">
-                        <span className="text-[13px] sm:text-[15px] font-semibold text-slate-800 leading-none tracking-tight">Degen Mode</span>
-                        <div className="w-full h-[3px] sm:h-[4px] bg-slate-100 rounded-full overflow-hidden flex-shrink-0">
-                          <div className="h-full bg-gradient-to-r from-[#F0B90B] to-[#F6465D] w-[85%] rounded-full relative">
-                            <div className="absolute inset-0 bg-white/50 animate-[shimmer_2s_infinite]" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* On-Chain Scores */}
-                    <div className="flex-1 bg-white/70 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-2.5 py-1.5 sm:p-3 border border-slate-200/60 flex flex-col justify-between group hover:border-[#0ECB81]/20 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(14,203,129,0.08)] transition-all duration-300 relative overflow-hidden">
-                      <div className="absolute -left-2 -bottom-2 w-16 h-16 bg-[#0ECB81]/5 rounded-full blur-2xl group-hover:bg-[#0ECB81]/10 transition-colors" />
-                      <div className="flex items-center justify-between w-full z-10">
-                        <span className="text-[9px] sm:text-[10px] text-slate-400 tracking-wide uppercase font-medium">Security</span>
-                        <span className="text-[10px] sm:text-[11px] font-bold text-[#0ECB81] uppercase">OK</span>
-                      </div>
-                      <div className="flex flex-col z-10 mt-1 sm:mt-2">
-                        <span className="text-[13px] sm:text-[15px] font-semibold text-slate-800 leading-none tracking-tight">On-Chain</span>
-                        <span className="text-[9px] sm:text-[10px] text-slate-400 mt-1 w-full overflow-hidden text-ellipsis whitespace-nowrap">Verified</span>
-                      </div>
-                    </div>
-
-                    {/* Rewards */}
-                    <div className="flex-1 bg-gradient-to-br from-white/80 to-[#8B5CF6]/5 backdrop-blur-md rounded-[16px] sm:rounded-[20px] px-2.5 py-1.5 sm:p-3 border border-[#8B5CF6]/15 flex flex-col justify-between group hover:border-[#8B5CF6]/30 hover:to-[#8B5CF6]/10 hover:shadow-[0_8px_30px_rgba(139,92,246,0.1)] transition-all duration-300 relative overflow-hidden">
-                      <div className="absolute right-0 top-0 w-20 h-20 bg-[#8B5CF6]/10 blur-2xl pointer-events-none" />
-                      <div className="flex items-center justify-between w-full relative z-10">
-                        <span className="text-[9px] sm:text-[10px] text-[#8B5CF6]/70 tracking-wide uppercase font-medium">Award Pool</span>
-                        <div className="w-1.5 h-1.5 bg-[#8B5CF6] rounded-full animate-ping shadow-[0_0_8px_rgba(139,92,246,0.6)] flex-shrink-0" />
-                      </div>
-                      <div className="flex flex-col relative z-10 mt-1 sm:mt-2">
-                        <span className="text-[13px] sm:text-[15px] font-semibold text-[#8B5CF6] leading-none tracking-tight">Rewards</span>
-                        <span className="text-[9px] sm:text-[10px] text-[#8B5CF6]/70 mt-1 animate-[pulse_2s_infinite] w-full overflow-hidden text-ellipsis whitespace-nowrap">Coming Soon</span>
-                      </div>
-                    </div>
-                  </div>
+                  {/* Note: In a future PR we will pull score/combo state UP to page.tsx via Zustand, for now passing 0/0 to initial mount layout */}
+                  <DashboardGrid score={0} combo={0} />
                 </div>
               </div>
             )}

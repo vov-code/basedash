@@ -249,6 +249,10 @@ export default function GameEngine({
   const [activeTrail, setActiveTrail] = useState<TrailType>('default')
   const { address } = useWallet()
 
+  // --- Realtime DOM Refs (Bypassing React state for 60fps performance) ---
+  const uiScoreRef = useRef<HTMLDivElement>(null)
+  const uiComboRef = useRef<HTMLDivElement>(null)
+
   // --- Audio Engine ---
   const {
     sfxDoubleJump: sfxJump,
@@ -448,25 +452,35 @@ export default function GameEngine({
     p.invincible = Math.max(0, p.invincible - dt)
 
     // Trail — spawn ghost image (much smoother and more frequent)
-    if (!p.onGround && e.player.trail.length < CFG.TRAIL_LIMIT) {
+    if (!p.onGround) {
       const trailInterval = 0.015 // Much faster spawn rate for a smooth beam
       if (e.gameTime % trailInterval < dt) {
-        p.trail.push({
-          x: p.x, y: p.y,
-          life: 1, alpha: 0.15, // Softer alpha to blend the dense trail
-          size: CFG.PLAYER_SIZE,
-          rotation: p.rotation,
-          scale: p.scale,
-        })
+        // Find first dead trail point or overwrite oldest
+        let tIdx = p.trail.findIndex(t => t.life <= 0)
+        if (tIdx === -1) {
+          tIdx = 0 // fallback overwrite
+        }
+
+        const pt = p.trail[tIdx]
+        if (pt) {
+          pt.x = p.x
+          pt.y = p.y
+          pt.life = 1
+          pt.alpha = 0.15 // Softer alpha to blend the dense trail
+          pt.size = CFG.PLAYER_SIZE
+          pt.rotation = p.rotation
+          pt.scale = p.scale
+        }
       }
     }
 
-    // Update trail
-    p.trail = p.trail.filter(t => {
-      t.life -= dt * 3
-      t.alpha -= dt * 1.5
-      return t.life > 0 && t.alpha > 0
-    })
+    // Update trail locally
+    for (let i = 0; i < p.trail.length; i++) {
+      if (p.trail[i].life > 0) {
+        p.trail[i].life -= dt * 3
+        p.trail[i].alpha -= dt * 1.5
+      }
+    }
 
     // Speed-based trail particles
     spawnTrailParticle(e)
@@ -775,39 +789,43 @@ export default function GameEngine({
     // Trail particles during jump (physical flight trail)
     if (!p.onGround && e.alive && e.trailTimer <= 0) {
       e.trailTimer = 0.05  // Add trail point every 50ms
-      p.trail.push({
-        x: CFG.PLAYER_X + CFG.PLAYER_SIZE / 2,
-        y: p.y + CFG.PLAYER_SIZE / 2,
-        life: 0.35,
-        alpha: 0.5,
-        size: CFG.PLAYER_SIZE * 0.7,
-        rotation: p.rotation,
-        scale: 0.9
-      })
+
+      // Object Pool Cursor logic
+      let tIdx = p.trail.findIndex(t => t.life <= 0)
+      if (tIdx === -1) tIdx = 0 // overwrite if full
+
+      const pt = p.trail[tIdx]
+      if (pt) {
+        pt.x = CFG.PLAYER_X + CFG.PLAYER_SIZE / 2
+        pt.y = p.y + CFG.PLAYER_SIZE / 2
+        pt.life = 0.35
+        pt.alpha = 0.5
+        pt.size = CFG.PLAYER_SIZE * 0.7
+        pt.rotation = p.rotation
+        pt.scale = 0.9
+      }
     }
     if (e.trailTimer > 0) e.trailTimer -= dt
 
-    // --- Clean up player trail particles ---
-    p.trail = p.trail.filter(t => {
-      t.life -= dt
-      return t.life > 0
-    })
-
-    // Cap trail count to prevent memory leaks over time
-    if (p.trail.length > CFG.PARTICLE_LIMIT) {
-      p.trail = p.trail.slice(-CFG.PARTICLE_LIMIT)
-    }
+    // --- Clean up player trail particles (handled in line 464 for performance) ---
 
     // --- Animation timers ---
     if (e.scorePulse > 0) e.scorePulse -= dt * 3
     if (e.comboPulse > 0) e.comboPulse -= dt * 3
 
-    // --- UI update (throttled) ---
+    // --- UI update (throttled logic + Direct DOM writes) ---
     e.uiTimer += dt
     if (e.uiTimer >= CFG.UI_RATE) {
       e.uiTimer = 0
-      setScore(e.score)
-      setCombo(e.combo)
+
+      // Write score direct to DOM to bypass React Reconciler
+      if (uiScoreRef.current) uiScoreRef.current.innerText = e.score.toString()
+      if (uiComboRef.current) {
+        uiComboRef.current.innerText = e.combo > 1 ? `x${e.combo}` : ''
+        uiComboRef.current.parentElement!.style.opacity = e.combo > 1 ? '1' : '0'
+      }
+
+      // Sync the rest (cheap updates)
       setWorldName(e.worldName)
       setSpeedName(getSpeed(e.score).label)
     }
@@ -838,16 +856,20 @@ export default function GameEngine({
     // Jump particles
     spawnJumpDust(e, IS_MOBILE ? 3 : 6)
 
-    // Add trail point for jump (physical trail effect)
-    p.trail.push({
-      x: CFG.PLAYER_X + CFG.PLAYER_SIZE / 2,
-      y: p.y + CFG.PLAYER_SIZE / 2,
-      life: 0.5,
-      alpha: 0.7,
-      size: CFG.PLAYER_SIZE * 0.9,
-      rotation: p.rotation,
-      scale: 1.0
-    })
+    // Add trail point for jump (Object Pool)
+    let tIdx = p.trail.findIndex(t => t.life <= 0)
+    if (tIdx === -1) tIdx = 0
+
+    const pt = p.trail[tIdx]
+    if (pt) {
+      pt.x = CFG.PLAYER_X + CFG.PLAYER_SIZE / 2
+      pt.y = p.y + CFG.PLAYER_SIZE / 2
+      pt.life = 0.5
+      pt.alpha = 0.7
+      pt.size = CFG.PLAYER_SIZE * 0.9
+      pt.rotation = p.rotation
+      pt.scale = 1.0
+    }
 
     // Sound + haptic
     sfxJump()

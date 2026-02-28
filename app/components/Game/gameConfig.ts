@@ -738,7 +738,7 @@ export const createPlayer = (): Player => ({
     coyoteTimer: CFG.COYOTE,
     jumpBufferTimer: 0,
     rotation: 0,
-    trail: [],
+    trail: Array.from({ length: CFG.TRAIL_LIMIT }, () => ({ x: -100, y: -100, life: 0, alpha: 0, size: 0, rotation: 0, scale: 0 })),
     jumpCount: 0,
     maxJumps: 1,
     invincible: 0,
