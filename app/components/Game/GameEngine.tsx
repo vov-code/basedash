@@ -451,28 +451,26 @@ export default function GameEngine({
     // Invincibility
     p.invincible = Math.max(0, p.invincible - dt)
 
-    // Trail — spawn ghost image (much smoother and more frequent)
-    if (!p.onGround) {
-      const trailInterval = 0.015 // Much faster spawn rate for a smooth beam
-      if (e.gameTime % trailInterval < dt) {
-        // Find first dead trail point or overwrite oldest
-        let tIdx = p.trail.findIndex(t => t.life <= 0)
-        if (tIdx === -1) {
-          tIdx = 0 // fallback overwrite
-        }
+    // Trail — spawn ghost image using reliable cooldown timer
+    if (!p.onGround && e.trailTimer <= 0) {
+      e.trailTimer = 0.04 // ~25 trail points per second (smooth, not overwhelming)
 
-        const pt = p.trail[tIdx]
-        if (pt) {
-          pt.x = p.x
-          pt.y = p.y
-          pt.life = 1
-          pt.alpha = 0.15 // Softer alpha to blend the dense trail
-          pt.size = CFG.PLAYER_SIZE
-          pt.rotation = p.rotation
-          pt.scale = p.scale
-        }
+      // Find first dead trail point or overwrite oldest
+      let tIdx = p.trail.findIndex(t => t.life <= 0)
+      if (tIdx === -1) tIdx = 0
+
+      const pt = p.trail[tIdx]
+      if (pt) {
+        pt.x = p.x
+        pt.y = p.y
+        pt.life = 1
+        pt.alpha = 0.18
+        pt.size = CFG.PLAYER_SIZE
+        pt.rotation = p.rotation
+        pt.scale = p.scale
       }
     }
+    if (e.trailTimer > 0) e.trailTimer -= dt
 
     // Update trail locally
     for (let i = 0; i < p.trail.length; i++) {
@@ -866,6 +864,15 @@ export default function GameEngine({
   // ========================================================================
 
   const startGame = useCallback(() => {
+    // CRITICAL: Kill old engine's state to prevent any stale RAF contamination
+    const oldEngine = engineRef.current
+    oldEngine.alive = false
+    oldEngine.particles.length = 0
+    for (const t of oldEngine.player.trail) { t.life = 0; t.alpha = 0 }
+
+    // Cancel any running RAF immediately
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
+
     const engine = createEngine()
     engine.activeTrail = activeTrail
 

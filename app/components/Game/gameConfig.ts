@@ -368,7 +368,7 @@ export const CFG = {
     HEIGHT: 540,
     GROUND: 430,
 
-    PLAYER_X: 324, // Shifted ~15% right from 180 for better reaction time
+    PLAYER_X: 160, // Closer to left edge for better visibility
     PLAYER_SIZE: 52, // Increased from 42 for better visibility
     HITBOX_FRAC: 0.12,  // 12% inset each side — fairly tight for precision dodging
     HITBOX: 6,          // computed at runtime from HITBOX_FRAC × PLAYER_SIZE
@@ -1098,7 +1098,7 @@ export function updateGameConfig(width: number, height: number) {
     if (isPortrait) {
         // --- PORTRAIT MODE (e.g. Base App / Mobile Vertical) ---
         CFG.GROUND = height * 0.83;
-        CFG.PLAYER_X = width * 0.18;
+        CFG.PLAYER_X = width * 0.12;
         CFG.PLAYER_SIZE = clamp(width * 0.055, 20, 28);  // Меньше размер (было 0.06, 22-32)
         CFG.HITBOX = CFG.PLAYER_SIZE * 0.20;  // Чуть меньше хитбокс
 
@@ -1128,7 +1128,7 @@ export function updateGameConfig(width: number, height: number) {
     } else {
         // --- LANDSCAPE MODE (Desktop / Tablet Horizontal) ---
         CFG.GROUND = height * 0.82;
-        CFG.PLAYER_X = clamp(width * 0.2, 120, 220);
+        CFG.PLAYER_X = clamp(width * 0.14, 80, 160);
         CFG.PLAYER_SIZE = clamp(width * 0.038, 30, 42);
         CFG.HITBOX = CFG.PLAYER_SIZE * 0.25;
 

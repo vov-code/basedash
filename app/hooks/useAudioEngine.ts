@@ -236,18 +236,26 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         bgmOscRef.current = osc1
         bgmGainRef.current = gain
 
-        // === HYPNOTIC ARPEGGIO PATTERN ===
-        // Am → F → C → G (classic degen loop, minor → resolved, very addictive)
-        // Each chord as 4 ascending 16th-notes
+        // === HYPNOTIC ARPEGGIO PATTERN (32 notes = 8 chords × 4) ===
+        // Am → F → C → Em → Dm → G → Am(high) → E7 
+        // Longer loop = more variety, less repetitive, more addictive
         const pattern = [
-            // Am chord: A C E A
+            // Am: A C E A
             220.00, 261.63, 329.63, 440.00,
-            // F chord: F A C F  
+            // F: F A C F  
             174.61, 220.00, 261.63, 349.23,
-            // C chord: C E G C
+            // C: C E G C
             261.63, 329.63, 392.00, 523.25,
-            // Em chord: E G B E (darker resolution — more degen)
+            // Em: E G B E (darker)
             164.81, 196.00, 246.94, 329.63,
+            // Dm: D F A D
+            146.83, 174.61, 220.00, 293.66,
+            // G: G B D G
+            196.00, 246.94, 293.66, 392.00,
+            // Am (octave up): A C E A
+            440.00, 523.25, 659.25, 880.00,
+            // E7 (tension): E G# B E
+            164.81, 207.65, 246.94, 329.63,
         ]
 
         let noteIdx = 0

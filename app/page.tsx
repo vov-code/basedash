@@ -160,7 +160,7 @@ export default function Home() {
 
           <div className="relative z-20 text-center px-6 max-w-[340px] w-full"
             style={{ opacity: 0, animation: 'fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both' }}>
-            <h2 className="text-[16px] font-medium text-slate-700 tracking-wide mb-10 leading-relaxed"
+            <h2 className="text-[13px] font-medium text-slate-700 tracking-wide mb-8 leading-relaxed"
               style={{ fontFamily: 'var(--font-mono)', opacity: 0, animation: 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both' }}>
               ready to trade like<br /><span className="text-[#0052FF] font-semibold">it&#39;s your first day again?</span>
             </h2>
@@ -168,7 +168,7 @@ export default function Home() {
             <div className="flex gap-2" style={{ opacity: 0, animation: 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both' }}>
               <button
                 onClick={handleEnter}
-                className="flex-1 py-2.5 text-white font-semibold tracking-wide text-[12px] transition-all duration-200 hover:scale-105 active:scale-95 bg-[#0ECB81] relative overflow-hidden group cursor-pointer rounded-md uppercase"
+                className="flex-1 py-1.5 text-white font-semibold tracking-wide text-[10px] transition-all duration-200 hover:scale-105 active:scale-95 bg-[#0ECB81] relative overflow-hidden group cursor-pointer rounded-md uppercase"
                 style={{
                   fontFamily: 'var(--font-mono)',
                   boxShadow: '0 4px 12px rgba(14,203,129,0.25)',
@@ -179,7 +179,7 @@ export default function Home() {
               </button>
               <button
                 onClick={handleEnter}
-                className="flex-1 py-2.5 text-white font-semibold tracking-wide text-[12px] transition-all duration-200 hover:scale-105 active:scale-95 bg-[#F6465D] relative overflow-hidden group cursor-pointer rounded-md uppercase"
+                className="flex-1 py-1.5 text-white font-semibold tracking-wide text-[10px] transition-all duration-200 hover:scale-105 active:scale-95 bg-[#F6465D] relative overflow-hidden group cursor-pointer rounded-md uppercase"
                 style={{
                   fontFamily: 'var(--font-mono)',
                   boxShadow: '0 4px 12px rgba(246,70,93,0.25)',
@@ -190,7 +190,7 @@ export default function Home() {
               </button>
             </div>
 
-            <p className="mt-8 text-[10px] text-slate-400 tracking-widest animate-pulse"
+            <p className="mt-6 text-[8px] text-slate-400 tracking-widest animate-pulse"
               style={{ fontFamily: 'var(--font-mono)', opacity: 0, animation: 'fadeIn 0.6s ease 0.9s both' }}>
               AUTO-ENTER SOON
             </p>
@@ -314,8 +314,8 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Game Canvas — Fixed relative proportion but can shrink to fit */}
-                <div className="w-full px-0 sm:px-0 mt-0.5 sm:mt-1 mb-0.5 sm:mb-1 flex-shrink h-[34vh] sm:h-[42vh] lg:h-[48vh] min-h-[150px] max-h-[450px] relative z-20 flex flex-col items-center justify-center fade-in">
+                {/* Game Canvas — Proportional flex: canvas dominates, dashboard is secondary */}
+                <div className="w-full px-0 sm:px-0 mt-0.5 sm:mt-1 mb-0.5 sm:mb-1 flex-[5] min-h-[140px] max-h-[450px] relative z-20 flex flex-col items-center justify-center fade-in">
                   <div
                     className="relative w-full h-full max-w-[600px] sm:rounded-[20px] overflow-hidden border-y sm:border-x border-[#0052FF]/10 bg-white mx-auto shadow-[0_8px_30px_rgba(0,0,0,0.12)] touch-none"
                   >
@@ -331,7 +331,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="w-full px-2 sm:px-4 pb-2.5 sm:pb-4 pt-1 sm:pt-2 flex-[2] relative z-20 flex flex-col min-h-[135px]">
+                <div className="w-full px-2 sm:px-4 pb-2.5 sm:pb-4 pt-1 sm:pt-2 flex-[2] relative z-20 flex flex-col min-h-[80px]">
                   {/* Note: In a future PR we will pull score/combo state UP to page.tsx via Zustand, for now passing 0/0 to initial mount layout */}
                   <DashboardGrid score={0} combo={0} />
                 </div>
