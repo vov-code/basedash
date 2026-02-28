@@ -4,9 +4,11 @@ import type { GameMode } from '../components/Game/gameConfig'
 
 interface GameState {
     score: number
+    combo: number
     mode: GameMode
     soundEnabled: boolean
     setScore: (score: number) => void
+    setCombo: (combo: number) => void
     setMode: (mode: GameMode | ((prev: GameMode) => GameMode)) => void
     setSoundEnabled: (enabled: boolean | ((prev: boolean) => boolean)) => void
 }
@@ -15,9 +17,11 @@ export const useGameStore = create<GameState>()(
     persist(
         (set) => ({
             score: 0,
+            combo: 0,
             mode: 'menu',
             soundEnabled: true,
             setScore: (score) => set({ score }),
+            setCombo: (combo) => set({ combo }),
             setMode: (mode) => set((state) => ({
                 mode: typeof mode === 'function' ? mode(state.mode) : mode
             })),

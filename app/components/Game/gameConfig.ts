@@ -290,6 +290,7 @@ export interface EngineState {
     distance: number
     score: number
     combo: number
+    prevCombo: number
     maxCombo: number
     slowdownTimer: number
     nextSpawnDistance: number
@@ -807,6 +808,7 @@ export const createEngine = (): EngineState => ({
     distance: 0,
     score: 0,
     combo: 0,
+    prevCombo: 0,
     maxCombo: 0,
     slowdownTimer: 0,
     nextSpawnDistance: FIRST_SPAWN_DIST,

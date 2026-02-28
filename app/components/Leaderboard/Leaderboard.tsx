@@ -117,12 +117,12 @@ export default function Leaderboard() {
   }
 
   return (
-    <div className="border border-[#e5e7eb]/80 bg-white/80 backdrop-blur-xl p-3 sm:p-6 shadow-sm rounded-2xl sm:rounded-3xl mx-2 sm:mx-0 animate-[fadeInUp_0.4s_ease-out] mb-6">
+    <div className="w-full max-w-lg mx-auto py-2 sm:py-4 animate-[fadeInUp_0.4s_ease-out] mb-8">
       <div className="mb-5 sm:mb-6 flex flex-row items-center justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-xl font-black text-slate-900 tracking-tight">
-            <svg className="h-5 w-5 text-[#F0B90B]" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7.4-6.3-4.8-6.3 4.8 2.3-7.4-6-4.6h7.6z" />
+            <svg className="h-4 w-4 text-[#0052FF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
             </svg>
             leaderboard
           </h2>
@@ -131,7 +131,7 @@ export default function Leaderboard() {
 
         <button
           onClick={() => void handleRefresh()}
-          className="inline-flex flex-shrink-0 items-center justify-center gap-1.5 border border-slate-200 bg-white px-3 py-2 rounded-xl text-[10px] sm:text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50 shadow-sm active:scale-95"
+          className="inline-flex flex-shrink-0 items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] sm:text-[11px] font-bold text-slate-500 hover:text-slate-900 transition-colors bg-white/50 hover:bg-white/80 border border-slate-200/50"
         >
           <svg className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${isRefreshing ? 'animate-spin text-[#0052FF]' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -141,24 +141,24 @@ export default function Leaderboard() {
       </div>
 
       {/* Top Stats Cards */}
-      <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-3">
-        <div className="border border-slate-200/60 bg-white p-2.5 sm:p-3 text-center rounded-2xl shadow-sm">
-          <p className="text-lg sm:text-2xl font-black text-slate-900">{scores.length}</p>
-          <p className="mt-0.5 text-[8px] sm:text-[10px] font-bold lowercase tracking-widest text-slate-400">players</p>
+      <div className="mb-8 grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="bg-white/40 backdrop-blur-md py-3 sm:py-4 text-center rounded-2xl border border-white/60">
+          <p className="text-xl sm:text-2xl font-black text-slate-800 leading-none">{scores.length}</p>
+          <p className="mt-1.5 text-[9px] font-bold lowercase tracking-widest text-slate-500">players</p>
         </div>
 
-        <div className="border border-[#0052FF]/20 bg-[#0052FF]/5 p-2.5 sm:p-3 text-center rounded-2xl shadow-sm">
-          <p className="text-lg sm:text-2xl font-black text-[#0052FF] font-mono">{topScore.toLocaleString()}</p>
-          <p className="mt-0.5 text-[8px] sm:text-[10px] font-bold lowercase tracking-widest text-[#0052FF]/70">top score</p>
+        <div className="bg-[#0052FF]/5 backdrop-blur-md py-3 sm:py-4 text-center rounded-2xl border border-[#0052FF]/10">
+          <p className="text-xl sm:text-2xl font-black text-[#0052FF] font-mono leading-none">{topScore.toLocaleString()}</p>
+          <p className="mt-1.5 text-[9px] font-bold lowercase tracking-widest text-[#0052FF]/70">top score</p>
         </div>
 
-        <div className="border border-[#F0B90B]/20 bg-[#F0B90B]/5 p-2.5 sm:p-3 text-center rounded-2xl shadow-sm">
-          <p className="text-lg sm:text-2xl font-black text-[#D4A002]">{maxStreak}</p>
-          <p className="mt-0.5 text-[8px] sm:text-[10px] font-bold lowercase tracking-widest text-[#D4A002]/70">best streak</p>
+        <div className="bg-[#F0B90B]/5 backdrop-blur-md py-3 sm:py-4 text-center rounded-2xl border border-[#F0B90B]/10">
+          <p className="text-xl sm:text-2xl font-black text-[#D4A002] leading-none">{maxStreak}</p>
+          <p className="mt-1.5 text-[9px] font-bold lowercase tracking-widest text-[#D4A002]/70">best streak</p>
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="flex flex-col gap-1">
         {scores.map((entry, i) => (
           <LeaderboardEntry
             key={`${entry.player}-${i}`}
@@ -172,11 +172,8 @@ export default function Leaderboard() {
 
       {/* User rank indicator — shows for all connected wallets (item 18) */}
       {address && (
-        <div className="mt-4 flex items-center justify-center gap-2 border border-[#0052FF]/20 bg-[#0052FF]/5 px-4 py-3 rounded-xl shadow-sm">
-          <svg className="w-4 h-4 text-[#0052FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-          <span className="text-sm font-black text-[#0052FF] lowercase tracking-wide">
+        <div className="mt-6 flex items-center justify-center gap-2 py-3 bg-white/40 backdrop-blur-md rounded-2xl border border-white/60">
+          <span className="text-xs font-black text-slate-800 lowercase tracking-widest">
             {userRank
               ? `your rank: #${userRank} of ${scores.length}`
               : (playerRankData && typeof playerRankData === 'bigint')

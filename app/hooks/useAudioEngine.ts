@@ -140,52 +140,49 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
     }, [soundEnabled, initAudio])
 
-    // Sweeter FM-like plucks for actions
-    const sfxJump = useCallback(() => playTone(392.00, 'sine', 0.25, 0.15, 440), [playTone]) // G4 to A4
-    const sfxDoubleJump = useCallback(() => playTone(523.25, 'triangle', 0.25, 0.2, 587.33), [playTone]) // C5 to D5
-    const sfxDash = useCallback(() => playTone(261.63, 'sine', 0.4, 0.15, 196.00), [playTone]) // C4 to G3 (whoosh down)
+    // Fast, Arcade Retro SFX (Filtered to be smooth/relaxing)
+    const sfxJump = useCallback(() => playTone(220.00, 'square', 0.1, 0.1, 440), [playTone]) // Classic jump
+    const sfxDoubleJump = useCallback(() => playTone(330.00, 'square', 0.12, 0.12, 660), [playTone])
+    const sfxDash = useCallback(() => playTone(150.00, 'sawtooth', 0.15, 0.15, 50), [playTone]) // Swoosh down
 
-    // Sparkly chime chord (Major 9th arpeggio)
+    // Fast 8-bit coin sound
     const sfxCollect = useCallback(() => {
-        playTone(523.25, 'sine', 0.3, 0.1) // C5
-        setTimeout(() => playTone(659.25, 'triangle', 0.4, 0.15), 40) // E5
-        setTimeout(() => playTone(783.99, 'sine', 0.5, 0.2), 80) // G5
-        setTimeout(() => playTone(987.77, 'triangle', 0.6, 0.3), 120) // B5
+        playTone(880.00, 'square', 0.1, 0.05)
+        setTimeout(() => playTone(1318.51, 'square', 0.15, 0.1), 40)
     }, [playTone])
 
-    // Heavenly harp glissando
+    // Fast ascending retro scale
     const sfxPowerup = useCallback(() => {
-        [392.00, 440.00, 523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
-            setTimeout(() => playTone(freq, 'sine', 0.4, 0.2), i * 40)
+        [440, 554.37, 659.25, 880].forEach((freq, i) => {
+            setTimeout(() => playTone(freq, 'square', 0.15, 0.08), i * 30)
         })
     }, [playTone])
 
-    // Soft, muffled thud
+    // Classic arcade death (descending sawtooth)
     const sfxHit = useCallback(() => {
-        playTone(130.81, 'sine', 0.6, 0.2, 65.41)
-        setTimeout(() => playTone(98.00, 'triangle', 0.7, 0.2, 49.00), 40)
+        playTone(150.00, 'sawtooth', 0.3, 0.25, 40.00)
     }, [playTone])
 
-    const sfxSelect = useCallback(() => playTone(523.25, 'sine', 0.3, 0.1, 659.25), [playTone])
+    const sfxSelect = useCallback(() => playTone(659.25, 'triangle', 0.2, 0.1, 880), [playTone])
 
-    // Gentle musical combo counter (playing up a C Major Pentatonic scale, lingering longer)
+    // Fast pinging combo
     const sfxCombo = useCallback((combo: number) => {
         const pentatonic = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00]
         const note = pentatonic[Math.min(combo, pentatonic.length - 1)]
-        playTone(note, 'triangle', 0.3, 0.1)
-        setTimeout(() => playTone(note * 1.5, 'sine', 0.4, 0.2), 60)
+        playTone(note, 'square', 0.1, 0.08)
+        setTimeout(() => playTone(note * 1.5, 'square', 0.12, 0.1), 40)
     }, [playTone])
 
     const sfxMilestone = useCallback(() => {
-        playTone(392.00, 'sine', 0.4, 0.15) // G4
-        setTimeout(() => playTone(523.25, 'triangle', 0.4, 0.2), 150) // C5
-        setTimeout(() => playTone(659.25, 'sine', 0.5, 0.3), 300) // E5
-        setTimeout(() => playTone(783.99, 'triangle', 0.6, 0.4), 450) // G5
+        playTone(523.25, 'square', 0.15, 0.1)
+        setTimeout(() => playTone(659.25, 'square', 0.15, 0.1), 100)
+        setTimeout(() => playTone(783.99, 'square', 0.15, 0.15), 200)
+        setTimeout(() => playTone(1046.50, 'square', 0.2, 0.2), 300)
     }, [playTone])
 
     const sfxLevelUp = useCallback(() => {
-        [261.63, 329.63, 392.00, 523.25, 659.25].forEach((freq, i) => {
-            setTimeout(() => playTone(freq, 'sine', 0.6, 0.2), i * 100)
+        [261.63, 329.63, 392.00, 523.25].forEach((freq, i) => {
+            setTimeout(() => playTone(freq, 'square', 0.2, 0.1), i * 60)
         })
     }, [playTone])
 
@@ -227,11 +224,13 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         bgmOscRef.current = osc
         bgmGainRef.current = gain
 
-        // C Major Pentatonic (C4, D4, E4, G4, A4) - relaxing intervals
+        // Use a fast, plucky, hypnotic synthwave arpeggio
+        // Fast 'degen' energy, but soft 'relaxing' sine notes with delay
         const notes = [
-            261.63, 329.63, 392.00, 329.63,
-            440.00, 392.00, 523.25, 392.00,
-            261.63, 293.66, 329.63, 392.00
+            220.00, 261.63, 329.63, 440.00, // Am
+            174.61, 220.00, 261.63, 349.23, // F
+            130.81, 164.81, 196.00, 261.63, // C
+            196.00, 246.94, 293.66, 392.00  // G
         ]
         let noteIdx = 0
         let nextNoteTime = ctx.currentTime + 0.1
@@ -239,20 +238,21 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         const schedulePattern = () => {
             if (!bgmOscRef.current || !audioCtxRef.current) return
 
-            while (nextNoteTime < audioCtxRef.current.currentTime + 1.0) {
+            // Schedule ahead by 0.5 seconds
+            while (nextNoteTime < audioCtxRef.current.currentTime + 0.5) {
                 osc.frequency.setValueAtTime(notes[noteIdx], nextNoteTime)
 
-                // Extremely soft attack and long decay (Harp/Pad like)
-                gain.gain.setValueAtTime(0.005, nextNoteTime)
-                gain.gain.linearRampToValueAtTime(0.015, nextNoteTime + 0.4) // Swell in
-                gain.gain.exponentialRampToValueAtTime(0.005, nextNoteTime + 1.2) // long fade out
+                // Fast plucky envelope (Synthwave Arp style)
+                gain.gain.setValueAtTime(0.0, nextNoteTime)
+                gain.gain.linearRampToValueAtTime(0.04, nextNoteTime + 0.01) // sharp attack
+                gain.gain.exponentialRampToValueAtTime(0.001, nextNoteTime + 0.12) // fast decay
 
                 noteIdx = (noteIdx + 1) % notes.length
 
-                // Slow, hypnotic tempo (~50 BPM, 1.2 seconds per note)
-                nextNoteTime += 1.2
+                // Fast 16th notes (approx 100 BPM)
+                nextNoteTime += 0.15
             }
-            setTimeout(schedulePattern, 800)
+            setTimeout(schedulePattern, 200)
         }
         schedulePattern()
 

@@ -250,8 +250,8 @@ export default function GameEngine({
   const { address } = useWallet()
 
   // --- Realtime DOM Refs (Bypassing React state for 60fps performance) ---
-  const uiScoreRef = useRef<HTMLDivElement>(null)
-  const uiComboRef = useRef<HTMLDivElement>(null)
+  const uiScoreRef = useRef<HTMLSpanElement>(null)
+  const uiComboRef = useRef<HTMLSpanElement>(null)
 
   // --- Audio Engine ---
   const {
@@ -819,9 +819,9 @@ export default function GameEngine({
       e.uiTimer = 0
 
       // Write score direct to DOM to bypass React Reconciler
-      if (uiScoreRef.current) uiScoreRef.current.innerText = e.score.toString()
+      if (uiScoreRef.current) uiScoreRef.current.innerText = formatMarketCap(e.score)
       if (uiComboRef.current) {
-        uiComboRef.current.innerText = e.combo > 1 ? `x${e.combo}` : ''
+        uiComboRef.current.innerText = e.combo > 1 ? `${e.combo}× combo` : ''
         uiComboRef.current.parentElement!.style.opacity = e.combo > 1 ? '1' : '0'
       }
 
@@ -1615,9 +1615,11 @@ export default function GameEngine({
               {/* Current Score */}
               <div className="flex items-center gap-2.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-xl border border-white/80 shadow-sm pointer-events-none"
                 style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-                <span className="text-[15px] font-black text-slate-900 leading-none tracking-tighter"
+                <span
+                  ref={uiScoreRef}
+                  className="text-[15px] font-black text-slate-900 leading-none tracking-tighter"
                   style={{ fontFamily: 'var(--font-mono, monospace)', textShadow: 'none' }}>
-                  {formatMarketCap(score)}
+                  {formatMarketCap(engineRef.current?.score || score)}
                 </span>
                 <div className="w-px h-3.5 bg-slate-300" />
                 <div className="flex items-center gap-1">
@@ -1642,15 +1644,18 @@ export default function GameEngine({
               )}
             </div>
 
-            {/* Combo badge */}
-            {engineRef.current.combo > 1 && (
-              <div className="flex items-center px-2 py-1 bg-[#FFF8DC]/90 backdrop-blur border border-[#F0B90B]/40 rounded-lg shadow-sm">
-                <span className="text-[10px] font-black text-[#D4A002] drop-shadow-[0_0_4px_rgba(240,185,11,0.4)] lowercase"
-                  style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                  {engineRef.current.combo}× combo
-                </span>
-              </div>
-            )}
+            {/* Combo badge (Hidden by default, shown via Ref bypass) */}
+            <div
+              className="flex items-center px-2 py-1 bg-[#FFF8DC]/90 backdrop-blur border border-[#F0B90B]/40 rounded-lg shadow-sm transition-opacity duration-300"
+              style={{ opacity: (engineRef.current?.combo ?? 0) > 1 ? 1 : 0 }}
+            >
+              <span
+                ref={uiComboRef}
+                className="text-[10px] font-black text-[#D4A002] drop-shadow-[0_0_4px_rgba(240,185,11,0.4)] lowercase"
+                style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                {(engineRef.current?.combo ?? 0) > 1 ? `${engineRef.current?.combo}× combo` : ''}
+              </span>
+            </div>
           </div>
 
           {/* Premium HUD — Right: World + Speed + Sound */}
