@@ -104,82 +104,81 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
     }, [soundEnabled, initAudio])
 
     // =====================================================================
-    // SFX — UNIQUE DEGEN CRYPTO SOUNDS
+    // SFX — MODERN RELAXING 'CRYSTAL/BUBBLE' AESTHETIC
     // =====================================================================
 
-    // JUMP — "bwip!" rising chirp with harmonic
+    // JUMP — Soft, resonant "bloop" (drop-like)
     const sfxJump = useCallback(() => {
-        playTone(330, 'square', 0.06, 0.07, 660)
-        playTone(660, 'sine', 0.02, 0.05, 990) // sparkle harmonic
+        playTone(480, 'sine', 0.08, 0.12, 280) // Smooth drop
+        playTone(960, 'sine', 0.02, 0.15)      // Tiny glass resonance
     }, [playTone])
 
-    // DOUBLE JUMP — Higher dual chirp "bweee-ip!"
+    // DOUBLE JUMP — Higher, slightly faster double bloop
     const sfxDoubleJump = useCallback(() => {
-        playTone(440, 'square', 0.06, 0.08, 880)
-        setTimeout(() => playTone(880, 'triangle', 0.03, 0.06, 1320), 25)
+        playTone(600, 'sine', 0.08, 0.12, 350)
+        setTimeout(() => playTone(800, 'sine', 0.06, 0.1, 500), 40)
     }, [playTone])
 
-    // DASH — Fast descending swoosh
+    // DASH — Smooth wind sweep
     const sfxDash = useCallback(() => {
-        playTone(350, 'sawtooth', 0.07, 0.1, 120)
+        playTone(220, 'triangle', 0.06, 0.18, 50)
     }, [playTone])
 
-    // COLLECT — Iconic 2-note "ka-ching!" (crypto money sound)
+    // COLLECT — Distinctive glassy chime "tink-ling!"
     const sfxCollect = useCallback(() => {
-        playTone(1047, 'square', 0.05, 0.04)       // C6 ping
-        setTimeout(() => playTone(1319, 'triangle', 0.06, 0.08), 45) // E6 resolution
+        playTone(1318, 'sine', 0.04, 0.15)       // E6
+        setTimeout(() => playTone(1567, 'sine', 0.05, 0.25), 60) // G6 with longer tail
     }, [playTone])
 
-    // POWERUP — Major arpeggio fanfare "do-mi-sol-DO!"
+    // POWERUP — Gentle ascending celestial chord
     const sfxPowerup = useCallback(() => {
-        const notes = [523, 659, 784, 1047]
+        const notes = [523, 659, 784, 1047] // C Major
         notes.forEach((freq, i) => {
-            setTimeout(() => playTone(freq, 'square', 0.05 + i * 0.015, 0.07 + i * 0.02), i * 40)
+            setTimeout(() => playTone(freq, 'sine', 0.06, 0.2 + i * 0.05), i * 45)
         })
     }, [playTone])
 
-    // DEATH — Memorable 3-note descending "bwaa-bwa-bwaaaa" 
+    // DEATH — Sad but gentle "power down" sweep, less harsh than chip-tune
     const sfxHit = useCallback(() => {
-        playTone(392, 'square', 0.1, 0.1, 220)
-        setTimeout(() => playTone(294, 'square', 0.08, 0.12, 147), 110)
-        setTimeout(() => playTone(165, 'sawtooth', 0.12, 0.35, 65), 230)
+        playTone(330, 'triangle', 0.12, 0.5, 110) // Long E -> A drop
+        setTimeout(() => playTone(220, 'sine', 0.08, 0.4, 55), 100)
     }, [playTone])
 
-    // SELECT — Quick "blip"
+    // SELECT — Crystal tap
     const sfxSelect = useCallback(() => {
-        playTone(784, 'square', 0.04, 0.05, 1047)
+        playTone(1046, 'sine', 0.05, 0.08, 880)
     }, [playTone])
 
-    // COMBO — Rising pentatonic (higher combo = higher pitch)
+    // COMBO — Ethereal ascending scale
     const sfxCombo = useCallback((combo: number) => {
-        const scale = [262, 311, 349, 415, 466, 523, 622, 698, 831, 932, 1047]
+        const scale = [392, 440, 493, 523, 587, 659, 740, 784, 880, 987, 1046]
         const note = scale[Math.min(combo, scale.length - 1)]
-        playTone(note, 'square', 0.05, 0.05)
-        setTimeout(() => playTone(note * 1.5, 'sine', 0.03, 0.06), 30)
+        playTone(note, 'sine', 0.06, 0.18)
+        setTimeout(() => playTone(note * 1.5, 'sine', 0.03, 0.25), 40) // Harmonic tail
     }, [playTone])
 
-    // MILESTONE — Victory jingle "da-da-da-DUM!"
+    // MILESTONE — Relaxing victory chord
     const sfxMilestone = useCallback(() => {
         const notes = [
-            { f: 523, d: 55 }, { f: 659, d: 55 },
-            { f: 784, d: 55 }, { f: 1047, d: 160 },
+            { f: 523, d: 80 }, { f: 659, d: 80 },
+            { f: 784, d: 80 }, { f: 1047, d: 250 },
         ]
         let t = 0
         notes.forEach(({ f, d }, i) => {
-            setTimeout(() => playTone(f, 'square', 0.06 + i * 0.01, d / 1000 + 0.04), t)
+            setTimeout(() => playTone(f, 'sine', 0.07, d / 1000 + 0.1), t)
             t += d
         })
     }, [playTone])
 
-    // LEVEL UP — Quick ascending burst
+    // LEVEL UP — Smooth cascade
     const sfxLevelUp = useCallback(() => {
-        [262, 330, 392, 523, 659].forEach((freq, i) => {
-            setTimeout(() => playTone(freq, 'square', 0.05, 0.06), i * 30)
+        [523, 659, 784, 1047, 1318].forEach((freq, i) => {
+            setTimeout(() => playTone(freq, 'sine', 0.05, 0.15), i * 35)
         })
     }, [playTone])
 
     // =====================================================================
-    // BGM — HYPNOTIC LO-FI CRYPTO ARPEGGIO
+    // BGM — LUSH AMBIENT LO-FI ARPEGGIO
     // =====================================================================
 
     const startBackgroundMusic = useCallback(() => {
@@ -191,22 +190,22 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
         if (ctx.state === 'suspended') ctx.resume()
 
-        // Two detuned oscillators for warm analog feel
+        // Soft, dreamy synth pads using dual sine/triangle layering
         const osc1 = ctx.createOscillator()
         const osc2 = ctx.createOscillator()
         const gain = ctx.createGain()
         const filter = ctx.createBiquadFilter()
 
-        osc1.type = 'square'
-        osc2.type = 'triangle' // triangle instead of sawtooth = softer, less buzzy
-        osc2.detune.value = 6
+        osc1.type = 'sine'      // Very smooth, no harsh harmonics
+        osc2.type = 'triangle'  // Adds just enough timbre
+        osc2.detune.value = 8   // Lush chorus effect
 
         filter.type = 'lowpass'
-        filter.frequency.value = 1400 // lower cutoff = warmer, less harsh
-        filter.Q.value = 1.0
+        filter.frequency.value = 1100 // Deep, muffled "underwater/lofi" tone
+        filter.Q.value = 0.8
 
         gain.gain.setValueAtTime(0, ctx.currentTime)
-        gain.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 2.5)
+        gain.gain.linearRampToValueAtTime(0.045, ctx.currentTime + 3.0) // Long, slow fade in
 
         osc1.connect(filter)
         osc2.connect(filter)
@@ -216,56 +215,43 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         osc1.start()
         osc2.start()
 
-        // Store ALL oscillators so we can stop them ALL
         bgmNodesRef.current = { oscs: [osc1, osc2], gain }
 
-        // 32-note arpeggio pattern across 8 chords
+        // === RELAXING JAZZ-HOP CHORD PROGRESSION ===
+        // CMaj7 → Am9 → FMaj7 → G6 (lush, dreamy, emotional but calming)
         const pattern = [
-            // Am: A C E A
-            220.00, 261.63, 329.63, 440.00,
-            // F: F A C F  
-            174.61, 220.00, 261.63, 349.23,
-            // C: C E G C
-            261.63, 329.63, 392.00, 523.25,
-            // Em: E G B E
-            164.81, 196.00, 246.94, 329.63,
-            // Dm: D F A D
-            146.83, 174.61, 220.00, 293.66,
-            // G: G B D G
-            196.00, 246.94, 293.66, 392.00,
-            // Am (high): A C E A
-            440.00, 523.25, 659.25, 880.00,
-            // E: E G# B E (tension → resolve)
-            164.81, 207.65, 246.94, 329.63,
+            // CMaj7: C E G B (warm, floating)
+            261.63, 329.63, 392.00, 493.88,
+            // Am9: A C E B (slightly melancholic but resolved)
+            220.00, 261.63, 329.63, 493.88,
+            // FMaj7: F A C E (dreamy, expansive)
+            174.61, 220.00, 261.63, 329.63,
+            // G6: G B D E (smooth turnaround)
+            196.00, 246.94, 293.66, 329.63,
         ]
 
         let noteIdx = 0
-        let nextNoteTime = ctx.currentTime + 0.3
-        const NOTE_INTERVAL = 0.115 // ~130 BPM 16th notes
+        let nextNoteTime = ctx.currentTime + 0.5
+        const NOTE_INTERVAL = 0.28 // SLOW, relaxing tempo (~107 BPM 8th notes)
 
         const schedulePattern = () => {
             if (!bgmNodesRef.current || !audioCtxRef.current) return
 
-            while (nextNoteTime < audioCtxRef.current.currentTime + 0.5) {
+            while (nextNoteTime < audioCtxRef.current.currentTime + 0.8) {
                 const note = pattern[noteIdx]
 
                 osc1.frequency.setValueAtTime(note, nextNoteTime)
                 osc2.frequency.setValueAtTime(note, nextNoteTime)
 
-                // Plucky kalimba envelope
-                gain.gain.setValueAtTime(0.008, nextNoteTime)
-                gain.gain.linearRampToValueAtTime(0.045, nextNoteTime + 0.006)
-                gain.gain.exponentialRampToValueAtTime(0.008, nextNoteTime + 0.08)
-
-                // Accent every chord root (first of 4 notes)
-                if (noteIdx % 4 === 0) {
-                    gain.gain.linearRampToValueAtTime(0.06, nextNoteTime + 0.006)
-                }
+                // Soft bell-like envelope with long decay
+                gain.gain.setValueAtTime(0.005, nextNoteTime)
+                gain.gain.linearRampToValueAtTime(0.05, nextNoteTime + 0.02)
+                gain.gain.exponentialRampToValueAtTime(0.01, nextNoteTime + 0.22)
 
                 noteIdx = (noteIdx + 1) % pattern.length
                 nextNoteTime += NOTE_INTERVAL
             }
-            bgmIntervalRef.current = setTimeout(schedulePattern, 180)
+            bgmIntervalRef.current = setTimeout(schedulePattern, 200)
         }
         schedulePattern()
 

@@ -244,7 +244,7 @@ export default function Home() {
             {/* TAB NAVIGATION - Always visible */}
             <div className="w-full px-3 sm:px-4 py-1.5 sm:py-2 relative z-20 flex-shrink-0">
               <div className="flex justify-center items-center gap-1 p-0.5 bg-white/60 backdrop-blur-md rounded-xl border border-slate-200/50 shadow-inner">
-                <button onClick={() => setActiveTab('game')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
+                <button onClick={() => setActiveTab('game')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
                   <div className="flex items-center gap-0.5">
                     <svg className="w-2.5 h-2.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                     <span className="text-[9px] sm:text-[10px] font-black tracking-wide leading-none">trade</span>
@@ -252,7 +252,7 @@ export default function Home() {
                   <span className="text-[6px] sm:text-[7px] font-semibold opacity-70 leading-none mt-[1px]">play demo</span>
                 </button>
 
-                <button onClick={() => setActiveTab('profile')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'profile' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'}`}>
+                <button onClick={() => setActiveTab('profile')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'profile' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
                   <div className="flex items-center gap-0.5">
                     <svg className="w-2.5 h-2.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
                     <span className="text-[9px] sm:text-[10px] font-black tracking-wide leading-none">wallet</span>
@@ -260,7 +260,7 @@ export default function Home() {
                   <span className="text-[6px] sm:text-[7px] font-semibold opacity-70 leading-none mt-[1px]">profile</span>
                 </button>
 
-                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-1.5 sm:px-2 h-[22px] sm:h-[24px] flex flex-col items-center justify-center rounded-lg transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white shadow-[0_0_15px_rgba(240,185,11,0.6)] scale-100 ring-1 ring-[#F0B90B]/80' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)]'}`}>
+                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-1.5 sm:px-2 h-[22px] sm:h-[24px] flex flex-col items-center justify-center rounded-lg transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white shadow-[0_0_15px_rgba(240,185,11,0.6)] scale-100 ring-1 ring-[#F0B90B]/80 z-10' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)] z-0'}`}>
                   {activeTab !== 'leaderboard' && <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-[#F0B90B] to-transparent opacity-20 -translate-x-full animate-[shimmerSweep_2.5s_ease-in-out_infinite]" />}
                   <div className="flex items-center gap-0.5 relative z-10">
                     <svg className={`w-2.5 h-2.5 hidden sm:block transition-transform duration-300 ${(activeTab as string) !== 'leaderboard' ? 'group-hover:scale-110 text-[#F0B90B]' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
@@ -406,7 +406,7 @@ export default function Home() {
         </main>
 
         {/* FOOTER - z-[40], solid white background */}
-        <footer className="mt-auto bg-white relative z-[40] flex-shrink-0 w-full flex flex-col justify-end min-h-[30px] sm:min-h-[36px] pb-[max(env(safe-area-inset-bottom),_6px)]">
+        <footer className="mt-auto bg-white relative z-[40] flex-shrink-0 w-full flex flex-col justify-end min-h-[30px] sm:min-h-[36px] pb-1.5">
           <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 flex flex-row items-center justify-between h-[24px] sm:h-[28px]">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none m-0 p-0">© {new Date().getFullYear()} base dash</span>
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none m-0 p-0">built by <span className="font-black text-[#0052FF] ml-0.5">vov</span></span>

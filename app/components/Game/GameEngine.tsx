@@ -1068,14 +1068,20 @@ export default function GameEngine({
       if (document.hidden && mode === 'playing') {
         setMode('paused')
       }
-      // Clear out the massive delta buildup by signaling physics loops
+      // When returning from background: resume audio context & restart BGM
       if (!document.hidden) {
         window.dispatchEvent(new Event('baseresume'))
+        // iOS Safari kills AudioContext oscillators on suspend.
+        // Clean up dead BGM nodes so startBackgroundMusic can recreate them.
+        if (soundEnabled && mode === 'playing') {
+          stopBackgroundMusic()
+          setTimeout(() => startBackgroundMusic(), 100)
+        }
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [mode, setMode])
+  }, [mode, setMode, soundEnabled, startBackgroundMusic, stopBackgroundMusic])
 
   // Keyboard controls
   useEffect(() => {
