@@ -314,8 +314,8 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Game Canvas — Proportional flex: canvas dominates, dashboard is secondary */}
-                <div className="w-full px-0 sm:px-0 mt-0.5 sm:mt-1 mb-0.5 sm:mb-1 flex-[5] min-h-[140px] max-h-[450px] relative z-20 flex flex-col items-center justify-center fade-in">
+                {/* Game Canvas — Proportional flex, capped at 55% viewport */}
+                <div className="w-full px-0 sm:px-0 mt-0.5 sm:mt-1 mb-0.5 sm:mb-1 flex-[3] min-h-[140px] max-h-[55vh] relative z-20 flex flex-col items-center justify-center fade-in">
                   <div
                     className="relative w-full h-full max-w-[600px] sm:rounded-[20px] overflow-hidden border-y sm:border-x border-[#0052FF]/10 bg-white mx-auto shadow-[0_8px_30px_rgba(0,0,0,0.12)] touch-none"
                   >
@@ -331,7 +331,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="w-full px-2 sm:px-4 pb-2.5 sm:pb-4 pt-1 sm:pt-2 flex-[2] relative z-20 flex flex-col min-h-[80px]">
+                <div className="w-full px-2 sm:px-4 pb-2.5 sm:pb-4 pt-1 sm:pt-2 flex-[2] relative z-20 flex flex-col min-h-[120px]">
                   {/* Note: In a future PR we will pull score/combo state UP to page.tsx via Zustand, for now passing 0/0 to initial mount layout */}
                   <DashboardGrid score={0} combo={0} />
                 </div>
