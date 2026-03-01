@@ -13,7 +13,7 @@
  * ============================================================================
  */
 import {
-  useState, useRef, useEffect, useCallback, useMemo,
+  useState, useRef, useEffect, useCallback,
 } from 'react'
 
 import {
@@ -23,24 +23,21 @@ import {
   type ParticleType,
   type TrailType,
   type TrailPoint,
-  type MarketState,
   CFG,
   WORLDS,
   SPEEDS,
   IS_MOBILE,
   POWERUP_CONFIG,
   MARKET_CONFIG,
-  TRAIL_UNLOCKS,
-  clamp, lerp, rand, easeOut,
+  clamp, lerp, rand,
   getWorld, getWorldIndex, getSpeed, getJumps,
   createEngine, spawnPattern, formatMarketCap,
   updateGameConfig,
 } from './gameConfig'
 import { drawFrame } from './gameRenderer'
 import { useWallet } from '@/app/hooks/useWallet'
-import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS } from '@/app/contracts'
 import { useAudioEngine } from '@/app/hooks/useAudioEngine'
-import { useGameStore } from '@/app/store/gameStore'
+import { useGameStore, type GameHistoryEntry } from '@/app/store/gameStore'
 
 // ============================================================================
 // PARTICLE SPAWNER HELPERS
@@ -230,7 +227,7 @@ export default function GameEngine({
   submitTxHash,
 }: GameEngineProps) {
   // --- React state ---
-  const { score, setScore, mode, setMode, soundEnabled, setSoundEnabled } = useGameStore()
+  const { score, setScore, mode, setMode, soundEnabled, setSoundEnabled, addGameToHistory } = useGameStore()
 
   const [best, setBest] = useState(0)
   const [combo, setCombo] = useState(0)
@@ -292,6 +289,8 @@ export default function GameEngine({
   const highScoreRef = useRef(0)
   const logoRef = useRef<HTMLImageElement | null>(null)
   const demoRafRef = useRef<number | null>(null)
+  const gameIdRef = useRef(0) // Monotonically increasing game ID to prevent stale loops
+  const gameSessionIdRef = useRef<string | null>(null) // Short session ID for sharing
   const [nearRecordDiff, setNearRecordDiff] = useState<number | null>(null)
   const [retryVisible, setRetryVisible] = useState(false)
 
@@ -311,9 +310,8 @@ export default function GameEngine({
     const speedTier = getSpeed(e.score)
     const speedMult = speedTier.multiplier
     const slowMult = e.slowdownTimer > 0 ? CFG.SLOW_MULT : 1
-    const nearMissMult = e.nearMissTimer > 0 ? 0.4 : 1 // near-miss slow-mo
-    const bearMult = 1 // Market mechanics disabled
-    const frameSpeed = CFG.BASE_SPEED * speedMult * slowMult * nearMissMult * bearMult * warmup
+    const nearMissMult = e.nearMissTimer > 0 ? 0.4 : 1
+    const frameSpeed = CFG.BASE_SPEED * speedMult * slowMult * nearMissMult * warmup
 
     e.speed = lerp(e.speed, frameSpeed, dt * 4)
     e.distance += e.speed * dt
@@ -372,12 +370,11 @@ export default function GameEngine({
     // Apply velocity
     p.y += p.velocityY * dt
 
-    // Ground collision — DEEP FIX: EXACT snap, NO GAP WHATSOEVER
+    // Ground collision
     const groundLevel = CFG.GROUND - CFG.PLAYER_SIZE
 
-    // CRITICAL: Snap if within 20px and not moving up fast
-    if (p.y >= groundLevel - 20 && p.velocityY >= 0) {
-      p.y = groundLevel  // PERFECT - zero gap
+    if (p.y >= groundLevel - 4 && p.velocityY >= 0) {
+      p.y = groundLevel
       p.velocityY = 0
       p.onGround = true
       p.coyoteTimer = CFG.COYOTE
@@ -406,8 +403,7 @@ export default function GameEngine({
     // Dash timer
     if (p.isDashing) {
       p.dashTimer -= dt
-      p.velocityY = 0 // freeze Y during dash
-      p.y += 0 // no vertical movement
+      p.velocityY = 0
       if (p.dashTimer <= 0) {
         p.isDashing = false
         p.dashTimer = CFG.DASH_COOLDOWN
@@ -428,6 +424,8 @@ export default function GameEngine({
     } else {
       // Smooth constant spin in air (Geometry Dash style)
       p.rotation += 11.5 * dt
+      // Normalize rotation to prevent float overflow on long sessions
+      if (p.rotation > 62.83) p.rotation -= 62.83 // ~10 full rotations
     }
 
     // Squash/stretch animation — SMOOTHER landing
@@ -505,8 +503,8 @@ export default function GameEngine({
         c.wickBottom = c.bodyY + c.bodyHeight + (c.height - c.bodyHeight) * 0.4
       }
 
-      // Collection progress
-      if (c.collected) c.collectProgress = Math.min(1, c.collectProgress + dt * 3)
+      // Collection progress — FASTER animation so candle disappears quickly
+      if (c.collected) c.collectProgress = Math.min(1, c.collectProgress + dt * 5)
 
       // Score — passed candle
       if (!c.passed && c.x + c.width < CFG.PLAYER_X) {
@@ -522,8 +520,15 @@ export default function GameEngine({
       }
     }
 
-    // Remove off-screen candles
-    e.candles = e.candles.filter(c => c.x + c.width > -100)
+    // Remove off-screen candles AND fully-animated collected ones — IN-PLACE compaction
+    let cWrite = 0
+    for (let ci = 0; ci < e.candles.length; ci++) {
+      const c = e.candles[ci]
+      if (c.x + c.width > -100 && !(c.collected && c.collectProgress >= 1)) {
+        e.candles[cWrite++] = c
+      }
+    }
+    e.candles.length = cWrite
 
     // --- Spawn patterns ---
     if (e.distance >= e.nextSpawnDistance) {
@@ -578,13 +583,14 @@ export default function GameEngine({
             setDeathScore(e.score)
             // Compute game stats
             const dodged = e.candles.filter(c => c.kind === 'red' && c.passed && !c.collected).length
-            setGameStats({
+            const stats = {
               timeSurvived: e.gameTime,
               candlesDodged: dodged + Math.floor(e.score / CFG.RED_SCORE),
               greensCollected: e.totalCollected,
               totalJumps: e.totalJumps,
               maxCombo: e.maxCombo,
-            })
+            }
+            setGameStats(stats)
             setMode('gameover')
             // 8.3 — "LIQUIDATED at $X" death message
             const msg = getRandomDeathMessage()
@@ -599,6 +605,38 @@ export default function GameEngine({
               setIsNewRecord(true)
               playNewRecordFanfare()
               try { localStorage.setItem(storageKey, String(e.score)) } catch { }
+            }
+            // Create game session (wallet-connected only) & add to history
+            gameSessionIdRef.current = null
+            if (address && e.score > 0) {
+              const sessionData = {
+                score: e.score,
+                time: Math.floor(stats.timeSurvived),
+                dodged: stats.candlesDodged,
+                buys: stats.greensCollected,
+                jumps: stats.totalJumps,
+                combo: stats.maxCombo,
+                address,
+              }
+              fetch('/api/game-sessions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(sessionData),
+              }).then(r => r.json()).then(data => {
+                if (data.id) {
+                  gameSessionIdRef.current = data.id
+                  addGameToHistory({
+                    id: data.id,
+                    score: e.score,
+                    time: Math.floor(stats.timeSurvived),
+                    dodged: stats.candlesDodged,
+                    buys: stats.greensCollected,
+                    jumps: stats.totalJumps,
+                    combo: stats.maxCombo,
+                    date: Date.now(),
+                  })
+                }
+              }).catch(() => { /* silent */ })
             }
             // Death particles
             spawnDeathBurst(e, IS_MOBILE ? 16 : 28)
@@ -625,8 +663,8 @@ export default function GameEngine({
           // Sound + haptic
           sfxCollect()
           hapticCollect()
-          // Collection particles
-          spawnCollectSparkle(e, c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, IS_MOBILE ? 6 : 12)
+          // Collection particles — reduced for mobile perf
+          spawnCollectSparkle(e, c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, IS_MOBILE ? 4 : 8)
         }
       } else if (c.kind === 'red' && !c.passed && c.x + c.width < CFG.PLAYER_X + 5 && c.x + c.width > CFG.PLAYER_X - 10 && e.nearMissTimer <= 0 && (e.gameTime - ((e as any)._lastNearMissTime || 0) > MARKET_CONFIG.NEAR_MISS_COOLDOWN)) {
         // Near-miss detection: only genuine close calls with cooldown
@@ -697,8 +735,15 @@ export default function GameEngine({
       }
     }
 
-    // Remove off-screen power-ups and fully collected ones
-    e.powerUps = e.powerUps.filter(pu => pu.x + pu.size > -50 && !(pu.collected && pu.collectProgress >= 1))
+    // Remove off-screen power-ups and fully collected ones — IN-PLACE compaction
+    let puWrite = 0
+    for (let pui = 0; pui < e.powerUps.length; pui++) {
+      const pu = e.powerUps[pui]
+      if (pu.x + pu.size > -50 && !(pu.collected && pu.collectProgress >= 1)) {
+        e.powerUps[puWrite++] = pu
+      }
+    }
+    e.powerUps.length = puWrite
 
     // --- Power-up timers ---
     if (e.moonBoostTimer > 0) {
@@ -804,10 +849,9 @@ export default function GameEngine({
       }
     }
 
-    // Trail spawn is handled at line 455 (single source of truth)
-    if (e.trailTimer > 0) e.trailTimer -= dt
+    // --- Trail timer handled at line 475 (single source of truth) ---
 
-    // --- Clean up player trail particles (handled in line 464 for performance) ---
+    // --- Clean up player trail particles (handled at line 477 for performance) ---
 
     // --- Animation timers ---
     if (e.scorePulse > 0) e.scorePulse -= dt * 3
@@ -881,14 +925,22 @@ export default function GameEngine({
   // ========================================================================
 
   const startGame = useCallback(() => {
+    // Increment game ID — any stale RAF from a previous game will see a different ID and bail
+    gameIdRef.current += 1
+
     // CRITICAL: Kill old engine's state to prevent any stale RAF contamination
     const oldEngine = engineRef.current
     oldEngine.alive = false
     oldEngine.particles.length = 0
+    oldEngine.candles.length = 0
+    oldEngine.powerUps.length = 0
     for (const t of oldEngine.player.trail) { t.life = 0; t.alpha = 0 }
 
-    // Cancel any running RAF immediately
+    // Cancel real game RAF immediately
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
+
+    // ALSO cancel demo RAF — prevents concurrent demo+game loops after rapid restarts
+    if (demoRafRef.current) { cancelAnimationFrame(demoRafRef.current); demoRafRef.current = null }
 
     const engine = createEngine()
     engine.activeTrail = activeTrail
@@ -1141,18 +1193,26 @@ export default function GameEngine({
     let frameCount = 0
     let lastFpsUpdate = performance.now()
 
+    // Capture the game ID at loop start — if it changes, this loop is STALE
+    const myGameId = gameIdRef.current
+
     // Reset loop time completely when waking up the tab
     const onResume = () => { prev = performance.now(); acc = 0 }
     window.addEventListener('baseresume', onResume)
 
     const loop = (t: number) => {
-      // Extremely aggressive cap on delta time. If the tab slept, discard huge time jumps entirely.
+      // CRITICAL: Bail if this loop belongs to a previous game instance
+      if (gameIdRef.current !== myGameId) return
+
       const rawDt = (t - prev) / 1000
-      const dt = Math.min(rawDt, 0.05) // Cap max step to 50ms safely
+      const dt = Math.min(rawDt, 0.05)
       prev = t
       acc += dt
 
-      // Limit physics updates to prevent spiral of death on slow devices
+      // Hard cap accumulated time to prevent spiral-of-death
+      if (acc > CFG.STEP * 4) acc = CFG.STEP * 2
+
+      // Limit physics updates per frame
       let updates = 0
       const maxUpdates = IS_MOBILE ? 2 : 3
       while (acc >= CFG.STEP && updates < maxUpdates) {
@@ -1167,7 +1227,7 @@ export default function GameEngine({
         updateAudioParams(speedMult, engineRef.current.worldIndex)
       }
 
-      // Discard excess accumulated time to avoid carrying huge deficit from tab switches or lag spikes
+      // Discard excess accumulated time
       acc = acc % CFG.STEP
 
       // Skip rendering if tab is hidden
@@ -1179,13 +1239,12 @@ export default function GameEngine({
       if (process.env.NODE_ENV === 'development') {
         frameCount++
         if (t - lastFpsUpdate >= 1000) {
-          // console.log(`FPS: ${frameCount}`)
           frameCount = 0
           lastFpsUpdate = t
         }
       }
 
-      if (engineRef.current.alive && mode === 'playing') {
+      if (engineRef.current.alive && mode === 'playing' && gameIdRef.current === myGameId) {
         rafRef.current = requestAnimationFrame(loop)
       }
     }
@@ -1350,22 +1409,38 @@ export default function GameEngine({
           if (gp.x < -10) gp.x = CFG.WIDTH + rand(5, 30)
         }
 
-        // Clean up demo trail particles
-        de.player.trail = de.player.trail.filter(t => {
-          t.life -= CFG.STEP
-          return t.life > 0
-        })
-        if (de.player.trail.length > CFG.PARTICLE_LIMIT) {
-          de.player.trail = de.player.trail.slice(-CFG.PARTICLE_LIMIT)
+        // Clean up demo trail — in-place mutation (no GC pressure, no new arrays)
+        let trailWrite = 0
+        for (let ti = 0; ti < de.player.trail.length; ti++) {
+          const tp = de.player.trail[ti]
+          if (tp.life > 0) {
+            tp.life -= CFG.STEP
+            tp.alpha -= CFG.STEP * 1.5
+            if (tp.life > 0) de.player.trail[trailWrite++] = tp
+          }
         }
+        de.player.trail.length = trailWrite
 
-        // Reset occasionally
+        // Clean up demo particles — in-place mutation
+        let partWrite = 0
+        for (let pi = 0; pi < de.particles.length; pi++) {
+          const pp = de.particles[pi]
+          pp.life -= CFG.STEP
+          if (pp.life > 0) de.particles[partWrite++] = pp
+        }
+        de.particles.length = partWrite
+
+        // Reset occasionally — full clean state
         if (de.distance > 10000) {
-          Object.assign(de, createEngine())
+          de.particles.length = 0
+          de.player.trail.length = 0
+          const fresh = createEngine()
+          Object.assign(de, fresh)
           de.alive = true
           de.showTutorial = false
           de.player.y = CFG.GROUND - CFG.PLAYER_SIZE
           de.player.onGround = true
+          de.particles = []
         }
 
         demoAcc -= CFG.STEP
@@ -1472,35 +1547,35 @@ export default function GameEngine({
       {/* ===================== MENU OVERLAY ===================== */}
       {mode === 'menu' && (
         <div className="game-overlay flex items-center justify-center p-4" style={{ containerType: 'size', background: 'transparent' }}>
-          <div className="border border-slate-200/60 bg-white/30 backdrop-blur-sm px-10 pt-7 pb-5 sm:px-12 sm:pt-8 sm:pb-6 shadow-[0_24px_80px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,82,255,0.06)] relative flex flex-col items-center gap-4 sm:gap-5 rounded-[24px]"
-            style={{ width: '100%', maxWidth: '280px', transform: 'scale(min(1, calc(100cqh / 280px)))', transformOrigin: 'center', animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
+          <div className="border border-white/70 bg-white/45 backdrop-blur-md px-8 pt-6 pb-5 sm:px-10 sm:pt-7 sm:pb-6 shadow-[0_16px_48px_rgba(0,0,0,0.06),0_0_0_1px_rgba(0,82,255,0.04),inset_0_1px_0_rgba(255,255,255,0.6)] relative flex flex-col items-center gap-3.5 sm:gap-4 rounded-[20px]"
+            style={{ width: '100%', maxWidth: '260px', transform: 'scale(min(1, calc(100cqh / 280px)))', transformOrigin: 'center', animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
 
-            {/* Best Score Display — Premium */}
-            <div className="w-full bg-gradient-to-br from-[#FFFBEB] to-[#FFF3CC] px-2 py-2.5 border border-[#F0B90B]/30 text-center rounded-2xl shadow-[0_4px_12px_rgba(240,185,11,0.15)]"
+            {/* Best Score Display */}
+            <div className="w-full bg-gradient-to-br from-[#FFFBEB] to-[#FFF3CC] px-3 py-2.5 border border-[#F0B90B]/25 text-center rounded-xl shadow-[0_2px_8px_rgba(240,185,11,0.1)]"
               style={{ animation: 'menuFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both', animationDelay: '0.05s' }}>
               <p className="text-[7px] font-black text-[#D4A002] tracking-[0.18em] mb-1 lowercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>best pnl</p>
               <p className="font-black text-[#B78905] leading-none text-base sm:text-lg tracking-tighter" style={{ fontFamily: 'var(--font-mono, monospace)' }}>{formatMarketCap(best)}</p>
             </div>
 
-            {/* Start Button — PREMIUM pulsing glow */}
+            {/* Start Button */}
             <button
               onClick={(e) => { e.stopPropagation(); startGame() }}
-              className="w-full relative overflow-hidden px-3 py-3 text-[12px] font-black tracking-[0.18em] lowercase text-white transition-all duration-300 active:scale-95 group rounded-2xl"
+              className="w-full relative overflow-hidden px-3 py-2.5 text-[11px] font-black tracking-[0.2em] lowercase text-white transition-all duration-300 active:scale-95 group rounded-xl"
               style={{
-                background: 'linear-gradient(135deg, #0052FF 0%, #0040CC 100%)',
-                boxShadow: '0 8px 32px rgba(0,82,255,0.45), 0 0 0 1px rgba(0,82,255,0.3)',
+                background: 'linear-gradient(135deg, #0052FF 0%, #003FCC 100%)',
+                boxShadow: '0 6px 24px rgba(0,82,255,0.35), 0 0 0 1px rgba(0,82,255,0.2)',
                 animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both, startGlow 2.5s ease-in-out 0.5s infinite',
                 animationDelay: '0.15s',
                 fontFamily: 'var(--font-mono, monospace)',
               }}
             >
               <span className="relative z-10">start trade</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 rounded-2xl" />
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 rounded-xl" />
             </button>
 
             {/* Hint Text */}
             <div className="text-center" style={{ animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both', animationDelay: '0.25s' }}>
-              <p className="text-[8px] font-black text-slate-800 tracking-[0.2em] uppercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>TAP TO START</p>
+              <p className="text-[7px] font-bold text-slate-500 tracking-[0.2em] uppercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>TAP TO START</p>
             </div>
 
           </div>
@@ -1530,7 +1605,7 @@ export default function GameEngine({
       {mode === 'gameover' && (
         <div className="game-overlay" style={{ containerType: 'size', background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', animation: 'deathFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}>
           <div className="w-full h-full flex items-center justify-center p-1 sm:p-2">
-            <div className="w-full max-w-[280px] rounded-xl bg-white border border-[#0A0B14]/20 shadow-2xl px-2 py-1.5 sm:py-2 mx-auto relative overflow-hidden"
+            <div className="w-full max-w-[280px] rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200/60 shadow-[0_20px_60px_rgba(0,0,0,0.15)] px-3 py-2.5 sm:py-3 mx-auto relative overflow-hidden"
               style={{ transform: 'scale(min(1, calc(100cqh / 280px)))', transformOrigin: 'center' }}>
 
               <div className="flex items-center justify-center gap-1 mb-1.5">
@@ -1598,16 +1673,16 @@ export default function GameEngine({
               ) : isNewRecord ? (
                 isConnected && canSubmitScore && deathScore > 0 ? (
                   submitting ? (
-                    <button disabled className="mb-1.5 w-full bg-slate-200 text-slate-500 py-1.5 text-[8px] sm:text-[9px] font-black lowercase tracking-widest rounded-none border border-slate-300">
+                    <button disabled className="mb-1.5 w-full bg-slate-100 text-slate-400 py-2 text-[8px] sm:text-[9px] font-black lowercase tracking-widest rounded-lg border border-slate-200">
                       submitting...
                     </button>
                   ) : (
-                    <button onClick={submitScore} className="mb-1.5 w-full bg-[#0052FF] text-white py-1.5 text-[8px] sm:text-[9px] font-black lowercase tracking-widest hover:bg-[#0A0B14] active:scale-[0.98] rounded-none border border-[#0052FF] hover:border-[#0A0B14] transition-colors">
+                    <button onClick={submitScore} className="mb-1.5 w-full bg-[#0052FF] text-white py-2 text-[8px] sm:text-[9px] font-black lowercase tracking-widest hover:bg-[#003FCC] active:scale-[0.98] rounded-lg border border-[#0052FF] transition-all shadow-[0_4px_12px_rgba(0,82,255,0.2)]">
                       save record (free)
                     </button>
                   )
                 ) : !isConnected ? (
-                  <button onClick={handleConnectWallet} disabled={connectingWallet} className="mb-1.5 w-full bg-[#0052FF] text-white py-1.5 text-[8px] sm:text-[9px] font-black lowercase tracking-widest hover:bg-[#0A0B14] active:scale-[0.98] rounded-none border border-[#0052FF] hover:border-[#0A0B14] transition-colors disabled:opacity-50">
+                  <button onClick={handleConnectWallet} disabled={connectingWallet} className="mb-1.5 w-full bg-[#0052FF] text-white py-2 text-[8px] sm:text-[9px] font-black lowercase tracking-widest hover:bg-[#003FCC] active:scale-[0.98] rounded-lg border border-[#0052FF] transition-all shadow-[0_4px_12px_rgba(0,82,255,0.2)] disabled:opacity-50">
                     {connectingWallet ? 'connecting...' : 'connect to save'}
                   </button>
                 ) : (
@@ -1617,17 +1692,15 @@ export default function GameEngine({
 
               {error && <p className="text-[#F6465D] text-[6px] sm:text-[7px] font-black mb-1.5 bg-[#FFF0F2] px-2 py-1 rounded text-center border border-[#F6465D]/30 lowercase tracking-widest">{error.toLowerCase()}</p>}
 
-              <button onClick={startGame} className={`w-full border border-[#0A0B14] bg-white px-2 py-1.5 text-[9px] sm:text-[10px] font-black text-[#0A0B14] lowercase tracking-widest hover:bg-[#0A0B14] hover:text-white active:scale-[0.98] transition-all rounded-none ${retryVisible ? 'opacity-100' : 'opacity-0 scale-95 pointer-events-none'}`} style={retryVisible ? { animation: 'retryPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards' } : undefined}>
+              <button onClick={startGame} className={`w-full border border-slate-200 bg-white px-2 py-2 text-[9px] sm:text-[10px] font-black text-slate-800 lowercase tracking-widest hover:bg-slate-900 hover:text-white hover:border-slate-900 active:scale-[0.98] transition-all rounded-lg ${retryVisible ? 'opacity-100' : 'opacity-0 scale-95 pointer-events-none'}`} style={retryVisible ? { animation: 'retryPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards' } : undefined}>
                 run it back
               </button>
 
-              {retryVisible && (
+              {retryVisible && isConnected && gameSessionIdRef.current && (
                 <button
                   onClick={() => {
-                    const encodedAddr = address ? `&address=${address}` : ''
-                    const statsParams = gameStats ? `&time=${Math.floor(gameStats.timeSurvived)}&dodged=${gameStats.candlesDodged}&buys=${gameStats.greensCollected}&jumps=${gameStats.totalJumps}` : ''
-                    const comboParam = gameStats?.maxCombo ? `&combo=${gameStats.maxCombo}` : ''
-                    const shareUrl = `${window.location.origin}/api/frames/result?score=${deathScore}${encodedAddr}${statsParams}${comboParam}`
+                    const sessionId = gameSessionIdRef.current
+                    const shareUrl = `${window.location.origin}/api/frames/result?id=${sessionId}`
                     const shareText = `I scored ${formatMarketCap(deathScore)} PNL in Base Dash! 🎮`
                     if (navigator.share) {
                       navigator.share({ title: 'Base Dash Score', text: shareText, url: shareUrl }).catch(() => { })
@@ -1635,10 +1708,10 @@ export default function GameEngine({
                       navigator.clipboard.writeText(`${shareText}\n${shareUrl}`).catch(() => { })
                     }
                   }}
-                  className="w-full mt-1 border border-[#8B5CF6] bg-[#8B5CF6]/10 px-2 py-1 text-[7px] sm:text-[8px] font-black text-[#8B5CF6] lowercase tracking-widest hover:bg-[#8B5CF6] hover:text-white active:scale-[0.98] transition-all rounded-none flex items-center justify-center gap-1"
+                  className="w-full mt-1 border border-[#8B5CF6] bg-[#8B5CF6]/10 px-2 py-1.5 text-[8px] font-black text-[#8B5CF6] lowercase tracking-widest hover:bg-[#8B5CF6] hover:text-white active:scale-[0.98] transition-all rounded-lg flex items-center justify-center gap-1.5"
                 >
-                  <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" /></svg>
-                  share
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" /></svg>
+                  share result
                 </button>
               )}
             </div>
@@ -1727,10 +1800,12 @@ export default function GameEngine({
             </button>
           </div>
 
-          {/* Chill / whale mode — glowing banner */}
+          {/* Chill / whale mode — glowing banner — bottom center, above jump dots */}
           {engineRef.current.slowdownTimer > 0 && (
-            <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-[#0ECB81]/15 backdrop-blur-md border border-[#0ECB81]/30 px-3 py-1 rounded-full z-10 shadow-[0_0_10px_rgba(14,203,129,0.2)] pointer-events-none">
-              <p className="text-[#0ECB81] text-[9px] font-bold text-center drop-shadow-[0_0_4px_rgba(14,203,129,0.5)] tracking-wide lowercase">
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full z-10 pointer-events-none"
+              style={{ background: 'rgba(14,203,129,0.12)', border: '1px solid rgba(14,203,129,0.35)', boxShadow: '0 0 12px rgba(14,203,129,0.25)' }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0ECB81] animate-pulse" />
+              <p className="text-[#0ECB81] text-[9px] font-black text-center tracking-widest uppercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
                 {engineRef.current.whaleTimer > 0 ? 'market freeze' : 'chill market'}
               </p>
             </div>

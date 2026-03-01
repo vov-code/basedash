@@ -39,15 +39,15 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             audioCtxRef.current = new AudioContext()
 
             const compressor = audioCtxRef.current.createDynamicsCompressor()
-            compressor.threshold.value = -10
-            compressor.knee.value = 8
-            compressor.ratio.value = 6
+            compressor.threshold.value = -12
+            compressor.knee.value = 10
+            compressor.ratio.value = 5
             compressor.attack.value = 0.003
-            compressor.release.value = 0.15
+            compressor.release.value = 0.12
             compressor.connect(audioCtxRef.current.destination)
 
             masterGainRef.current = audioCtxRef.current.createGain()
-            masterGainRef.current.gain.value = 0.4
+            masterGainRef.current.gain.value = 0.35
             masterGainRef.current.connect(compressor)
         }
         if (audioCtxRef.current.state === 'suspended') {
@@ -93,9 +93,9 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             osc.frequency.exponentialRampToValueAtTime(slideFreq, dur)
         }
 
-        // Punchy envelope
+        // Smooth envelope — fast attack, natural decay
         gain.gain.setValueAtTime(0, 0)
-        gain.gain.linearRampToValueAtTime(1.0, 0.006)
+        gain.gain.linearRampToValueAtTime(1.0, 0.005)
         gain.gain.exponentialRampToValueAtTime(0.001, dur)
 
         osc.connect(gain)
@@ -112,82 +112,96 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
     }, [soundEnabled, initAudio])
 
     // =====================================================================
-    // SFX — MODERN RELAXING 'CRYSTAL/BUBBLE' AESTHETIC
+    // SFX — CLEAN, HARMONIOUS, CRYSTAL-CLEAR SOUNDS
     // =====================================================================
 
-    // JUMP — Soft, resonant "bloop" (drop-like)
+    // JUMP — Soft crystalline "pop" with harmonic overtone
     const sfxJump = useCallback(() => {
-        playTone(480, 'sine', 0.08, 0.12, 280) // Smooth drop
-        playTone(960, 'sine', 0.02, 0.15)      // Tiny glass resonance
+        playTone(523, 'sine', 0.06, 0.1, 349)    // C5→F4 smooth drop
+        playTone(1046, 'sine', 0.015, 0.12)       // C6 crystal shimmer
     }, [playTone])
 
-    // DOUBLE JUMP — Higher, slightly faster double bloop
+    // DOUBLE JUMP — Rising two-note chime
     const sfxDoubleJump = useCallback(() => {
-        playTone(600, 'sine', 0.08, 0.12, 350)
-        setTimeout(() => playTone(800, 'sine', 0.06, 0.1, 500), 40)
+        playTone(659, 'sine', 0.06, 0.1, 440)     // E5→A4
+        setTimeout(() => playTone(880, 'sine', 0.04, 0.12, 587), 50) // A5→D5
     }, [playTone])
 
-    // DASH — Smooth wind sweep
+    // DASH — Smooth wind whoosh
     const sfxDash = useCallback(() => {
-        playTone(220, 'triangle', 0.06, 0.18, 50)
+        playTone(196, 'triangle', 0.05, 0.2, 55)  // G3→low sweep
     }, [playTone])
 
-    // COLLECT — Distinctive glassy chime "tink-ling!"
+    // COLLECT — Distinctive two-note bell chime (pure intervals)
     const sfxCollect = useCallback(() => {
-        playTone(1318, 'sine', 0.04, 0.15)       // E6
-        setTimeout(() => playTone(1567, 'sine', 0.05, 0.25), 60) // G6 with longer tail
+        playTone(1318, 'sine', 0.05, 0.18)         // E6
+        setTimeout(() => playTone(1760, 'sine', 0.04, 0.3), 70) // A6 — perfect 4th, long tail
     }, [playTone])
 
-    // POWERUP — Gentle ascending celestial chord
+    // POWERUP — Ascending major 7th arpeggio with sparkle
     const sfxPowerup = useCallback(() => {
-        const notes = [523, 659, 784, 1047] // C Major
+        const notes = [523, 659, 784, 988, 1318] // C-E-G-B-E (CMaj7 + octave)
         notes.forEach((freq, i) => {
-            setTimeout(() => playTone(freq, 'sine', 0.06, 0.2 + i * 0.05), i * 45)
+            setTimeout(() => playTone(freq, 'sine', 0.05, 0.18 + i * 0.04), i * 40)
         })
     }, [playTone])
 
-    // DEATH — Sad but gentle "power down" sweep, less harsh than chip-tune
+    // DEATH — Gentle descending minor sweep
     const sfxHit = useCallback(() => {
-        playTone(330, 'triangle', 0.12, 0.5, 110) // Long E -> A drop
-        setTimeout(() => playTone(220, 'sine', 0.08, 0.4, 55), 100)
+        playTone(392, 'triangle', 0.1, 0.5, 130)   // G4→C3 long drop
+        setTimeout(() => playTone(261, 'sine', 0.06, 0.35, 65), 100) // C4→C2
     }, [playTone])
 
-    // SELECT — Crystal tap
+    // SELECT — Quick crystal tap
     const sfxSelect = useCallback(() => {
-        playTone(1046, 'sine', 0.05, 0.08, 880)
+        playTone(1046, 'sine', 0.04, 0.08, 880)
     }, [playTone])
 
-    // COMBO — Ethereal ascending scale
+    // COMBO — Ascending pentatonic scale with harmonic fifth
     const sfxCombo = useCallback((combo: number) => {
-        const scale = [392, 440, 493, 523, 587, 659, 740, 784, 880, 987, 1046]
-        const note = scale[Math.min(combo, scale.length - 1)]
-        playTone(note, 'sine', 0.06, 0.18)
-        setTimeout(() => playTone(note * 1.5, 'sine', 0.03, 0.25), 40) // Harmonic tail
+        const pentatonic = [392, 440, 523, 587, 659, 784, 880, 988, 1046, 1174, 1318]
+        const idx = Math.min(combo, pentatonic.length - 1)
+        const note = pentatonic[idx]
+        playTone(note, 'sine', 0.05, 0.15)
+        setTimeout(() => playTone(note * 1.498, 'sine', 0.025, 0.2), 45) // Perfect 5th harmonic
     }, [playTone])
 
-    // MILESTONE — Relaxing victory chord
+    // MILESTONE — Triumphant ascending chord with suspended 4th resolution
     const sfxMilestone = useCallback(() => {
-        const notes = [
-            { f: 523, d: 80 }, { f: 659, d: 80 },
-            { f: 784, d: 80 }, { f: 1047, d: 250 },
+        const sequence = [
+            { f: 523, d: 70 },  // C5
+            { f: 659, d: 70 },  // E5
+            { f: 784, d: 70 },  // G5
+            { f: 988, d: 90 },  // B5
+            { f: 1046, d: 250 }, // C6 — resolve
         ]
         let t = 0
-        notes.forEach(({ f, d }, i) => {
-            setTimeout(() => playTone(f, 'sine', 0.07, d / 1000 + 0.1), t)
+        sequence.forEach(({ f, d }) => {
+            setTimeout(() => playTone(f, 'sine', 0.06, d / 1000 + 0.12), t)
             t += d
         })
     }, [playTone])
 
-    // LEVEL UP — Smooth cascade
+    // LEVEL UP — Sparkling cascade with octave leap
     const sfxLevelUp = useCallback(() => {
-        [523, 659, 784, 1047, 1318].forEach((freq, i) => {
-            setTimeout(() => playTone(freq, 'sine', 0.05, 0.15), i * 35)
+        [523, 659, 784, 1046, 1318, 1568].forEach((freq, i) => {
+            setTimeout(() => playTone(freq, 'sine', 0.04, 0.14 + i * 0.02), i * 30)
         })
     }, [playTone])
 
     // =====================================================================
-    // BGM — LUSH AMBIENT LO-FI ARPEGGIO
+    // BGM — EVOLVING AMBIENT LO-FI WITH DYNAMIC KEY CHANGES
     // =====================================================================
+    //
+    // 4-chord progression that changes KEY based on the current world theme.
+    // Tempo increases with game speed. Additional harmonic layers unlock
+    // as the player progresses through worlds, creating a sense of musical
+    // evolution that pulls the player deeper into the experience.
+    //
+    // World 0-1: Simple pentatonic arpeggios (calm, inviting)
+    // World 2-3: Add 7th chords + octave doublings (richer texture)
+    // World 4-5: Add bass pedal + 5th harmonics (driving energy)
+    // World 6+:  Full arrangement with counter-melody (epic, immersive)
 
     const startBackgroundMusic = useCallback(() => {
         if (!soundEnabled) return
@@ -198,83 +212,172 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
         if (ctx.state === 'suspended') ctx.resume()
 
-        // Soft, dreamy synth pads using dual sine/triangle layering
-        const osc1 = ctx.createOscillator()
-        const osc2 = ctx.createOscillator()
+        // Main melody oscillator + harmony oscillator + bass
+        const oscMelody = ctx.createOscillator()
+        const oscHarmony = ctx.createOscillator()
+        const oscBass = ctx.createOscillator()
         const gain = ctx.createGain()
         const filter = ctx.createBiquadFilter()
 
-        osc1.type = 'sine'      // Very smooth, no harsh harmonics
-        osc2.type = 'triangle'  // Adds just enough timbre
-        osc2.detune.value = 8   // Lush chorus effect
+        oscMelody.type = 'sine'
+        oscHarmony.type = 'triangle'
+        oscHarmony.detune.value = 6  // Subtle chorus
+        oscBass.type = 'sine'
 
         filter.type = 'lowpass'
-        filter.frequency.value = 1100 // Deep, muffled "underwater/lofi" tone
-        filter.Q.value = 0.8
+        filter.frequency.value = 1200
+        filter.Q.value = 0.6
 
         gain.gain.setValueAtTime(0, ctx.currentTime)
-        gain.gain.linearRampToValueAtTime(0.045, ctx.currentTime + 3.0) // Long, slow fade in
+        gain.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 2.5)
 
-        osc1.connect(filter)
-        osc2.connect(filter)
+        oscMelody.connect(filter)
+        oscHarmony.connect(filter)
+        oscBass.connect(filter)
         filter.connect(gain)
         gain.connect(master)
 
-        osc1.start()
-        osc2.start()
+        oscMelody.start()
+        oscHarmony.start()
+        oscBass.start()
 
-        bgmNodesRef.current = { oscs: [osc1, osc2], gain }
+        bgmNodesRef.current = { oscs: [oscMelody, oscHarmony, oscBass], gain }
 
-        // === RELAXING JAZZ-HOP CHORD PROGRESSION ===
-        // CMaj7 → Am9 → FMaj7 → G6 (lush, dreamy, emotional but calming)
-        const pattern = [
-            // CMaj7: C E G B (warm, floating)
-            261.63, 329.63, 392.00, 493.88,
-            // Am9: A C E B (slightly melancholic but resolved)
-            220.00, 261.63, 329.63, 493.88,
-            // FMaj7: F A C E (dreamy, expansive)
-            174.61, 220.00, 261.63, 329.63,
-            // G6: G B D E (smooth turnaround)
-            196.00, 246.94, 293.66, 329.63,
+        // === KEY PROGRESSIONS PER WORLD ===
+        // Each world gets a unique key/mood to make progression feel fresh
+        const keyPatterns: number[][] = [
+            // World 0–1: C major pentatonic (warm, welcoming)
+            // CMaj7 → Am7 → FMaj7 → G
+            [261.63, 329.63, 392.00, 493.88, 220.00, 261.63, 329.63, 440.00,
+                174.61, 220.00, 261.63, 329.63, 196.00, 246.94, 293.66, 392.00],
+            // World 2–3: D dorian (slightly mysterious, cool)
+            // Dm7 → Em7 → CMaj7 → Am7
+            [293.66, 349.23, 440.00, 523.25, 329.63, 392.00, 493.88, 587.33,
+                261.63, 329.63, 392.00, 493.88, 220.00, 261.63, 329.63, 440.00],
+            // World 4–5: E minor (darker, intense)
+            // Em → CMaj → G → D
+            [329.63, 392.00, 493.88, 587.33, 261.63, 329.63, 392.00, 523.25,
+                196.00, 246.94, 293.66, 392.00, 293.66, 349.23, 440.00, 587.33],
+            // World 6–7: Ab major (ethereal, epic)
+            // AbMaj7 → Fm → DbMaj7 → Eb
+            [415.30, 523.25, 622.25, 783.99, 349.23, 415.30, 523.25, 698.46,
+                277.18, 349.23, 415.30, 523.25, 311.13, 392.00, 466.16, 622.25],
+            // World 8+: F# minor (triumphant, climactic)
+            // F#m → DMaj → A → E
+            [369.99, 440.00, 523.25, 659.26, 293.66, 369.99, 440.00, 587.33,
+                220.00, 277.18, 329.63, 440.00, 329.63, 415.30, 493.88, 659.26],
+        ]
+
+        // Bass note for each chord (root notes, one octave below)
+        const bassPatterns: number[][] = [
+            [130.81, 130.81, 130.81, 130.81, 110.00, 110.00, 110.00, 110.00,
+                87.31, 87.31, 87.31, 87.31, 98.00, 98.00, 98.00, 98.00],
+            [146.83, 146.83, 146.83, 146.83, 164.81, 164.81, 164.81, 164.81,
+                130.81, 130.81, 130.81, 130.81, 110.00, 110.00, 110.00, 110.00],
+            [164.81, 164.81, 164.81, 164.81, 130.81, 130.81, 130.81, 130.81,
+                98.00, 98.00, 98.00, 98.00, 146.83, 146.83, 146.83, 146.83],
+            [207.65, 207.65, 207.65, 207.65, 174.61, 174.61, 174.61, 174.61,
+                138.59, 138.59, 138.59, 138.59, 155.56, 155.56, 155.56, 155.56],
+            [184.99, 184.99, 184.99, 184.99, 146.83, 146.83, 146.83, 146.83,
+                110.00, 110.00, 110.00, 110.00, 164.81, 164.81, 164.81, 164.81],
         ]
 
         let noteIdx = 0
         let nextNoteTime = ctx.currentTime + 0.5
-        const BASE_INTERVAL = 0.28 // SLOW, relaxing tempo (~107 BPM 8th notes)
+        let patternCycle = 0
+        const BASE_INTERVAL = 0.26
 
         const schedulePattern = () => {
             if (!bgmNodesRef.current || !audioCtxRef.current) return
 
-            // Dynamically scale interval based on game speed (faster = shorter interval)
-            // If speed multiplier is 1.5, music plays 1.5x faster
             const currentSpeed = bgmSpeedRef.current || 1
             const currentTheme = bgmThemeRef.current || 0
 
-            const NOTE_INTERVAL = BASE_INTERVAL / currentSpeed
+            // Select key progression based on world (cycles through available patterns)
+            const patternIdx = Math.min(Math.floor(currentTheme / 2), keyPatterns.length - 1)
+            const pattern = keyPatterns[patternIdx]
+            const bassLine = bassPatterns[patternIdx]
+
+            // Dynamic tempo — scales smoothly with speed, feels natural
+            const tempoMult = 0.85 + currentSpeed * 0.15 // ranges from ~1.0 to ~1.3
+            const NOTE_INTERVAL = BASE_INTERVAL / tempoMult
 
             while (nextNoteTime < audioCtxRef.current.currentTime + 0.8) {
                 const note = pattern[noteIdx]
+                const bass = bassLine[noteIdx]
 
-                // Dynamic variety based on world theme progression
-                let freq1 = note
-                let freq2 = note
+                let melodyFreq = note
+                let harmonyFreq = note
+                let bassFreq = bass
+                let melodyVol = 0.04
+                let harmonyVol = 0.025
+                let bassVol = 0
 
-                // 2nd World: Add upper octave sparkle to triangle wave every 2nd note
-                if (currentTheme >= 1 && noteIdx % 2 === 0) freq2 = note * 2
-                // 3rd World+: Add deep sub-bass to sine wave on chord roots
-                if (currentTheme >= 2 && noteIdx % 4 === 0) freq1 = note / 2
-                // 4th World+: Create a 5th harmony on the triangle wave off-beats
-                if (currentTheme >= 3 && noteIdx % 2 !== 0) freq2 = note * 1.5
+                // World 0-1: Simple melody only
+                if (currentTheme >= 1 && noteIdx % 2 === 0) {
+                    harmonyFreq = note * 2 // Octave sparkle on even beats
+                    harmonyVol = 0.02
+                }
 
-                osc1.frequency.setValueAtTime(freq1, nextNoteTime)
-                osc2.frequency.setValueAtTime(freq2, nextNoteTime)
+                // World 2-3: Add bass pedal tones on downbeats
+                if (currentTheme >= 2) {
+                    bassVol = noteIdx % 4 === 0 ? 0.03 : 0.015
+                    bassFreq = bass
+                }
 
-                // Soft bell-like envelope with long decay
-                gain.gain.setValueAtTime(0.005, nextNoteTime)
-                gain.gain.linearRampToValueAtTime(0.05, nextNoteTime + 0.02)
-                gain.gain.exponentialRampToValueAtTime(0.01, nextNoteTime + Math.max(0.1, 0.22 / currentSpeed))
+                // World 3+: Fifth harmony on offbeats
+                if (currentTheme >= 3 && noteIdx % 2 !== 0) {
+                    harmonyFreq = note * 1.498 // Perfect 5th
+                    harmonyVol = 0.022
+                }
+
+                // World 4+: Melody gets octave variation for interest
+                if (currentTheme >= 4) {
+                    if (noteIdx % 8 >= 4) melodyFreq = note * 2
+                    melodyVol = 0.035
+                }
+
+                // World 5+: Counter-melody — bass walks chromatically
+                if (currentTheme >= 5 && noteIdx % 4 === 2) {
+                    bassFreq = bass * 1.189 // Minor 3rd walk
+                    bassVol = 0.025
+                }
+
+                // World 6+: Arpeggio becomes denser, shorter notes
+                if (currentTheme >= 6) {
+                    harmonyVol = 0.03
+                    melodyVol = 0.04
+                }
+
+                // World 7+: Add reverb-like double note
+                if (currentTheme >= 7 && noteIdx % 3 === 0) {
+                    // Delayed ghost note via frequency slide
+                    melodyFreq = note * 1.002 // Slight detuning for width
+                }
+
+                // Set oscillator frequencies
+                oscMelody.frequency.setValueAtTime(melodyFreq, nextNoteTime)
+                oscHarmony.frequency.setValueAtTime(harmonyFreq, nextNoteTime)
+                oscBass.frequency.setValueAtTime(bassFreq, nextNoteTime)
+
+                // Dynamic envelope — varies with pattern position for groove
+                const isDownbeat = noteIdx % 4 === 0
+                const accentVol = isDownbeat ? 1.3 : 1.0
+                const totalVol = melodyVol * accentVol
+
+                gain.gain.setValueAtTime(0.003, nextNoteTime)
+                gain.gain.linearRampToValueAtTime(totalVol, nextNoteTime + 0.015)
+                gain.gain.exponentialRampToValueAtTime(
+                    0.008,
+                    nextNoteTime + Math.max(0.08, 0.2 / tempoMult)
+                )
+
+                // Update filter cutoff based on world (brighter in later worlds)
+                const cutoff = 1000 + currentTheme * 120
+                filter.frequency.setValueAtTime(Math.min(cutoff, 2800), nextNoteTime)
 
                 noteIdx = (noteIdx + 1) % pattern.length
+                patternCycle++
                 nextNoteTime += NOTE_INTERVAL
             }
             bgmIntervalRef.current = setTimeout(schedulePattern, NOTE_INTERVAL * 1000 * 0.7)
@@ -284,13 +387,11 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
     }, [soundEnabled, initAudio])
 
     const stopBackgroundMusic = useCallback(() => {
-        // Stop ALL oscillators — this is the critical fix for the buzzing bug
         if (bgmNodesRef.current && audioCtxRef.current) {
             const ct = audioCtxRef.current.currentTime
             bgmNodesRef.current.gain.gain.cancelScheduledValues(ct)
             bgmNodesRef.current.gain.gain.setValueAtTime(bgmNodesRef.current.gain.gain.value, ct)
             bgmNodesRef.current.gain.gain.linearRampToValueAtTime(0, ct + 0.3)
-            // Stop EVERY oscillator
             for (const osc of bgmNodesRef.current.oscs) {
                 try { osc.stop(ct + 0.4) } catch { /* already stopped */ }
             }

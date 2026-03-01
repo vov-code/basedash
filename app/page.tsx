@@ -21,12 +21,42 @@ import Leaderboard from './components/Leaderboard/Leaderboard'
 import ParticleChaos from './components/Background/ParticleChaos'
 import { Header } from './components/UI/Header'
 import { DashboardGrid } from './components/UI/DashboardGrid'
+import { useGameStore } from './store/gameStore'
+import { formatMarketCap } from './components/Game/gameConfig'
 
 // ============================================================================
 // MAIN PAGE
 // ============================================================================
 
 type TabType = 'game' | 'leaderboard' | 'profile'
+
+const mono = { fontFamily: 'var(--font-mono, monospace)' }
+
+/** Reactive game history — subscribes to zustand store */
+function GameHistorySection() {
+  const gameHistory = useGameStore((s) => s.gameHistory)
+  if (!gameHistory || gameHistory.length === 0) return null
+  return (
+    <div className="mt-4">
+      <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] mb-2" style={mono}>recent games</h3>
+      <div className="space-y-1.5">
+        {gameHistory.slice(0, 5).map((g, i) => (
+          <div key={g.id || i} className="flex items-center justify-between px-3 py-2.5 rounded-xl border border-slate-100 bg-gradient-to-r from-white to-slate-50/50 transition-all hover:border-slate-200">
+            <div className="flex flex-col gap-1">
+              <span className="text-[12px] font-black text-slate-800 leading-none" style={mono}>{formatMarketCap(g.score)}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[7px] font-bold text-slate-400 leading-none" style={mono}>{g.time}s</span>
+                <span className="text-[7px] font-bold text-[#0ECB81] leading-none" style={mono}>{g.buys} buys</span>
+                {g.combo > 0 && <span className="text-[7px] font-bold text-[#F0B90B] leading-none" style={mono}>{g.combo}× combo</span>}
+              </div>
+            </div>
+            <span className="text-[7px] font-bold text-slate-300" style={mono}>{new Date(g.date).toLocaleDateString()}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function Home() {
   const [hasEntered, setHasEntered] = useState(false)
@@ -147,8 +177,8 @@ export default function Home() {
 
       {/* ENTRY POPUP OVERLAY - Brutalist Degen Style */}
       {!hasEntered && (
-        <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden transition-all duration-500 lg:hidden backdrop-blur-md ${isEntering ? 'opacity-0 scale-105' : 'opacity-100'}`}
-          style={{ background: 'linear-gradient(165deg, rgba(255,255,255,0.70) 0%, rgba(245,248,255,0.65) 35%, rgba(235,240,255,0.60) 65%, rgba(224,234,255,0.55) 100%)' }}>
+        <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden transition-all duration-500 lg:hidden backdrop-blur-xl ${isEntering ? 'opacity-0 scale-105' : 'opacity-100'}`}
+          style={{ background: 'linear-gradient(165deg, rgba(255,255,255,0.92) 0%, rgba(245,248,255,0.90) 35%, rgba(235,240,255,0.88) 65%, rgba(224,234,255,0.85) 100%)' }}>
 
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute top-[15%] left-[10%] w-48 h-48 bg-[#0052FF]/[0.08] rounded-full blur-3xl animate-[float_8s_ease-in-out_infinite]" />
@@ -379,6 +409,9 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="pt-1"><DailyCheckinButton /></div>
+
+                    {/* GAME HISTORY — Last 5 games */}
+                    <GameHistorySection />
                   </div>
                 ) : (
                   <div className="py-14 text-center max-w-xs mx-auto">

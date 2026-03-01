@@ -37,7 +37,8 @@ import {
 /** Pre-calculated constants to avoid per-frame division */
 const TWO_PI = Math.PI * 2
 const HALF_PI = Math.PI / 2
-const PLAYER_HALF = CFG.PLAYER_SIZE / 2
+/** Computed dynamically since CFG.PLAYER_SIZE can change via updateGameConfig() */
+let PLAYER_HALF = CFG.PLAYER_SIZE / 2
 
 /** Gradient cache to avoid recreating every frame */
 let cachedSkyGrad: CanvasGradient | null = null
@@ -354,22 +355,32 @@ const drawSingleCandle = (
 
     ctx.save()
 
+    // ===== COLLECTION FADE — smooth opacity reduction during collect =====
+    let bodyAlpha = 1
+    if (c.collected) {
+        const prog = c.collectProgress
+        const ease = 1 - (1 - prog) * (1 - prog) // ease-out quad
+        bodyAlpha = Math.max(0, 1 - ease)
+    }
+
     ctx.save()
 
     // ===== TRADING WICK (Tail/Shadow) =====
-    // Thin, sharp line representing high/low trading prices
-    ctx.globalAlpha = 0.8
-    ctx.strokeStyle = a
-    ctx.lineWidth = 2
-    ctx.lineCap = 'butt' // Sharp ends for trading charts
-    ctx.beginPath()
-    ctx.moveTo(cx, c.wickTop)
-    ctx.lineTo(cx, c.wickBottom)
-    ctx.stroke()
-    ctx.globalAlpha = 1
+    // Skip wick for collected candles (looks cleaner during fade)
+    if (!c.collected) {
+        ctx.globalAlpha = 0.8
+        ctx.strokeStyle = a
+        ctx.lineWidth = 2
+        ctx.lineCap = 'butt'
+        ctx.beginPath()
+        ctx.moveTo(cx, c.wickTop)
+        ctx.lineTo(cx, c.wickBottom)
+        ctx.stroke()
+        ctx.globalAlpha = 1
+    }
 
     // ===== TRADING BODY (Open/Close) =====
-    // Sharp rectangle with a premium terminal glow
+    ctx.globalAlpha = bodyAlpha
     const bodyGrad = ctx.createLinearGradient(c.x, drawY, c.x + c.width, drawY)
     bodyGrad.addColorStop(0, b)
     bodyGrad.addColorStop(0.5, a)
@@ -378,18 +389,18 @@ const drawSingleCandle = (
     ctx.fillStyle = bodyGrad
     ctx.fillRect(c.x, drawY, c.width, c.bodyHeight)
 
-    // Inner bright streak for "neon tube" or digital terminal screen effect
+    // Inner bright streak
     ctx.fillStyle = '#FFFFFF'
-    ctx.globalAlpha = 0.15
+    ctx.globalAlpha = bodyAlpha * 0.15
     ctx.fillRect(c.x + c.width * 0.2, drawY, c.width * 0.6, c.bodyHeight)
-    ctx.globalAlpha = 1
 
     // Sharp outer border
+    ctx.globalAlpha = bodyAlpha
     ctx.strokeStyle = b
     ctx.lineWidth = 1
     ctx.strokeRect(c.x, drawY, c.width, c.bodyHeight)
 
-    // ===== ANIMATED PULSE (subtle) =====
+    // ===== ANIMATED PULSE (only for non-collected) =====
     if (!c.collected) {
         ctx.globalAlpha = 0.05 + Math.sin(t * 2.5) * 0.02
         ctx.strokeStyle = a
@@ -397,17 +408,18 @@ const drawSingleCandle = (
         ctx.strokeRect(c.x - 2, drawY - 2, c.width + 4, c.bodyHeight + 4)
     }
 
-    // ===== COLLECTION ANIMATION =====
+    // ===== COLLECTION ANIMATION — expanding ring + floating score =====
     if (c.collected && c.collectProgress < 1) {
         const prog = c.collectProgress
         const ease = 1 - (1 - prog) * (1 - prog)
-        ctx.globalAlpha = (1 - ease) * 0.3
+        ctx.globalAlpha = (1 - ease) * 0.4
         ctx.strokeStyle = a
-        ctx.lineWidth = 1.5 * (1 - ease)
+        ctx.lineWidth = 2 * (1 - ease)
         ctx.beginPath()
         ctx.arc(cx, c.bodyY + c.bodyHeight / 2, c.width * (0.5 + ease * 2.5), 0, TWO_PI)
         ctx.stroke()
-        ctx.globalAlpha = (1 - ease) * 0.8
+        // Floating score text
+        ctx.globalAlpha = (1 - ease) * 0.9
         ctx.fillStyle = '#FFFFFF'
         ctx.font = `700 ${CFG.WIDTH < 600 ? 13 : 11}px Inter, sans-serif`
         ctx.textAlign = 'center'
@@ -1010,7 +1022,7 @@ export const drawParticles = (
 // WORLD BANNER
 // ============================================================================
 
-/** Draw the world transition banner — positioned lower to avoid HUD overlap */
+/** Draw the world transition banner — compact pill, in-game style */
 export const drawWorldBanner = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
@@ -1018,14 +1030,9 @@ export const drawWorldBanner = (
 ): void => {
     if (e.worldBannerTimer <= 0) return
 
-    const duration = 2.5
-    const progress = clamp(e.worldBannerTimer / duration, 0, 1)
-
-    // Entrance: slide down + scale in (first 0.3s)
-    // Hold: stay visible
-    // Exit: fade out (last 0.5s)
-    const enterT = clamp(1 - (e.worldBannerTimer - (duration - 0.4)) / 0.4, 0, 1)
-    const exitT = clamp(e.worldBannerTimer / 0.6, 0, 1)
+    const duration = 2.0
+    const enterT = clamp(1 - (e.worldBannerTimer - (duration - 0.3)) / 0.3, 0, 1)
+    const exitT = clamp(e.worldBannerTimer / 0.4, 0, 1)
     const enter = 1 - (1 - enterT) * (1 - enterT) // ease-out
     const alpha = Math.min(enter, exitT)
 
@@ -1034,54 +1041,37 @@ export const drawWorldBanner = (
     ctx.save()
     ctx.globalAlpha = alpha
 
-    // Banner dimensions — balanced size
-    const bw = Math.min(220, CFG.WIDTH * 0.6)
-    const bh = 32
+    // Compact pill dimensions
+    const fontSize = Math.max(8, Math.min(10, CFG.WIDTH * 0.028))
+    ctx.font = `800 ${fontSize}px monospace`
+    const text = w.name.toUpperCase()
+    const textW = ctx.measureText(text).width
+    const bw = textW + 28
+    const bh = 22
     const bx = CFG.WIDTH / 2 - bw / 2
-    const slideY = -15 + enter * 15
-    const by = 48 + slideY  // Positioned neatly under HUD
+    const slideY = -10 + enter * 10
+    const by = 52 + slideY
 
-    // Glowing shadow for the banner
-    ctx.shadowColor = w.accent
-    ctx.shadowBlur = Math.sin(progress * Math.PI) * 15 // Pulsating glow
-
-    // Background - modern dark glass
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)' // Slate-900 with opacity
+    // Dark glass pill background
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.75)'
     ctx.beginPath()
-    ctx.roundRect(bx, by, bw, bh, 8)
+    ctx.roundRect(bx, by, bw, bh, bh / 2) // Fully rounded pill
     ctx.fill()
 
-    // Reset shadow so it doesn't affect the border/text wildly
-    ctx.shadowBlur = 0
-
-    // Neon accent border
-    ctx.globalAlpha = alpha * 0.9
+    // Thin accent border
     ctx.strokeStyle = w.accent
-    ctx.lineWidth = 1.5
+    ctx.lineWidth = 1
+    ctx.globalAlpha = alpha * 0.6
     ctx.beginPath()
-    ctx.roundRect(bx, by, bw, bh, 8)
+    ctx.roundRect(bx, by, bw, bh, bh / 2)
     ctx.stroke()
     ctx.globalAlpha = alpha
 
-    // Large World name text
-    ctx.fillStyle = '#ffffff'
-    const fontSize = Math.max(10, Math.min(13, CFG.WIDTH * 0.035)) // Responsive font size
-    ctx.font = `800 ${fontSize}px monospace`
+    // World name text in accent color
+    ctx.fillStyle = w.accent
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.letterSpacing = '2px'
-
-    // Add subtle text shadow
-    ctx.shadowColor = 'rgba(0,0,0,0.5)'
-    ctx.shadowBlur = 4
-    ctx.shadowOffsetY = 1
-
-    ctx.fillText(`ENTERING ${w.name.toUpperCase()}`, CFG.WIDTH / 2, by + bh / 2 + 1)
-
-    // Reset shadows
-    ctx.shadowColor = 'transparent'
-    ctx.shadowBlur = 0
-    ctx.shadowOffsetY = 0
+    ctx.fillText(text, CFG.WIDTH / 2, by + bh / 2 + 0.5)
 
     ctx.restore()
 }
@@ -1252,6 +1242,9 @@ export const drawFrame = (
 ): void => {
     const { w, h, dpr, cssW, cssH } = containerDims
     const wTheme = getWorld(Math.max(0, e.score))
+
+    // Re-sync PLAYER_HALF with current CFG (may have changed after resize)
+    PLAYER_HALF = CFG.PLAYER_SIZE / 2
 
     ctx.save()
 
