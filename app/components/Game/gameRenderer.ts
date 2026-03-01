@@ -1034,36 +1034,54 @@ export const drawWorldBanner = (
     ctx.save()
     ctx.globalAlpha = alpha
 
-    // Banner dimensions — compact, positioned lower
-    const bw = Math.min(160, CFG.WIDTH * 0.45)
-    const bh = 24
+    // Banner dimensions — balanced size
+    const bw = Math.min(220, CFG.WIDTH * 0.6)
+    const bh = 32
     const bx = CFG.WIDTH / 2 - bw / 2
     const slideY = -15 + enter * 15
-    const by = 45 + slideY  // Moved down from 24 to 45 to avoid HUD overlap
+    const by = 48 + slideY  // Positioned neatly under HUD
 
-    // Background
-    ctx.fillStyle = 'rgba(255,255,255,0.7)'
+    // Glowing shadow for the banner
+    ctx.shadowColor = w.accent
+    ctx.shadowBlur = Math.sin(progress * Math.PI) * 15 // Pulsating glow
+
+    // Background - modern dark glass
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)' // Slate-900 with opacity
     ctx.beginPath()
-    ctx.roundRect(bx, by, bw, bh, 6)
+    ctx.roundRect(bx, by, bw, bh, 8)
     ctx.fill()
 
-    // Subtle border
-    ctx.globalAlpha = alpha * 0.8
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)'
-    ctx.lineWidth = 1
+    // Reset shadow so it doesn't affect the border/text wildly
+    ctx.shadowBlur = 0
+
+    // Neon accent border
+    ctx.globalAlpha = alpha * 0.9
+    ctx.strokeStyle = w.accent
+    ctx.lineWidth = 1.5
     ctx.beginPath()
-    ctx.roundRect(bx, by, bw, bh, 6)
+    ctx.roundRect(bx, by, bw, bh, 8)
     ctx.stroke()
     ctx.globalAlpha = alpha
 
-    // World name
-    ctx.fillStyle = '#64748b' // slate-500
-    const fontSize = 10
-    ctx.font = `600 ${fontSize}px monospace`
+    // Large World name text
+    ctx.fillStyle = '#ffffff'
+    const fontSize = Math.max(10, Math.min(13, CFG.WIDTH * 0.035)) // Responsive font size
+    ctx.font = `800 ${fontSize}px monospace`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.letterSpacing = '1px'
-    ctx.fillText(`entering ${w.name.toLowerCase()}`, CFG.WIDTH / 2, by + bh / 2 + 1)
+    ctx.letterSpacing = '2px'
+
+    // Add subtle text shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.5)'
+    ctx.shadowBlur = 4
+    ctx.shadowOffsetY = 1
+
+    ctx.fillText(`ENTERING ${w.name.toUpperCase()}`, CFG.WIDTH / 2, by + bh / 2 + 1)
+
+    // Reset shadows
+    ctx.shadowColor = 'transparent'
+    ctx.shadowBlur = 0
+    ctx.shadowOffsetY = 0
 
     ctx.restore()
 }

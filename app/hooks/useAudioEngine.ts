@@ -16,6 +16,7 @@ export interface AudioEngine {
     sfxLevelUp: () => void
     startBackgroundMusic: () => void
     stopBackgroundMusic: () => void
+    updateAudioParams: (speedMultiplier: number, themeIndex: number) => void
 }
 
 export function useAudioEngine(soundEnabled: boolean): AudioEngine {
@@ -23,7 +24,14 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
     const masterGainRef = useRef<GainNode | null>(null)
     const bgmNodesRef = useRef<{ oscs: OscillatorNode[], gain: GainNode } | null>(null)
     const bgmIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const bgmSpeedRef = useRef<number>(1)
+    const bgmThemeRef = useRef<number>(0)
     const toneCacheRef = useRef<Map<string, AudioBuffer>>(new Map())
+
+    const updateAudioParams = useCallback((speedMultiplier: number, themeIndex: number) => {
+        bgmSpeedRef.current = speedMultiplier
+        bgmThemeRef.current = themeIndex
+    }, [])
 
     const initAudio = useCallback(() => {
         if (!audioCtxRef.current) {
@@ -232,26 +240,44 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
         let noteIdx = 0
         let nextNoteTime = ctx.currentTime + 0.5
-        const NOTE_INTERVAL = 0.28 // SLOW, relaxing tempo (~107 BPM 8th notes)
+        const BASE_INTERVAL = 0.28 // SLOW, relaxing tempo (~107 BPM 8th notes)
 
         const schedulePattern = () => {
             if (!bgmNodesRef.current || !audioCtxRef.current) return
 
+            // Dynamically scale interval based on game speed (faster = shorter interval)
+            // If speed multiplier is 1.5, music plays 1.5x faster
+            const currentSpeed = bgmSpeedRef.current || 1
+            const currentTheme = bgmThemeRef.current || 0
+
+            const NOTE_INTERVAL = BASE_INTERVAL / currentSpeed
+
             while (nextNoteTime < audioCtxRef.current.currentTime + 0.8) {
                 const note = pattern[noteIdx]
 
-                osc1.frequency.setValueAtTime(note, nextNoteTime)
-                osc2.frequency.setValueAtTime(note, nextNoteTime)
+                // Dynamic variety based on world theme progression
+                let freq1 = note
+                let freq2 = note
+
+                // 2nd World: Add upper octave sparkle to triangle wave every 2nd note
+                if (currentTheme >= 1 && noteIdx % 2 === 0) freq2 = note * 2
+                // 3rd World+: Add deep sub-bass to sine wave on chord roots
+                if (currentTheme >= 2 && noteIdx % 4 === 0) freq1 = note / 2
+                // 4th World+: Create a 5th harmony on the triangle wave off-beats
+                if (currentTheme >= 3 && noteIdx % 2 !== 0) freq2 = note * 1.5
+
+                osc1.frequency.setValueAtTime(freq1, nextNoteTime)
+                osc2.frequency.setValueAtTime(freq2, nextNoteTime)
 
                 // Soft bell-like envelope with long decay
                 gain.gain.setValueAtTime(0.005, nextNoteTime)
                 gain.gain.linearRampToValueAtTime(0.05, nextNoteTime + 0.02)
-                gain.gain.exponentialRampToValueAtTime(0.01, nextNoteTime + 0.22)
+                gain.gain.exponentialRampToValueAtTime(0.01, nextNoteTime + Math.max(0.1, 0.22 / currentSpeed))
 
                 noteIdx = (noteIdx + 1) % pattern.length
                 nextNoteTime += NOTE_INTERVAL
             }
-            bgmIntervalRef.current = setTimeout(schedulePattern, 200)
+            bgmIntervalRef.current = setTimeout(schedulePattern, NOTE_INTERVAL * 1000 * 0.7)
         }
         schedulePattern()
 
@@ -278,6 +304,7 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
     return {
         playTone,
+        updateAudioParams,
         sfxJump,
         sfxDoubleJump,
         sfxDash,

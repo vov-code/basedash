@@ -264,7 +264,8 @@ export default function GameEngine({
     sfxDash: sfxNearMiss,
     sfxLevelUp: playNewRecordFanfare,
     startBackgroundMusic,
-    stopBackgroundMusic
+    stopBackgroundMusic,
+    updateAudioParams,
   } = useAudioEngine(soundEnabled)
 
   useEffect(() => {
@@ -727,6 +728,22 @@ export default function GameEngine({
       e.worldBannerTimer = 3.5
       // Update star colors for new world
       for (const s of e.stars) s.color = newWorld.starColor
+
+      // New World Burst Effect
+      sfxMarketChange()
+      for (let i = 0; i < (IS_MOBILE ? 15 : 30); i++) {
+        e.particles.push(mkParticle(
+          CFG.PLAYER_X + CFG.PLAYER_SIZE, e.player.y,
+          'powerup', newWorld.accent,
+          {
+            vx: rand(50, 250),
+            vy: rand(-250, 50),
+            life: rand(0.5, 1.2),
+            size: rand(4, 9),
+            gravity: 100
+          }
+        ))
+      }
     }
 
     // --- Update stars ---
@@ -1144,6 +1161,12 @@ export default function GameEngine({
         updates++
       }
 
+      // Update Audio Engine dynamically
+      if (engineRef.current.alive && mode === 'playing') {
+        const speedMult = engineRef.current.speed / CFG.BASE_SPEED
+        updateAudioParams(speedMult, engineRef.current.worldIndex)
+      }
+
       // Discard excess accumulated time to avoid carrying huge deficit from tab switches or lag spikes
       acc = acc % CFG.STEP
 
@@ -1259,29 +1282,46 @@ export default function GameEngine({
         // Spawn
         if (de.distance >= de.nextSpawnDistance) spawnPattern(de)
 
-        // AI: auto-jump — improved timing and double-jump
+        // AI: auto-jump — perfectly predictive and highly defensive
         jumpCooldown -= CFG.STEP
-        if (jumpCooldown <= 0) {
-          const nearest = de.candles.find(c =>
-            c.kind === 'red' &&
-            c.x > CFG.PLAYER_X - 20 &&
-            c.x < CFG.PLAYER_X + 160
-          )
-          if (nearest) {
-            const distToCandle = nearest.x - (CFG.PLAYER_X + CFG.PLAYER_SIZE)
-            // Ground jump at optimized timing
-            if (dp.onGround && distToCandle < 70 && distToCandle > 25) {
-              dp.velocityY = CFG.JUMP
-              dp.onGround = false
-              dp.squash = -0.12
-              dp.jumpCount = 1
-              jumpCooldown = 0.3
-            }
-            // Double jump for tall candles
-            else if (!dp.onGround && dp.jumpCount < 2 && distToCandle < 40 && nearest.height > 80) {
+
+        // 1. Find the nearest threatening red candle ahead
+        const nearestIndex = de.candles.findIndex(c =>
+          c.kind === 'red' &&
+          c.x + c.width > CFG.PLAYER_X - 10 // slightly behind player head
+        )
+
+        const nearest = nearestIndex !== -1 ? de.candles[nearestIndex] : null
+
+        if (nearest) {
+          const distToCandle = nearest.x - (CFG.PLAYER_X + CFG.PLAYER_SIZE)
+          const candleSpeedFactor = de.speed * 0.25
+
+          // A. Initial Ground Jump (Triggers slightly earlier now)
+          if (jumpCooldown <= 0 && dp.onGround && distToCandle < (120 + candleSpeedFactor) && distToCandle > 0) {
+            dp.velocityY = CFG.JUMP
+            dp.onGround = false
+            dp.squash = -0.12
+            dp.jumpCount = 1
+            jumpCooldown = 0.1 // Short cooldown
+          }
+
+          // B. Defensive Double Jump (NOT blocked by initial jump cooldown)
+          if (!dp.onGround && dp.jumpCount < 2) {
+            const playerBottomY = dp.y + CFG.PLAYER_SIZE
+            const candleTopY = nearest.bodyY
+
+            // Panic conditions to instantly double jump
+            const isDroppingIntoCandle = dp.velocityY > 0 && (playerBottomY > candleTopY - 30) && distToCandle < 100 && distToCandle > -30
+            const isTallObstacle = nearest.height >= 65 && distToCandle < (80 + candleSpeedFactor * 0.5) && distToCandle > -30
+
+            const isHittingNext = de.candles[nearestIndex + 1]?.kind === 'red' &&
+              (de.candles[nearestIndex + 1].x - (CFG.PLAYER_X + CFG.PLAYER_SIZE)) < 160 && dp.velocityY > 0
+
+            if (isDroppingIntoCandle || isTallObstacle || isHittingNext) {
               dp.velocityY = CFG.DOUBLE_JUMP
               dp.jumpCount = 2
-              jumpCooldown = 0.4
+              jumpCooldown = 0.3
             }
           }
         }
@@ -1431,12 +1471,12 @@ export default function GameEngine({
 
       {/* ===================== MENU OVERLAY ===================== */}
       {mode === 'menu' && (
-        <div className="game-overlay flex items-center justify-center" style={{ containerType: 'size', background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
-          <div className="w-full max-w-[180px] border border-white/40 bg-white/50 backdrop-blur-md px-4 py-4 sm:px-5 sm:py-6 shadow-[0_24px_80px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.9)] relative flex flex-col items-center gap-3 sm:gap-4 rounded-[20px]"
-            style={{ transform: 'scale(min(1, calc(100cqh / 260px)))', transformOrigin: 'center', animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
+        <div className="game-overlay flex items-center justify-center p-4" style={{ containerType: 'size', background: 'transparent' }}>
+          <div className="border border-slate-200/60 bg-white/30 backdrop-blur-sm px-10 pt-7 pb-5 sm:px-12 sm:pt-8 sm:pb-6 shadow-[0_24px_80px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,82,255,0.06)] relative flex flex-col items-center gap-4 sm:gap-5 rounded-[24px]"
+            style={{ width: '100%', maxWidth: '280px', transform: 'scale(min(1, calc(100cqh / 280px)))', transformOrigin: 'center', animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
 
             {/* Best Score Display — Premium */}
-            <div className="w-full bg-gradient-to-br from-[#FFFBEB] to-[#FFF3CC] px-4 py-2.5 sm:py-3 border border-[#F0B90B]/30 text-center rounded-2xl shadow-[0_4px_12px_rgba(240,185,11,0.15)]"
+            <div className="w-full bg-gradient-to-br from-[#FFFBEB] to-[#FFF3CC] px-2 py-2.5 border border-[#F0B90B]/30 text-center rounded-2xl shadow-[0_4px_12px_rgba(240,185,11,0.15)]"
               style={{ animation: 'menuFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both', animationDelay: '0.05s' }}>
               <p className="text-[7px] font-black text-[#D4A002] tracking-[0.18em] mb-1 lowercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>best pnl</p>
               <p className="font-black text-[#B78905] leading-none text-base sm:text-lg tracking-tighter" style={{ fontFamily: 'var(--font-mono, monospace)' }}>{formatMarketCap(best)}</p>
@@ -1445,7 +1485,7 @@ export default function GameEngine({
             {/* Start Button — PREMIUM pulsing glow */}
             <button
               onClick={(e) => { e.stopPropagation(); startGame() }}
-              className="w-full relative overflow-hidden px-4 py-3 sm:py-4 text-[12px] font-black tracking-[0.18em] lowercase text-white transition-all duration-300 active:scale-95 group rounded-2xl"
+              className="w-full relative overflow-hidden px-3 py-3 text-[12px] font-black tracking-[0.18em] lowercase text-white transition-all duration-300 active:scale-95 group rounded-2xl"
               style={{
                 background: 'linear-gradient(135deg, #0052FF 0%, #0040CC 100%)',
                 boxShadow: '0 8px 32px rgba(0,82,255,0.45), 0 0 0 1px rgba(0,82,255,0.3)',
@@ -1460,7 +1500,7 @@ export default function GameEngine({
 
             {/* Hint Text */}
             <div className="text-center" style={{ animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both', animationDelay: '0.25s' }}>
-              <p className="text-[9px] font-medium text-slate-500 tracking-wide" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Tap or space to start</p>
+              <p className="text-[8px] font-black text-slate-800 tracking-[0.2em] uppercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>TAP TO START</p>
             </div>
 
           </div>

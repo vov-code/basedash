@@ -48,7 +48,8 @@ export async function GET(req: NextRequest) {
   <meta property="og:title" content="base dash — ${formattedScore}"/>
   <meta property="og:description" content="${deathMsg} — ${formattedScore} PNL"/>
   <meta property="fc:frame" content="vNext"/>
-  <meta property="fc:frame:image" content="${appUrl}/og-image.svg"/>
+  <meta property="fc:frame:image:aspect_ratio" content="1:1"/>
+  <meta property="fc:frame:image" content="${appUrl}/api/frames/image?score=${score}&combo=${combo}&time=${time}&dodged=${dodged}&buys=${buys}&jumps=${jumps}&address=${address}"/>
   <meta property="fc:frame:button:1" content="🎮 try"/>
   <meta property="fc:frame:button:1:action" content="link"/>
   <meta property="fc:frame:button:1:target" content="${appUrl}"/>

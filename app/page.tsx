@@ -145,53 +145,53 @@ export default function Home() {
         backgroundImage: 'repeating-linear-gradient(0deg, #0052FF 0, #0052FF 1px, transparent 1px, transparent 80px), repeating-linear-gradient(90deg, #0052FF 0, #0052FF 1px, transparent 1px, transparent 80px)'
       }} />
 
-      {/* ENTRY POPUP OVERLAY - Rendered on SSR, hidden on desktop via CSS */}
+      {/* ENTRY POPUP OVERLAY - Brutalist Degen Style */}
       {!hasEntered && (
-        <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden transition-all duration-400 lg:hidden ${isEntering ? 'opacity-0 scale-105' : 'opacity-100'}`}
-          style={{ background: 'linear-gradient(165deg, rgba(255,255,255,0.97) 0%, rgba(245,248,255,0.96) 35%, rgba(235,240,255,0.95) 65%, rgba(224,234,255,0.94) 100%)' }}>
+        <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden transition-all duration-500 lg:hidden backdrop-blur-md ${isEntering ? 'opacity-0 scale-105' : 'opacity-100'}`}
+          style={{ background: 'linear-gradient(165deg, rgba(255,255,255,0.70) 0%, rgba(245,248,255,0.65) 35%, rgba(235,240,255,0.60) 65%, rgba(224,234,255,0.55) 100%)' }}>
+
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute top-[15%] left-[10%] w-48 h-48 bg-[#0052FF]/[0.08] rounded-full blur-3xl animate-[float_8s_ease-in-out_infinite]" />
             <div className="absolute bottom-[20%] right-[15%] w-64 h-64 bg-[#0052FF]/[0.06] rounded-full blur-3xl animate-[float_12s_ease-in-out_infinite_reverse]" />
             <div className="absolute top-[50%] left-[50%] w-40 h-40 bg-[#0ECB81]/[0.06] rounded-full blur-3xl animate-[float_10s_ease-in-out_infinite_2s]" />
           </div>
+
           <div className="absolute inset-0 pointer-events-none z-10 opacity-[0.05]" style={{
             backgroundImage: 'repeating-linear-gradient(0deg, #0052FF 0, #0052FF 1px, transparent 1px, transparent 80px), repeating-linear-gradient(90deg, #0052FF 0, #0052FF 1px, transparent 1px, transparent 80px)'
           }} />
 
-          <div className="relative z-20 text-center px-6 max-w-[340px] w-full"
-            style={{ opacity: 0, animation: 'fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both' }}>
-            <h2 className="text-[13px] font-medium text-slate-700 tracking-wide mb-8 leading-relaxed"
-              style={{ fontFamily: 'var(--font-mono)', opacity: 0, animation: 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both' }}>
-              ready to trade like<br /><span className="text-[#0052FF] font-semibold">it&#39;s your first day again?</span>
+          <div className="relative z-20 text-center px-4 max-w-[300px] w-full"
+            style={{ opacity: 0, animation: 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both' }}>
+            <h2 className="mb-8 mt-2 flex flex-col items-center justify-center gap-1.5"
+              style={{ fontFamily: 'var(--font-mono)', opacity: 0, animation: 'fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both' }}>
+              <span className="text-[8.5px] font-bold text-slate-500 tracking-[0.3em] uppercase relative z-10" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                ready to trade like
+              </span>
+              <span className="text-[12px] font-black uppercase tracking-widest leading-none text-transparent bg-clip-text bg-gradient-to-r from-[#0A0B14] via-[#3A405A] to-[#0A0B14] bg-[length:200%_auto] relative inline-block animate-[shimmer_2.5s_linear_infinite]" style={{ filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.25))' }}>
+                it&#39;s your first day again?
+                <div className="absolute -inset-5 bg-gradient-to-r from-[#0A0B14]/20 to-[#3A405A]/20 blur-2xl -z-10 rounded-[100%] animate-pulse pointer-events-none" />
+              </span>
             </h2>
 
-            <div className="flex gap-2" style={{ opacity: 0, animation: 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both' }}>
+            <div className="flex gap-2.5" style={{ opacity: 0, animation: 'fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both' }}>
               <button
                 onClick={handleEnter}
-                className="flex-1 py-1.5 text-white font-semibold tracking-wide text-[10px] transition-all duration-200 hover:scale-105 active:scale-95 bg-[#0ECB81] relative overflow-hidden group cursor-pointer rounded-md uppercase"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  boxShadow: '0 4px 12px rgba(14,203,129,0.25)',
-                }}
+                className="flex-1 py-2 text-white font-black tracking-widest text-[9.5px] transition-all duration-150 active:translate-y-[2px] active:scale-95 bg-[#0ECB81] relative group cursor-pointer border-b-[3px] border-[#0B9A62] uppercase rounded-sm"
+                style={{ fontFamily: 'var(--font-mono)' }}
               >
                 <span className="relative z-10">Yes</span>
-                <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-200" />
               </button>
               <button
                 onClick={handleEnter}
-                className="flex-1 py-1.5 text-white font-semibold tracking-wide text-[10px] transition-all duration-200 hover:scale-105 active:scale-95 bg-[#F6465D] relative overflow-hidden group cursor-pointer rounded-md uppercase"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  boxShadow: '0 4px 12px rgba(246,70,93,0.25)',
-                }}
+                className="flex-1 py-2 text-white font-black tracking-widest text-[9.5px] transition-all duration-150 active:translate-y-[2px] active:scale-95 bg-[#F6465D] relative group cursor-pointer border-b-[3px] border-[#B93445] uppercase rounded-sm"
+                style={{ fontFamily: 'var(--font-mono)' }}
               >
                 <span className="relative z-10">Yes</span>
-                <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-200" />
               </button>
             </div>
 
-            <p className="mt-6 text-[8px] text-slate-400 tracking-widest animate-pulse"
-              style={{ fontFamily: 'var(--font-mono)', opacity: 0, animation: 'fadeIn 0.6s ease 0.9s both' }}>
+            <p className="mt-8 text-[9px] text-[#0052FF] font-bold tracking-[0.2em] animate-pulse"
+              style={{ fontFamily: 'var(--font-mono)', opacity: 0, animation: 'fadeIn 0.8s ease 0.7s both' }}>
               AUTO-ENTER SOON
             </p>
           </div>
@@ -244,7 +244,7 @@ export default function Home() {
             {/* TAB NAVIGATION - Always visible */}
             <div className="w-full px-3 sm:px-4 py-1.5 sm:py-2 relative z-20 flex-shrink-0">
               <div className="flex justify-center items-center gap-1 p-0.5 bg-white/60 backdrop-blur-md rounded-xl border border-slate-200/50 shadow-inner">
-                <button onClick={() => setActiveTab('game')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
+                <button onClick={() => setActiveTab('game')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-[#F0F4FF] text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
                   <div className="flex items-center gap-0.5">
                     <svg className="w-2.5 h-2.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                     <span className="text-[9px] sm:text-[10px] font-black tracking-wide leading-none">trade</span>
@@ -252,7 +252,7 @@ export default function Home() {
                   <span className="text-[6px] sm:text-[7px] font-semibold opacity-70 leading-none mt-[1px]">play demo</span>
                 </button>
 
-                <button onClick={() => setActiveTab('profile')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'profile' ? 'bg-white text-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.5)] scale-100 ring-1 ring-[#0052FF]/50 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
+                <button onClick={() => setActiveTab('profile')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'profile' ? 'bg-[#F0F4FF] text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
                   <div className="flex items-center gap-0.5">
                     <svg className="w-2.5 h-2.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
                     <span className="text-[9px] sm:text-[10px] font-black tracking-wide leading-none">wallet</span>
@@ -260,7 +260,7 @@ export default function Home() {
                   <span className="text-[6px] sm:text-[7px] font-semibold opacity-70 leading-none mt-[1px]">profile</span>
                 </button>
 
-                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-1.5 sm:px-2 h-[22px] sm:h-[24px] flex flex-col items-center justify-center rounded-lg transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white shadow-[0_0_15px_rgba(240,185,11,0.6)] scale-100 ring-1 ring-[#F0B90B]/80 z-10' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)] z-0'}`}>
+                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-1.5 sm:px-2 h-[22px] sm:h-[24px] flex flex-col items-center justify-center rounded-lg transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white scale-100 ring-1 ring-[#F0B90B] z-10' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)] z-0'}`}>
                   {activeTab !== 'leaderboard' && <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-[#F0B90B] to-transparent opacity-20 -translate-x-full animate-[shimmerSweep_2.5s_ease-in-out_infinite]" />}
                   <div className="flex items-center gap-0.5 relative z-10">
                     <svg className={`w-2.5 h-2.5 hidden sm:block transition-transform duration-300 ${(activeTab as string) !== 'leaderboard' ? 'group-hover:scale-110 text-[#F0B90B]' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
@@ -340,60 +340,61 @@ export default function Home() {
 
 
             {/* LEADERBOARD TAB */}
-            {activeTab === 'leaderboard' && <Leaderboard />}
+            {activeTab === 'leaderboard' && <div className="flex-1 overflow-y-auto px-3 sm:px-4 pb-4"><Leaderboard /></div>}
 
             {/* PROFILE TAB */}
             {activeTab === 'profile' && (
-              <div className="px-4 py-6">
+              <div className="flex-1 overflow-y-auto px-4 py-5">
                 {isConnected && address ? (
-                  <div className="space-y-4 max-w-xl mx-auto">
-                    <h2 className="text-xl font-black text-slate-900 tracking-tight">your wallet</h2>
-                    <div className="p-5 sm:p-6 bg-gradient-to-br from-[#0052FF] to-[#0040CC] shadow-[0_12px_24px_rgba(0,82,255,0.2)] text-white relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 blur-3xl -translate-y-1/2 translate-x-1/3" />
-                      <div className="relative z-10 flex flex-col justify-between sm:flex-row sm:items-end gap-5">
+                  <div className="space-y-3 max-w-md mx-auto">
+                    <h2 className="text-lg font-black text-slate-900 tracking-tight lowercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>your wallet</h2>
+                    <div className="p-4 sm:p-5 bg-gradient-to-br from-[#0052FF] to-[#0040CC] rounded-2xl shadow-[0_12px_24px_rgba(0,82,255,0.2)] text-white relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-3xl -translate-y-1/2 translate-x-1/3" />
+                      <div className="relative z-10 flex flex-col justify-between sm:flex-row sm:items-end gap-4">
                         <div>
-                          <p className="text-[10px] font-bold text-white/60 lowercase tracking-widest mb-1.5">connected wallet</p>
-                          <p className="font-mono text-xl sm:text-2xl font-black text-white tracking-tight leading-none">{address.slice(0, 6)}...{address.slice(-4)}</p>
+                          <p className="text-[9px] font-bold text-white/50 uppercase tracking-[0.2em] mb-1" style={{ fontFamily: 'var(--font-mono, monospace)' }}>connected wallet</p>
+                          <p className="font-mono text-lg sm:text-xl font-black text-white tracking-tight leading-none">{address.slice(0, 6)}...{address.slice(-4)}</p>
                         </div>
-                        <div className="flex gap-2">
-                          <div className="bg-white/10 backdrop-blur-md px-3 py-2 border border-white/20">
-                            <p className="text-[8px] font-bold text-white/50 lowercase tracking-widest mb-1">network</p>
-                            <p className="text-[11px] font-black text-white flex items-center gap-1.5 leading-none">
-                              <span className="w-1.5 h-1.5 bg-[#0ECB81] animate-pulse shadow-[0_0_4px_#0ECB81]" />
+                        <div className="flex gap-1.5">
+                          <div className="bg-white/10 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-white/20">
+                            <p className="text-[7px] font-bold text-white/50 uppercase tracking-[0.2em] mb-0.5" style={{ fontFamily: 'var(--font-mono, monospace)' }}>network</p>
+                            <p className="text-[10px] font-black text-white flex items-center gap-1 leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#0ECB81] animate-pulse shadow-[0_0_4px_#0ECB81]" />
                               {networkLabel}
                             </p>
                           </div>
                         </div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                      <div className="p-3 sm:p-4 border border-[#0ECB81]/10 bg-[#0ECB81]/[0.03] shadow-sm flex flex-col items-center justify-center text-center">
-                        <p className="text-[9px] font-bold text-slate-400 lowercase tracking-widest">time in game</p>
-                        <p className="mt-1 text-xl sm:text-2xl font-black text-[#0ECB81] leading-none">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-3 rounded-xl border border-[#0ECB81]/15 bg-[#0ECB81]/[0.04] flex flex-col items-center justify-center text-center">
+                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>time in game</p>
+                        <p className="mt-1 text-lg font-black text-[#0ECB81] leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
                           {typeof window !== 'undefined' ? (parseInt(localStorage.getItem('base_dash_time') || '0') / 60).toFixed(1) : 0}m
                         </p>
                       </div>
-                      <div className="p-3 sm:p-4 border border-[#0052FF]/10 bg-[#0052FF]/[0.03] shadow-sm flex flex-col items-center justify-center text-center">
-                        <p className="text-[9px] font-bold text-slate-400 lowercase tracking-widest">streak</p>
-                        <p className="mt-1 text-xl sm:text-2xl font-black text-[#0052FF] leading-none">{checkInStatus.streak}</p>
+                      <div className="p-3 rounded-xl border border-[#0052FF]/15 bg-[#0052FF]/[0.04] flex flex-col items-center justify-center text-center">
+                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>streak</p>
+                        <p className="mt-1 text-lg font-black text-[#0052FF] leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>{checkInStatus.streak}</p>
                       </div>
                     </div>
-                    <div className="pt-2"><DailyCheckinButton /></div>
+                    <div className="pt-1"><DailyCheckinButton /></div>
                   </div>
                 ) : (
-                  <div className="py-16 text-center max-w-sm mx-auto">
-                    <div className="w-16 h-16 mx-auto mb-5 bg-gradient-to-br from-[#0052FF] to-[#0040CC] shadow-[0_12px_24px_rgba(0,82,255,0.25)] flex items-center justify-center animate-[float_4s_ease-in-out_infinite]">
-                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <div className="py-14 text-center max-w-xs mx-auto">
+                    <div className="w-14 h-14 mx-auto mb-4 bg-gradient-to-br from-[#0052FF] to-[#0040CC] rounded-2xl shadow-[0_12px_24px_rgba(0,82,255,0.25)] flex items-center justify-center animate-[float_4s_ease-in-out_infinite]">
+                      <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                       </svg>
                     </div>
-                    <h3 className="text-xl font-black text-slate-900 mb-2 tracking-tight">connect wallet</h3>
-                    <p className="text-slate-500 text-[13px] font-medium mb-6 leading-relaxed">save your session on-chain, access the leaderboard, and claim your rewards.</p>
+                    <h3 className="text-lg font-black text-slate-900 mb-1.5 tracking-tight lowercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>connect wallet</h3>
+                    <p className="text-slate-500 text-[11px] font-medium mb-5 leading-relaxed">save your session on-chain, access the leaderboard, and claim your rewards.</p>
                     <button
                       onClick={handleConnect}
-                      className="w-full bg-[#0052FF] text-white py-3.5 text-sm font-black tracking-wide hover:bg-[#0040CC] transition-all shadow-[0_8px_16px_rgba(0,82,255,0.2)] active:scale-[0.98] rounded-xl flex items-center justify-center gap-2"
+                      className="w-full bg-[#0052FF] text-white py-3 text-[12px] font-black tracking-wide hover:bg-[#0040CC] transition-all shadow-[0_8px_16px_rgba(0,82,255,0.2)] active:scale-[0.98] rounded-xl flex items-center justify-center gap-2"
+                      style={{ fontFamily: 'var(--font-mono, monospace)' }}
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                       </svg>
                       connect wallet
@@ -407,7 +408,7 @@ export default function Home() {
 
         {/* FOOTER - z-[40], solid white background */}
         <footer className="mt-auto bg-white relative z-[40] flex-shrink-0 w-full flex flex-col justify-end min-h-[30px] sm:min-h-[36px] pb-1.5">
-          <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 flex flex-row items-center justify-between h-[24px] sm:h-[28px]">
+          <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 flex flex-row items-end justify-between h-[20px] sm:h-[24px]">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none m-0 p-0">© {new Date().getFullYear()} base dash</span>
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none m-0 p-0">built by <span className="font-black text-[#0052FF] ml-0.5">vov</span></span>
           </div>
