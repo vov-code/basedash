@@ -121,7 +121,7 @@ export default function Home() {
     try { await connectWallet() } catch { }
   }, [connectWallet])
 
-  const handleScoreSubmit = useCallback(async (score: number) => {
+  const handleScoreSubmit = useCallback(async (score: number, sessionId?: string) => {
     if (!address) throw new Error('wallet not connected')
     if (CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') throw new Error('contract not deployed')
 
@@ -129,7 +129,7 @@ export default function Home() {
     const res = await fetch('/api/score-sign', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address, score }),
+      body: JSON.stringify({ address, score, sessionId }),
     })
 
     if (!res.ok) {
@@ -178,7 +178,7 @@ export default function Home() {
       {/* ENTRY POPUP OVERLAY - Brutalist Degen Style */}
       {!hasEntered && (
         <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden transition-all duration-500 lg:hidden backdrop-blur-xl ${isEntering ? 'opacity-0 scale-105' : 'opacity-100'}`}
-          style={{ background: 'linear-gradient(165deg, rgba(255,255,255,0.92) 0%, rgba(245,248,255,0.90) 35%, rgba(235,240,255,0.88) 65%, rgba(224,234,255,0.85) 100%)' }}>
+          style={{ background: 'linear-gradient(165deg, rgba(255,255,255,0.98) 0%, rgba(245,248,255,0.95) 35%, rgba(235,240,255,0.92) 65%, rgba(224,234,255,0.90) 100%)' }}>
 
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute top-[15%] left-[10%] w-48 h-48 bg-[#0052FF]/[0.08] rounded-full blur-3xl animate-[float_8s_ease-in-out_infinite]" />
@@ -424,7 +424,7 @@ export default function Home() {
                     <p className="text-slate-500 text-[11px] font-medium mb-5 leading-relaxed">save your session on-chain, access the leaderboard, and claim your rewards.</p>
                     <button
                       onClick={handleConnect}
-                      className="w-full bg-[#0052FF] text-white py-3 text-[12px] font-black tracking-wide hover:bg-[#0040CC] transition-all shadow-[0_8px_16px_rgba(0,82,255,0.2)] active:scale-[0.98] rounded-xl flex items-center justify-center gap-2"
+                      className="w-full bg-[#0052FF] text-white py-3 text-[12px] font-black tracking-wide hover:bg-[#0040CC] transition-all shadow-[0_8px_16px_rgba(0,82,255,0.2)] active:scale-[0.98] rounded-xl flex items-center justify-center gap-2 animate-[pulse_2s_ease-in-out_infinite]"
                       style={{ fontFamily: 'var(--font-mono, monospace)' }}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -443,7 +443,7 @@ export default function Home() {
         <footer className="mt-auto bg-white relative z-[40] flex-shrink-0 w-full flex flex-col justify-end min-h-[30px] sm:min-h-[36px] pb-1.5">
           <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 flex flex-row items-end justify-between h-[20px] sm:h-[24px]">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none m-0 p-0">© {new Date().getFullYear()} base dash</span>
-            <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none m-0 p-0">built by <span className="font-black text-[#0052FF] ml-0.5">vov</span></span>
+            <a href="https://x.com/vovweb3" target="_blank" rel="noopener noreferrer" className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none m-0 p-0 inline-flex items-center gap-0.5 active:scale-95 transition-transform cursor-pointer no-underline">built by <span className="font-black text-[#0052FF] ml-0.5 relative overflow-hidden drop-shadow-[0_0_4px_rgba(0,82,255,0.3)]">vov<span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-[shimmerVov_2.5s_ease-in-out_infinite]" style={{ animationDelay: '1s' }} /></span></a>
           </div>
         </footer>
       </div>

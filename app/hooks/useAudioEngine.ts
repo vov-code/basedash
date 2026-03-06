@@ -3,7 +3,7 @@
 import { useRef, useCallback } from 'react'
 
 export interface AudioEngine {
-    playTone: (freq: number, type: OscillatorType, dur: number, vol?: number, slideFreq?: number) => void
+    playTone: (freq: number, type: OscillatorType, vol?: number, dur?: number, slideFreq?: number) => void
     sfxJump: () => void
     sfxDoubleJump: () => void
     sfxDash: () => void
@@ -253,42 +253,32 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
         bgmNodesRef.current = { oscs: [oscMelody, oscPad, oscBass], gain }
 
-        // === CHORD PROGRESSIONS PER WORLD — each has a unique emotional key ===
+        // === CHORD PROGRESSIONS PER WORLD — Pentatonic scales for harmonious melodies ===
         const keyPatterns: number[][] = [
-            // World 0–1: C major (warm, welcoming, simple)
-            // CMaj7 → Am7 → FMaj7 → G
-            [261.63, 329.63, 392.00, 493.88, 220.00, 261.63, 329.63, 440.00,
-                174.61, 220.00, 261.63, 329.63, 196.00, 246.94, 293.66, 392.00],
-            // World 2–3: D dorian (dreamy, slightly mysterious)
-            // Dm9 → Em7 → CMaj7 → Am7
-            [293.66, 349.23, 440.00, 523.25, 329.63, 392.00, 493.88, 587.33,
-                261.63, 329.63, 392.00, 493.88, 220.00, 261.63, 329.63, 440.00],
-            // World 4–5: E minor (deeper, driving)
-            // Em7 → CMaj → G → Dsus
-            [329.63, 392.00, 493.88, 587.33, 261.63, 329.63, 392.00, 523.25,
-                196.00, 246.94, 293.66, 392.00, 293.66, 392.00, 440.00, 587.33],
-            // World 6–7: Ab major (ethereal, expansive)
-            // AbMaj7 → Fm7 → DbMaj7 → Eb
-            [415.30, 523.25, 622.25, 783.99, 349.23, 415.30, 523.25, 698.46,
-                277.18, 349.23, 415.30, 523.25, 311.13, 392.00, 466.16, 622.25],
-            // World 8+: F# minor (climactic, transcendent)
-            // F#m9 → DMaj → A → E
-            [369.99, 440.00, 523.25, 659.26, 293.66, 369.99, 440.00, 587.33,
-                220.00, 277.18, 329.63, 440.00, 329.63, 415.30, 493.88, 659.26],
+            // World 0–1: C major Pentatonic (Dreamy, floating)
+            [261.63, 329.63, 392.00, 440.00, 523.25, 440.00, 392.00, 329.63,
+                261.63, 392.00, 523.25, 659.25, 523.25, 392.00, 329.63, 261.63],
+            // World 2–3: D dorian Pentatonic (Gently driving)
+            [293.66, 349.23, 440.00, 523.25, 587.33, 523.25, 440.00, 349.23,
+                293.66, 440.00, 587.33, 698.46, 587.33, 440.00, 349.23, 293.66],
+            // World 4–5: E minor Pentatonic (Deeper, darker)
+            [329.63, 392.00, 440.00, 493.88, 659.25, 493.88, 440.00, 392.00,
+                329.63, 493.88, 659.25, 783.99, 659.25, 493.88, 392.00, 329.63],
+            // World 6–7: F Lydian Pentatonic (Ethereal)
+            [349.23, 440.00, 523.25, 587.33, 698.46, 587.33, 523.25, 440.00,
+                349.23, 523.25, 698.46, 880.00, 698.46, 523.25, 440.00, 349.23],
+            // World 8+: G major Pentatonic (Transcendent)
+            [392.00, 493.88, 587.33, 659.25, 783.99, 659.25, 587.33, 493.88,
+                392.00, 587.33, 783.99, 987.77, 783.99, 587.33, 493.88, 392.00],
         ]
 
-        // Bass roots — one octave below chord root
+        // Bass roots — simple sustained roots corresponding to the keys
         const bassPatterns: number[][] = [
-            [130.81, 130.81, 130.81, 130.81, 110.00, 110.00, 110.00, 110.00,
-                87.31, 87.31, 87.31, 87.31, 98.00, 98.00, 98.00, 98.00],
-            [146.83, 146.83, 146.83, 146.83, 164.81, 164.81, 164.81, 164.81,
-                130.81, 130.81, 130.81, 130.81, 110.00, 110.00, 110.00, 110.00],
-            [164.81, 164.81, 164.81, 164.81, 130.81, 130.81, 130.81, 130.81,
-                98.00, 98.00, 98.00, 98.00, 146.83, 146.83, 146.83, 146.83],
-            [207.65, 207.65, 207.65, 207.65, 174.61, 174.61, 174.61, 174.61,
-                138.59, 138.59, 138.59, 138.59, 155.56, 155.56, 155.56, 155.56],
-            [184.99, 184.99, 184.99, 184.99, 146.83, 146.83, 146.83, 146.83,
-                110.00, 110.00, 110.00, 110.00, 164.81, 164.81, 164.81, 164.81],
+            Array(16).fill(130.81), // C3
+            Array(16).fill(146.83), // D3
+            Array(16).fill(164.81), // E3
+            Array(16).fill(174.61), // F3
+            Array(16).fill(196.00), // G3
         ]
 
         let noteIdx = 0

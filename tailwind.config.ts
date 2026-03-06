@@ -133,6 +133,10 @@ const config: Config = {
           '0%': { backgroundPosition: '-1000px 0' },
           '100%': { backgroundPosition: '1000px 0' },
         },
+        shimmerVov: {
+          '0%, 100%': { transform: 'translateX(-200%)' },
+          '50%': { transform: 'translateX(200%)' },
+        },
       },
       fontSize: {
         xs: ['12px', { lineHeight: '16px' }],

@@ -32,7 +32,7 @@ import {
   clamp, lerp, rand,
   getWorld, getWorldIndex, getSpeed, getJumps,
   createEngine, spawnPattern, formatMarketCap,
-  updateGameConfig,
+  updateGameConfig, createCandle,
 } from './gameConfig'
 import { drawFrame } from './gameRenderer'
 import { useWallet } from '@/app/hooks/useWallet'
@@ -163,7 +163,7 @@ const spawnTrailParticle = (e: EngineState): void => {
 // ============================================================================
 
 interface GameEngineProps {
-  onScoreSubmit?: (score: number) => Promise<void>
+  onScoreSubmit?: (score: number, sessionId?: string) => Promise<void>
   storageKey?: string
   isConnected?: boolean
   canSubmitScore?: boolean
@@ -547,126 +547,131 @@ export default function GameEngine({
       if (c.collected || c.x + c.width < CFG.PLAYER_X - 10) continue
       if (c.x > CFG.PLAYER_X + CFG.PLAYER_SIZE + 10) continue
 
-      // Stricter candle hitbox (no margin)
+      // Stricter candle hitbox (no margin) for Red
       const cx1 = c.x + 1
       const cy1 = c.bodyY + 1
       const cx2 = c.x + c.width - 1
       const cy2 = c.bodyY + c.bodyHeight - 1
 
-      const hit = px1 < cx2 && px2 > cx1 && py1 < cy2 && py2 > cy1
+      const hitRed = px1 < cx2 && px2 > cx1 && py1 < cy2 && py2 > cy1
 
-      if (hit) {
-        if (c.kind === 'red') {
-          if (p.invincible <= 0) {
-            // Shield check (diamond hands power-up)
-            if (e.shieldActive) {
-              e.shieldActive = false
-              e.shieldFlashTimer = 0.3  // White screen flash (item 4)
-              p.invincible = 0.8
-              p.flash = 0.8
-              e.shakeTimer = 0.2
-              sfxCollect()
-              hapticCollect()
-              // Shield break particles
-              for (let i = 0; i < 8; i++) {
-                e.particles.push(mkParticle(
-                  CFG.PLAYER_X + CFG.PLAYER_SIZE / 2, p.y + CFG.PLAYER_SIZE / 2,
-                  'powerup', '#00D4FF',
-                  { vx: rand(-150, 150), vy: rand(-200, -50), life: rand(0.5, 0.8), size: rand(4, 8) }
-                ))
-              }
-              continue
+      // Generous grab radius for Green candles (+20px padding)
+      const laxPx1 = CFG.PLAYER_X - 25
+      const laxPy1 = p.y - 25
+      const laxPx2 = CFG.PLAYER_X + CFG.PLAYER_SIZE + 25
+      const laxPy2 = p.y + CFG.PLAYER_SIZE + 25
+      const hitGreen = laxPx1 < cx2 && laxPx2 > cx1 && laxPy1 < cy2 && laxPy2 > cy1
+
+      if (hitRed && c.kind === 'red') {
+        if (p.invincible <= 0) {
+          // Shield check (diamond hands power-up)
+          if (e.shieldActive) {
+            e.shieldActive = false
+            e.shieldFlashTimer = 0.3  // White screen flash (item 4)
+            p.invincible = 0.8
+            p.flash = 0.8
+            e.shakeTimer = 0.2
+            sfxCollect()
+            hapticCollect()
+            // Shield break particles
+            for (let i = 0; i < 8; i++) {
+              e.particles.push(mkParticle(
+                CFG.PLAYER_X + CFG.PLAYER_SIZE / 2, p.y + CFG.PLAYER_SIZE / 2,
+                'powerup', '#00D4FF',
+                { vx: rand(-150, 150), vy: rand(-200, -50), life: rand(0.5, 0.8), size: rand(4, 8) }
+              ))
             }
-            // DEATH
-            e.alive = false
-            e.shakeTimer = 0.4
-            e.combo = 0  // Сброс комбо при смерти
-            setDeathScore(e.score)
-            // Compute game stats
-            const dodged = e.candles.filter(c => c.kind === 'red' && c.passed && !c.collected).length
-            const stats = {
-              timeSurvived: e.gameTime,
-              candlesDodged: dodged + Math.floor(e.score / CFG.RED_SCORE),
-              greensCollected: e.totalCollected,
-              totalJumps: e.totalJumps,
-              maxCombo: e.maxCombo,
-            }
-            setGameStats(stats)
-            setMode('gameover')
-            // 8.3 — "LIQUIDATED at $X" death message
-            const msg = getRandomDeathMessage()
-            setDeathMessage(msg === 'liquidated at' ? `liquidated at ${formatMarketCap(e.score)}` : msg)
-            // Sound + haptic
-            sfxDeath()
-            hapticDeath()
-            // Save high score & new record celebration
-            if (e.score > highScoreRef.current) {
-              highScoreRef.current = e.score
-              setBest(e.score)
-              setIsNewRecord(true)
-              playNewRecordFanfare()
-              try { localStorage.setItem(storageKey, String(e.score)) } catch { }
-            }
-            // Create game session (wallet-connected only) & add to history
-            gameSessionIdRef.current = null
-            if (address && e.score > 0) {
-              const sessionData = {
-                score: e.score,
-                time: Math.floor(stats.timeSurvived),
-                dodged: stats.candlesDodged,
-                buys: stats.greensCollected,
-                jumps: stats.totalJumps,
-                combo: stats.maxCombo,
-                address,
-              }
-              fetch('/api/game-sessions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(sessionData),
-              }).then(r => r.json()).then(data => {
-                if (data.id) {
-                  gameSessionIdRef.current = data.id
-                  addGameToHistory({
-                    id: data.id,
-                    score: e.score,
-                    time: Math.floor(stats.timeSurvived),
-                    dodged: stats.candlesDodged,
-                    buys: stats.greensCollected,
-                    jumps: stats.totalJumps,
-                    combo: stats.maxCombo,
-                    date: Date.now(),
-                  })
-                }
-              }).catch(() => { /* silent */ })
-            }
-            // Death particles
-            spawnDeathBurst(e, IS_MOBILE ? 16 : 28)
-            return
+            continue
           }
-        } else if (c.kind === 'green' && !c.collected) {
-          // COLLECT green candle
-          c.collected = true
-          const greenPts = CFG.GREEN_SCORE * e.scoreMultiplier
-          e.score += Math.round(greenPts)
-          e.combo += 1
-          e.maxCombo = Math.max(e.maxCombo, e.combo)
-          e.totalCollected += 1
-          e.slowdownTimer = CFG.SLOW_TIME
-          e.scorePulse = 1
-          e.comboPulse = 1
-          p.flash = 0.6
-          p.invincible = 0.3
-          // 7.3 — Combo pulse at x5 milestones
-          if (e.combo > 0 && e.combo % 5 === 0) {
-            e.comboPulseTimer = 0.5
-            sfxCombo(e.combo)
+          // DEATH
+          e.alive = false
+          e.shakeTimer = 0.4
+          e.combo = 0  // Сброс комбо при смерти
+          setDeathScore(e.score)
+          // Compute game stats
+          const dodged = e.candles.filter(c => c.kind === 'red' && c.passed && !c.collected).length
+          const stats = {
+            timeSurvived: e.gameTime,
+            candlesDodged: dodged + Math.floor(e.score / CFG.RED_SCORE),
+            greensCollected: e.totalCollected,
+            totalJumps: e.totalJumps,
+            maxCombo: e.maxCombo,
           }
+          setGameStats(stats)
+          setMode('gameover')
+          // 8.3 — "LIQUIDATED at $X" death message
+          const msg = getRandomDeathMessage()
+          setDeathMessage(msg === 'liquidated at' ? `liquidated at ${formatMarketCap(e.score)}` : msg)
           // Sound + haptic
-          sfxCollect()
-          hapticCollect()
-          // Collection particles — reduced for mobile perf
-          spawnCollectSparkle(e, c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, IS_MOBILE ? 4 : 8)
+          sfxDeath()
+          hapticDeath()
+          // Save high score & new record celebration
+          if (e.score > highScoreRef.current) {
+            highScoreRef.current = e.score
+            setBest(e.score)
+            setIsNewRecord(true)
+            playNewRecordFanfare()
+            try { localStorage.setItem(storageKey, String(e.score)) } catch { }
+          }
+          // Create game session (wallet-connected only) & add to history
+          gameSessionIdRef.current = null
+          if (address && e.score > 0) {
+            const sessionData = {
+              score: e.score,
+              time: Math.floor(stats.timeSurvived),
+              dodged: stats.candlesDodged,
+              buys: stats.greensCollected,
+              jumps: stats.totalJumps,
+              combo: stats.maxCombo,
+              address,
+            }
+            fetch('/api/game-sessions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(sessionData),
+            }).then(r => r.json()).then(data => {
+              if (data.id) {
+                gameSessionIdRef.current = data.id
+                addGameToHistory({
+                  id: data.id,
+                  score: e.score,
+                  time: Math.floor(stats.timeSurvived),
+                  dodged: stats.candlesDodged,
+                  buys: stats.greensCollected,
+                  jumps: stats.totalJumps,
+                  combo: stats.maxCombo,
+                  date: Date.now(),
+                })
+              }
+            }).catch(() => { /* silent */ })
+          }
+          // Death particles
+          spawnDeathBurst(e, IS_MOBILE ? 16 : 28)
+          return
         }
+      } else if (hitGreen && c.kind === 'green' && !c.collected) {
+        // COLLECT green candle
+        c.collected = true
+        const greenPts = CFG.GREEN_SCORE * e.scoreMultiplier
+        e.score += Math.round(greenPts)
+        e.combo += 1
+        e.maxCombo = Math.max(e.maxCombo, e.combo)
+        e.totalCollected += 1
+        e.slowdownTimer = CFG.SLOW_TIME
+        e.scorePulse = 1
+        e.comboPulse = 1
+        p.flash = 0.6
+        p.invincible = 0.3
+        // 7.3 — Combo pulse at x5 milestones
+        if (e.combo > 0 && e.combo % 5 === 0) {
+          e.comboPulseTimer = 0.5
+          sfxCombo(e.combo)
+        }
+        // Sound + haptic
+        sfxCollect()
+        hapticCollect()
+        // Collection particles — reduced for mobile perf
+        spawnCollectSparkle(e, c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, IS_MOBILE ? 4 : 8)
       } else if (c.kind === 'red' && !c.passed && c.x + c.width < CFG.PLAYER_X + 5 && c.x + c.width > CFG.PLAYER_X - 10 && e.nearMissTimer <= 0 && (e.gameTime - ((e as any)._lastNearMissTime || 0) > MARKET_CONFIG.NEAR_MISS_COOLDOWN)) {
         // Near-miss detection: only genuine close calls with cooldown
         const vertDistTop = Math.abs((p.y + CFG.PLAYER_SIZE - CFG.HITBOX) - c.bodyY)
@@ -1036,7 +1041,7 @@ export default function GameEngine({
     setSubmitting(true)
     setError(null)
     try {
-      await onScoreSubmit(deathScore)
+      await onScoreSubmit(deathScore, gameSessionIdRef.current || undefined)
       setSubmitted(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'failed to submit')
@@ -1353,8 +1358,14 @@ export default function GameEngine({
         }
         de.candles.length = cw
 
-        // Spawn
-        if (de.distance >= de.nextSpawnDistance) spawnPattern(de)
+        // Spawn only simple red candles for demo mode
+        if (de.distance >= de.nextSpawnDistance) {
+          const gap = 380 + Math.random() * 200
+          de.nextSpawnDistance = de.distance + gap
+          const c = createCandle(de.nextCandleId++, 'red', CFG.WIDTH + 140, 90, 30)
+          c.glowIntensity = 0.5
+          de.candles.push(c)
+        }
 
         // === DEMO COLLISION: cube bounces off reds (respawn-style) ===
         const px1 = CFG.PLAYER_X + 2
@@ -1483,12 +1494,11 @@ export default function GameEngine({
         }
         de.particles.length = Math.min(partWrite, CFG.PARTICLE_LIMIT)
 
-        // World transitions in demo
-        const newWorldIdx = getWorldIndex(de.score)
-        if (newWorldIdx !== de.worldIndex) {
-          de.worldIndex = newWorldIdx
-          de.worldName = WORLDS[newWorldIdx].name
-          for (const s of de.stars) s.color = WORLDS[newWorldIdx].starColor
+        // Keep demo at world 0 - no transitions
+        if (de.worldIndex !== 0) {
+          de.worldIndex = 0
+          de.worldName = WORLDS[0].name
+          for (const s of de.stars) s.color = WORLDS[0].starColor
         }
 
         // Reset demo periodically — full clean engine swap
@@ -1628,7 +1638,7 @@ export default function GameEngine({
               }}
             >
               <span className="relative z-10">start trade</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 rounded-xl" />
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 animate-[shimmerVov_2.5s_ease-in-out_infinite] rounded-xl" />
             </button>
 
             {/* Hint Text */}
@@ -1735,12 +1745,12 @@ export default function GameEngine({
                       submitting...
                     </button>
                   ) : (
-                    <button onClick={submitScore} className="mb-1.5 w-full bg-[#0052FF] text-white py-2 text-[8px] sm:text-[9px] font-black lowercase tracking-widest hover:bg-[#003FCC] active:scale-[0.98] rounded-lg border border-[#0052FF] transition-all shadow-[0_4px_12px_rgba(0,82,255,0.2)]">
+                    <button onClick={submitScore} className="mb-1.5 w-full bg-[#0052FF] text-white py-2 text-[8px] sm:text-[9px] font-black lowercase tracking-widest active:bg-[#003FCC] active:scale-[0.98] rounded-lg border border-[#0052FF] transition-all shadow-[0_4px_12px_rgba(0,82,255,0.2)] animate-[pulse_2s_ease-in-out_infinite]">
                       save record (free)
                     </button>
                   )
                 ) : !isConnected ? (
-                  <button onClick={handleConnectWallet} disabled={connectingWallet} className="mb-1.5 w-full bg-[#0052FF] text-white py-2 text-[8px] sm:text-[9px] font-black lowercase tracking-widest hover:bg-[#003FCC] active:scale-[0.98] rounded-lg border border-[#0052FF] transition-all shadow-[0_4px_12px_rgba(0,82,255,0.2)] disabled:opacity-50">
+                  <button onClick={handleConnectWallet} disabled={connectingWallet} className="mb-1.5 w-full bg-[#0052FF] text-white py-2 text-[8px] sm:text-[9px] font-black lowercase tracking-widest active:bg-[#003FCC] active:scale-[0.98] rounded-lg border border-[#0052FF] transition-all shadow-[0_4px_12px_rgba(0,82,255,0.2)] disabled:opacity-50">
                     {connectingWallet ? 'connecting...' : 'connect to save'}
                   </button>
                 ) : (
@@ -1750,7 +1760,7 @@ export default function GameEngine({
 
               {error && <p className="text-[#F6465D] text-[6px] sm:text-[7px] font-black mb-1.5 bg-[#FFF0F2] px-2 py-1 rounded text-center border border-[#F6465D]/30 lowercase tracking-widest">{error.toLowerCase()}</p>}
 
-              <button onClick={startGame} className={`w-full border border-slate-200 bg-white px-2 py-2 text-[9px] sm:text-[10px] font-black text-slate-800 lowercase tracking-widest hover:bg-slate-900 hover:text-white hover:border-slate-900 active:scale-[0.98] transition-all rounded-lg ${retryVisible ? 'opacity-100' : 'opacity-0 scale-95 pointer-events-none'}`} style={retryVisible ? { animation: 'retryPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards' } : undefined}>
+              <button onClick={startGame} className={`w-full border border-slate-200 bg-white px-2 py-2 text-[9px] sm:text-[10px] font-black text-slate-800 lowercase tracking-widest active:bg-slate-900 active:text-white active:border-slate-900 active:scale-[0.98] transition-all rounded-lg ${retryVisible ? 'opacity-100' : 'opacity-0 scale-95 pointer-events-none'}`} style={retryVisible ? { animation: 'retryPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards' } : undefined}>
                 run it back
               </button>
 

@@ -3,8 +3,12 @@ import { createPublicClient, createWalletClient, http, encodePacked, keccak256, 
 import { privateKeyToAccount } from 'viem/accounts'
 import { base, baseSepolia } from 'viem/chains'
 import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS } from '@/app/contracts'
+import Redis from 'ioredis'
 
 export const dynamic = 'force-dynamic'
+
+const redisUrl = process.env.REDIS_URL || process.env.KV_URL
+const redis = redisUrl ? new Redis(redisUrl) : null
 
 const isTestnet = process.env.NEXT_PUBLIC_USE_TESTNET === 'true'
 const chain = isTestnet ? baseSepolia : base
@@ -73,13 +77,13 @@ function verifyChallenge(ip: string, challenge: string): boolean {
 
 function checkRateLimit(ip: string, address: string): { allowed: boolean; challenge?: string; retryAfter?: number } {
   const now = Date.now()
-  
+
   // Check for suspicious patterns
   const pattern = suspiciousPatterns.get(ip)
   if (pattern && pattern.count > 50 && now - pattern.lastSeen < 300000) {
-    return { 
-      allowed: false, 
-      retryAfter: Math.ceil((300000 - (now - pattern.lastSeen)) / 1000) 
+    return {
+      allowed: false,
+      retryAfter: Math.ceil((300000 - (now - pattern.lastSeen)) / 1000)
     }
   }
 
@@ -93,9 +97,9 @@ function checkRateLimit(ip: string, address: string): { allowed: boolean; challe
 
   // Check if IP is temporarily blocked
   if (record.blockedUntil && now < record.blockedUntil) {
-    return { 
-      allowed: false, 
-      retryAfter: Math.ceil((record.blockedUntil - now) / 1000) 
+    return {
+      allowed: false,
+      retryAfter: Math.ceil((record.blockedUntil - now) / 1000)
     }
   }
 
@@ -114,13 +118,13 @@ function checkRateLimit(ip: string, address: string): { allowed: boolean; challe
     // Block IP temporarily
     record.blockedUntil = now + 300000 // 5 minutes
     ipRateLimitMap.set(ip, record)
-    
+
     // Mark as suspicious
     suspiciousPatterns.set(ip, { count: (pattern?.count || 0) + 1, lastSeen: now })
-    
-    return { 
-      allowed: false, 
-      retryAfter: 300 
+
+    return {
+      allowed: false,
+      retryAfter: 300
     }
   }
 
@@ -135,7 +139,7 @@ setInterval(() => {
   // Convert to array for iteration compatibility
   const ipEntries = Array.from(ipRateLimitMap.entries())
   const addressEntries = Array.from(addressCooldown.entries())
-  
+
   for (const [ip, record] of ipEntries) {
     if (now > record.resetTime + 300000) {
       ipRateLimitMap.delete(ip)
@@ -174,18 +178,18 @@ export async function GET(request: NextRequest) {
 
     // Check rate limit with challenge support
     const rateLimitResult = checkRateLimit(ip, address)
-    
+
     if (!rateLimitResult.allowed) {
       if (rateLimitResult.retryAfter) {
         return NextResponse.json(
-          { 
+          {
             error: 'Rate limit exceeded',
             retryAfter: rateLimitResult.retryAfter,
-            message: rateLimitResult.retryAfter > 60 
+            message: rateLimitResult.retryAfter > 60
               ? 'Too many requests. Please wait before trying again.'
               : 'Please wait a moment before submitting another score.'
           },
-          { 
+          {
             status: 429,
             headers: { 'Retry-After': rateLimitResult.retryAfter.toString() }
           }
@@ -213,7 +217,7 @@ export async function GET(request: NextRequest) {
     // ========================================================================
     // ANTI-CHEAT: Score validation heuristics
     // ========================================================================
-    
+
     // Check for impossible scores
     if (score > 50_000) {
       console.warn(`Suspicious score detected: ${score} from ${address}`)
@@ -231,7 +235,7 @@ export async function GET(request: NextRequest) {
     const lastSubmit = addressCooldown.get(addrLower) || 0
     if (Date.now() - lastSubmit < 30_000) {
       return NextResponse.json(
-        { 
+        {
           error: 'please wait between submissions',
           retryAfter: 30 - Math.floor((Date.now() - lastSubmit) / 1000)
         },
@@ -287,7 +291,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { address, score } = body
+    const { address, score, sessionId } = body
 
     // Get client identifiers
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
@@ -304,6 +308,38 @@ export async function POST(request: NextRequest) {
     const scoreNum = Number(score)
     if (!Number.isFinite(scoreNum) || scoreNum <= 0 || scoreNum > 50_000) {
       return NextResponse.json({ error: 'invalid score' }, { status: 400 })
+    }
+
+    // ========================================================================
+    // ANTI-CHEAT: Session ID Validation against Redis store
+    // ========================================================================
+    if (redis && sessionId) {
+      try {
+        const sessionStr = await redis.get(`session:${sessionId}`)
+        if (!sessionStr) {
+          console.warn(`[Anti-Cheat] Invalid or expired session ID: ${sessionId} for address: ${address}`)
+          return NextResponse.json({ error: 'invalid or expired game session' }, { status: 403 })
+        }
+
+        const session = JSON.parse(sessionStr)
+        if (session.score !== scoreNum) {
+          console.warn(`[Anti-Cheat] Score mismatch! Submitted: ${scoreNum}, Session: ${session.score} for ${address}`)
+          return NextResponse.json({ error: 'score mismatch with game session' }, { status: 403 })
+        }
+        if (session.address?.toLowerCase() !== address.toLowerCase()) {
+          console.warn(`[Anti-Cheat] Address mismatch! Submitted: ${address}, Session: ${session.address}`)
+          return NextResponse.json({ error: 'address mismatch with game session' }, { status: 403 })
+        }
+
+        // Optionally mark session as used so it cannot be reused
+        await redis.del(`session:${sessionId}`)
+      } catch (err) {
+        console.error('Redis session validation failed:', err)
+      }
+    } else if (redis && !sessionId && scoreNum > 0) {
+      // Disallow positive scores lacking a verifiable session when Redis is available
+      console.warn(`[Anti-Cheat] Missing session ID for score ${scoreNum} from ${address}`)
+      return NextResponse.json({ error: 'missing game session verifier' }, { status: 403 })
     }
 
     // Check rate limit
@@ -345,7 +381,7 @@ export async function POST(request: NextRequest) {
     // Generate signature
     const pk = process.env.SCORE_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY
     const account = privateKeyToAccount(pk as `0x${string}`)
-    
+
     const msgHash = keccak256(
       encodePacked(
         ['address', 'uint256', 'address', 'uint256', 'uint256'],
