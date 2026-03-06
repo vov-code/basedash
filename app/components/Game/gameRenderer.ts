@@ -1018,7 +1018,7 @@ export const drawParticles = (
 // WORLD BANNER
 // ============================================================================
 
-/** Draw the world transition banner — prominent pill in the sky */
+/** Draw the world transition banner — minimalist "entered in:" */
 export const drawWorldBanner = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
@@ -1027,9 +1027,9 @@ export const drawWorldBanner = (
     if (e.worldBannerTimer <= 0) return
 
     const duration = 3.5
-    const enterT = clamp(1 - (e.worldBannerTimer - (duration - 0.4)) / 0.4, 0, 1)
-    const exitT = clamp(e.worldBannerTimer / 0.5, 0, 1)
-    const enter = 1 - (1 - enterT) * (1 - enterT) // ease-out
+    const enterT = clamp(1 - (e.worldBannerTimer - (duration - 0.3)) / 0.3, 0, 1)
+    const exitT = clamp(e.worldBannerTimer / 0.4, 0, 1)
+    const enter = 1 - (1 - enterT) * (1 - enterT)
     const alpha = Math.min(enter, exitT)
 
     if (alpha <= 0.01) return
@@ -1037,53 +1037,34 @@ export const drawWorldBanner = (
     ctx.save()
     ctx.globalAlpha = alpha
 
-    const fontSize = Math.max(12, Math.min(18, CFG.WIDTH * 0.04))
-    ctx.font = `900 ${fontSize}px monospace`
-    const text = w.name.toUpperCase()
-    const tw = ctx.measureText(text).width
+    const centerX = CFG.WIDTH / 2
+    // Position below HUD area (y=65) with slide-down entrance
+    const bannerY = 65 + (-15 + enter * 15)
 
-    // Slide down from the very top (sky area)
-    const slideY = -30 + enter * 30
-    const by = 38 + slideY
-    const pad = 16
-
-    // Semi-transparent pill background with accent color
-    ctx.fillStyle = 'rgba(0,0,0,0.35)'
-    const pillW = tw + pad * 2 + 10
-    const pillH = fontSize + pad
-    const pillX = CFG.WIDTH / 2 - pillW / 2
-    const pillY = by - pillH / 2
-    const r = pillH / 2
-    ctx.beginPath()
-    ctx.moveTo(pillX + r, pillY)
-    ctx.lineTo(pillX + pillW - r, pillY)
-    ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + r, r)
-    ctx.arcTo(pillX + pillW, pillY + pillH, pillX + pillW - r, pillY + pillH, r)
-    ctx.lineTo(pillX + r, pillY + pillH)
-    ctx.arcTo(pillX, pillY + pillH, pillX, pillY + pillH - r, r)
-    ctx.arcTo(pillX, pillY, pillX + r, pillY, r)
-    ctx.fill()
-
-    // Accent border
-    ctx.strokeStyle = w.accent
-    ctx.lineWidth = 1.5
-    ctx.stroke()
-
-    // World name text — white with subtle glow
-    ctx.fillStyle = '#FFFFFF'
+    // "entered in:" label — small, subdued
+    const labelSize = Math.max(8, Math.min(10, CFG.WIDTH * 0.02))
+    ctx.font = `600 ${labelSize}px monospace`
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.letterSpacing = '0.15em'
-    ctx.fillText(text, CFG.WIDTH / 2, by)
+    ctx.fillText('entered in:', centerX, bannerY)
+
+    // World name — bold, white
+    const nameSize = Math.max(13, Math.min(17, CFG.WIDTH * 0.035))
+    ctx.font = `900 ${nameSize}px monospace`
+    ctx.fillStyle = '#FFFFFF'
+    ctx.fillText(w.name.toUpperCase(), centerX, bannerY + labelSize + nameSize * 0.55)
 
     // Thin accent underline
-    const lineW = tw * 0.6 * enter
+    const tw = ctx.measureText(w.name.toUpperCase()).width
+    const lineW = tw * 0.5 * enter
+    const lineY = bannerY + labelSize + nameSize * 0.55 + nameSize * 0.5
     ctx.strokeStyle = w.accent
-    ctx.lineWidth = 2
-    ctx.globalAlpha = alpha * 0.8
+    ctx.lineWidth = 1.5
+    ctx.globalAlpha = alpha * 0.5
     ctx.beginPath()
-    ctx.moveTo(CFG.WIDTH / 2 - lineW / 2, by + fontSize * 0.6)
-    ctx.lineTo(CFG.WIDTH / 2 + lineW / 2, by + fontSize * 0.6)
+    ctx.moveTo(centerX - lineW / 2, lineY)
+    ctx.lineTo(centerX + lineW / 2, lineY)
     ctx.stroke()
 
     ctx.restore()

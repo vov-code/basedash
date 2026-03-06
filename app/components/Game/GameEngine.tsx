@@ -1181,20 +1181,18 @@ export default function GameEngine({
       if (document.hidden && mode === 'playing') {
         setMode('paused')
       }
-      // When returning from background: resume audio context & restart BGM
+      // When returning from background:
+      // 1. Reset game loop clock (baseresume event)
+      // 2. Force-clear dead BGM nodes (browser kills oscillators on suspend)
+      // The useEffect at line 270 restarts music when user hits Resume.
       if (!document.hidden) {
         window.dispatchEvent(new Event('baseresume'))
-        // iOS Safari kills AudioContext oscillators on suspend.
-        // Clean up dead BGM nodes so startBackgroundMusic can recreate them.
-        if (soundEnabled && mode === 'playing') {
-          stopBackgroundMusic()
-          setTimeout(() => startBackgroundMusic(), 100)
-        }
+        stopBackgroundMusic()
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [mode, setMode, soundEnabled, startBackgroundMusic, stopBackgroundMusic])
+  }, [mode, setMode, stopBackgroundMusic])
 
   // Keyboard controls
   useEffect(() => {

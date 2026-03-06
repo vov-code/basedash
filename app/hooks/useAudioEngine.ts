@@ -261,37 +261,26 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
         bgmNodesRef.current = { oscs: [oscMelody, oscPad, oscBass], gain }
 
-        // === CHORD PROGRESSIONS PER WORLD — Pentatonic scales for harmonious melodies ===
+        // === SIMPLE, RELAXING MELODY — 8-note pentatonic waves ===
         const keyPatterns: number[][] = [
-            // World 0–1: C major Pentatonic (Dreamy, floating)
-            [261.63, 329.63, 392.00, 440.00, 523.25, 440.00, 392.00, 329.63,
-                261.63, 392.00, 523.25, 659.25, 523.25, 392.00, 329.63, 261.63],
-            // World 2–3: D dorian Pentatonic (Gently driving)
-            [293.66, 349.23, 440.00, 523.25, 587.33, 523.25, 440.00, 349.23,
-                293.66, 440.00, 587.33, 698.46, 587.33, 440.00, 349.23, 293.66],
-            // World 4–5: E minor Pentatonic (Deeper, darker)
-            [329.63, 392.00, 440.00, 493.88, 659.25, 493.88, 440.00, 392.00,
-                329.63, 493.88, 659.25, 783.99, 659.25, 493.88, 392.00, 329.63],
-            // World 6–7: F Lydian Pentatonic (Ethereal)
-            [349.23, 440.00, 523.25, 587.33, 698.46, 587.33, 523.25, 440.00,
-                349.23, 523.25, 698.46, 880.00, 698.46, 523.25, 440.00, 349.23],
-            // World 8+: G major Pentatonic (Transcendent)
-            [392.00, 493.88, 587.33, 659.25, 783.99, 659.25, 587.33, 493.88,
-                392.00, 587.33, 783.99, 987.77, 783.99, 587.33, 493.88, 392.00],
+            // World 0–1: C pentatonic — gentle wave
+            [261.63, 329.63, 392.00, 523.25, 392.00, 329.63, 261.63, 196.00],
+            // World 2–3: D pentatonic — warmer
+            [293.66, 349.23, 440.00, 523.25, 440.00, 349.23, 293.66, 220.00],
+            // World 4–5: E minor pentatonic — emotional
+            [329.63, 392.00, 493.88, 659.25, 493.88, 392.00, 329.63, 246.94],
+            // World 6–7: F lydian — ethereal
+            [349.23, 440.00, 523.25, 698.46, 523.25, 440.00, 349.23, 261.63],
+            // World 8+: G pentatonic — transcendent
+            [392.00, 493.88, 587.33, 783.99, 587.33, 493.88, 392.00, 293.66],
         ]
 
-        // Bass roots — simple sustained roots corresponding to the keys
-        const bassPatterns: number[][] = [
-            Array(16).fill(130.81), // C3
-            Array(16).fill(146.83), // D3
-            Array(16).fill(164.81), // E3
-            Array(16).fill(174.61), // F3
-            Array(16).fill(196.00), // G3
-        ]
+        // Bass — single sustained root per world
+        const bassRoots: number[] = [130.81, 146.83, 164.81, 174.61, 196.00]
 
         let noteIdx = 0
-        let nextNoteTime = ctx.currentTime + 0.6
-        const BASE_INTERVAL = 0.32 // Slower tempo = more relaxed feel (was 0.26)
+        let nextNoteTime = ctx.currentTime + 0.8
+        const BASE_INTERVAL = 0.48 // Slow meditative tempo
 
         const schedulePattern = () => {
             if (!bgmNodesRef.current || !audioCtxRef.current) return
@@ -301,90 +290,46 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
             const patternIdx = Math.min(Math.floor(currentTheme / 2), keyPatterns.length - 1)
             const pattern = keyPatterns[patternIdx]
-            const bassLine = bassPatterns[patternIdx]
+            const bassRoot = bassRoots[patternIdx]
 
-            // Tempo scales gently with speed — never frantic
-            const tempoMult = 0.9 + currentSpeed * 0.1 // ranges from ~1.0 to ~1.2
+            // Tempo gently follows speed — never rushes
+            const tempoMult = 0.95 + currentSpeed * 0.05
             const NOTE_INTERVAL = BASE_INTERVAL / tempoMult
 
             while (nextNoteTime < audioCtxRef.current.currentTime + 1.0) {
                 const note = pattern[noteIdx]
-                const bass = bassLine[noteIdx]
                 const isDownbeat = noteIdx % 4 === 0
-                const isOffbeat = noteIdx % 2 !== 0
 
-                // --- Layer volumes based on world progression ---
-                let melodyVol = 0.038
-                let padVol = 0.012      // Subtle pad from the start (warmth)
-                let bassVol = 0.008     // Whisper of bass even in world 0
+                // Simple layering by world
+                let melodyVol = 0.032
+                const padVol = currentTheme >= 2 ? 0.015 : 0.005
+                const bassVol = currentTheme >= 3 ? 0.02 : 0.005
+                const padFreq = note * 0.5
+                const bassFreq = bassRoot
 
-                // Pad harmony — octave above on even beats
-                let padFreq = note * 0.5 // Default: octave below (gentle pad)
-                let bassFreq = bass
+                // World 5+: slightly richer
+                if (currentTheme >= 5) melodyVol = 0.036
 
-                // World 0–1: Gentle melody + whisper pad
-                if (currentTheme >= 1 && !isOffbeat) {
-                    padFreq = note * 2    // Octave sparkle on downbeats
-                    padVol = 0.018
-                }
-
-                // World 2–3: Bass becomes audible, pad fills in
-                if (currentTheme >= 2) {
-                    bassVol = isDownbeat ? 0.028 : 0.015
-                    padVol = 0.022
-                }
-
-                // World 3+: Perfect 5th harmony on offbeats
-                if (currentTheme >= 3 && isOffbeat) {
-                    padFreq = note * 1.498
-                    padVol = 0.025
-                }
-
-                // World 4+: Melody octave variation for interest
-                let melodyFreq = note
-                if (currentTheme >= 4) {
-                    if (noteIdx % 8 >= 4) melodyFreq = note * 2
-                    melodyVol = 0.035
-                }
-
-                // World 5+: Bass walks chromatically on beat 3
-                if (currentTheme >= 5 && noteIdx % 4 === 2) {
-                    bassFreq = bass * 1.189
-                    bassVol = 0.025
-                }
-
-                // World 6+: Fuller arrangement
-                if (currentTheme >= 6) {
-                    padVol = 0.03
-                    melodyVol = 0.04
-                }
-
-                // World 7+: Gentle detuning for dreamy width
-                if (currentTheme >= 7 && noteIdx % 3 === 0) {
-                    melodyFreq = note * 1.003
-                }
-
-                // --- Set frequencies with SMOOTH glide (legato!) ---
-                const glideTime = NOTE_INTERVAL * 0.15  // 15% of note = smooth portamento
-                oscMelody.frequency.setTargetAtTime(melodyFreq, nextNoteTime, glideTime)
+                // Smooth legato glide
+                const glideTime = NOTE_INTERVAL * 0.2
+                oscMelody.frequency.setTargetAtTime(note, nextNoteTime, glideTime)
                 oscPad.frequency.setTargetAtTime(padFreq, nextNoteTime, glideTime)
-                oscBass.frequency.setTargetAtTime(bassFreq, nextNoteTime, glideTime * 2) // Bass glides slower
+                oscBass.frequency.setTargetAtTime(bassFreq, nextNoteTime, glideTime * 3)
 
-                // --- Dynamic envelope — LEGATO (no hard cuts) ---
-                const accentVol = isDownbeat ? 1.25 : 1.0
+                // Gentle breathing envelope
+                const accentVol = isDownbeat ? 1.15 : 1.0
                 const totalVol = melodyVol * accentVol
 
-                // Smooth swell instead of staccato on/off
-                gain.gain.setTargetAtTime(totalVol, nextNoteTime, 0.04)   // ~40ms attack
+                gain.gain.setTargetAtTime(totalVol, nextNoteTime, 0.06)
                 gain.gain.setTargetAtTime(
-                    totalVol * 0.6,                                        // Sustain at 60%
-                    nextNoteTime + NOTE_INTERVAL * 0.5,
-                    0.06
+                    totalVol * 0.5,
+                    nextNoteTime + NOTE_INTERVAL * 0.6,
+                    0.08
                 )
 
-                // Filter opens slightly on downbeats for brightness variation
-                const cutoff = 900 + currentTheme * 100 + (isDownbeat ? 250 : 0)
-                filter.frequency.setTargetAtTime(Math.min(cutoff, 2400), nextNoteTime, 0.05)
+                // Warm filter
+                const cutoff = 800 + currentTheme * 80 + (isDownbeat ? 150 : 0)
+                filter.frequency.setTargetAtTime(Math.min(cutoff, 1800), nextNoteTime, 0.06)
 
                 noteIdx = (noteIdx + 1) % pattern.length
                 nextNoteTime += NOTE_INTERVAL
