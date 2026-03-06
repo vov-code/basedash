@@ -1041,37 +1041,25 @@ export const drawWorldBanner = (
     ctx.save()
     ctx.globalAlpha = alpha
 
-    // Compact pill dimensions
-    const fontSize = Math.max(8, Math.min(10, CFG.WIDTH * 0.028))
+    const fontSize = Math.max(10, Math.min(14, CFG.WIDTH * 0.035))
     ctx.font = `800 ${fontSize}px monospace`
     const text = w.name.toUpperCase()
-    const textW = ctx.measureText(text).width
-    const bw = textW + 28
-    const bh = 22
-    const bx = CFG.WIDTH / 2 - bw / 2
-    const slideY = -10 + enter * 10
-    const by = 52 + slideY
 
-    // Dark glass pill background
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.75)'
-    ctx.beginPath()
-    ctx.roundRect(bx, by, bw, bh, bh / 2) // Fully rounded pill
-    ctx.fill()
+    // Slide down from the very top (sky)
+    const slideY = -20 + enter * 20
+    const by = 25 + slideY // Much higher in the sky
 
-    // Thin accent border
-    ctx.strokeStyle = w.accent
-    ctx.lineWidth = 1
-    ctx.globalAlpha = alpha * 0.6
-    ctx.beginPath()
-    ctx.roundRect(bx, by, bw, bh, bh / 2)
-    ctx.stroke()
-    ctx.globalAlpha = alpha
+    // Just a clean text drop shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
+    ctx.shadowBlur = 8
+    ctx.shadowOffsetY = 2
 
-    // World name text in accent color
-    ctx.fillStyle = w.accent
+    // World name text
+    ctx.fillStyle = '#FFFFFF'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(text, CFG.WIDTH / 2, by + bh / 2 + 0.5)
+    ctx.letterSpacing = '0.2em'
+    ctx.fillText(text, CFG.WIDTH / 2, by)
 
     ctx.restore()
 }

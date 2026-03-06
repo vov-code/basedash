@@ -303,6 +303,9 @@ export default function GameEngine({
     const e = engineRef.current
     if (!e.alive) return
 
+    // === FIREWALL: Reject garbage dt values ===
+    if (!isFinite(dt) || isNaN(dt) || dt <= 0 || dt > 0.1) return
+
     e.gameTime += dt
     // Smooth exponential difficulty (item 1)
     e.difficulty = 1 - Math.exp(-e.score / 2500)
@@ -444,9 +447,22 @@ export default function GameEngine({
     // Flash decay
     p.flash = Math.max(0, p.flash - dt * 4)
 
-    // Ensure scale is always valid (prevent NaN disappearance)
-    if (isNaN(p.scale) || !isFinite(p.scale)) p.scale = 1;
-    if (isNaN(p.y) || !isFinite(p.y)) p.y = CFG.GROUND - CFG.PLAYER_SIZE;
+    // === FULL NaN/Infinity FIREWALL — prevent cube disappearance ===
+    if (!isFinite(p.y)) p.y = CFG.GROUND - CFG.PLAYER_SIZE
+    if (!isFinite(p.velocityY)) p.velocityY = 0
+    if (!isFinite(p.scale)) p.scale = 1
+    if (!isFinite(p.rotation)) p.rotation = 0
+    if (!isFinite(p.tilt)) p.tilt = 0
+    if (!isFinite(p.squash)) p.squash = 0
+    if (!isFinite(p.flash)) p.flash = 0
+    if (!isFinite(p.invincible)) p.invincible = 0
+    if (!isFinite(e.speed)) e.speed = CFG.BASE_SPEED
+    if (!isFinite(e.score)) e.score = 0
+    if (!isFinite(e.distance)) e.distance = 0
+    if (!isFinite(e.combo)) e.combo = 0
+    if (!isFinite(e.gameTime)) e.gameTime = 0
+    if (!isFinite(e.difficulty)) e.difficulty = 0
+    if (!isFinite(e.scoreMultiplier) || e.scoreMultiplier <= 0) e.scoreMultiplier = 1
 
     // Invincibility
     p.invincible = Math.max(0, p.invincible - dt)
@@ -508,15 +524,20 @@ export default function GameEngine({
       if (c.collected) c.collectProgress = Math.min(1, c.collectProgress + dt * 5)
 
       // Score — passed candle
-      if (!c.passed && c.x + c.width < CFG.PLAYER_X) {
-        c.passed = true
-        if (c.kind === 'red' && !c.collected) {
-          const pts = CFG.RED_SCORE * Math.max(1, e.combo) * e.scoreMultiplier
-          e.score += Math.round(pts)
-          e.scorePulse = 1
-        } else if (c.kind === 'green' && !c.collected) {
-          e.combo = 0
-          e.comboPulse = 0
+      if (!c.passed) {
+        if (c.kind === 'red' && c.x + c.width < CFG.PLAYER_X) {
+          c.passed = true
+          if (!c.collected) {
+            const pts = CFG.RED_SCORE * Math.max(1, e.combo) * e.scoreMultiplier
+            e.score += Math.round(pts)
+            e.scorePulse = 1
+          }
+        } else if (c.kind === 'green' && c.x + c.width < CFG.PLAYER_X - 25) {
+          c.passed = true
+          if (!c.collected) {
+            e.combo = 0
+            e.comboPulse = 0
+          }
         }
       }
     }
@@ -1287,7 +1308,9 @@ export default function GameEngine({
     const demoLoop = (t: number) => {
       if (cancelled) return
 
-      const dt = Math.min(0.033, (t - prev) / 1000)
+      const rawDt = (t - prev) / 1000
+      // Cap dt to 0.05s max so we don't spiral-of-death when tab wakes up
+      const dt = Math.min(rawDt, 0.05)
       prev = t
       demoAcc += dt
 
@@ -1367,16 +1390,14 @@ export default function GameEngine({
           de.candles.push(c)
         }
 
-        // === DEMO COLLISION: cube bounces off reds (respawn-style) ===
-        const px1 = CFG.PLAYER_X + 2
-        const py1 = dp.y + 2
-        const px2 = CFG.PLAYER_X + CFG.PLAYER_SIZE - 2
-        const py2 = dp.y + CFG.PLAYER_SIZE - 2
+        // === SIMPLE DEMO COLLISION ===
+        const px1 = CFG.PLAYER_X + 5
+        const py1 = dp.y + 5
+        const px2 = CFG.PLAYER_X + CFG.PLAYER_SIZE - 5
+        const py2 = dp.y + CFG.PLAYER_SIZE - 5
         let demoHit = false
         for (const c of de.candles) {
-          if (c.collected || c.kind !== 'red') continue
-          if (c.x > CFG.PLAYER_X + CFG.PLAYER_SIZE + 20) continue
-          if (c.x + c.width < CFG.PLAYER_X - 10) continue
+          if (c.kind !== 'red') continue
           const cx1 = c.x + 1
           const cy1 = c.bodyY + 1
           const cx2 = c.x + c.width - 1
@@ -1387,13 +1408,12 @@ export default function GameEngine({
           }
         }
         if (demoHit) {
-          // Demo "death" — just bounce player up and reset nearby candles
+          // Soft reset on hit
           dp.y = CFG.GROUND - CFG.PLAYER_SIZE
-          dp.velocityY = CFG.JUMP * 0.8
-          dp.onGround = false
+          dp.velocityY = 0
+          dp.onGround = true
           dp.jumpCount = 0
-          dp.squash = -0.2
-          // Remove all candles near the player to prevent instant re-death
+
           let dw = 0
           for (let di = 0; di < de.candles.length; di++) {
             if (de.candles[di].x > CFG.PLAYER_X + CFG.PLAYER_SIZE + 40) {

@@ -212,12 +212,20 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
     const startBackgroundMusic = useCallback(() => {
         if (!soundEnabled) return
+
+        // Ensure AudioContext exists
         initAudio()
         const ctx = audioCtxRef.current
         const master = masterGainRef.current
+
+        // Critical Fix: If nodes already exist, don't create overlapping loops 
         if (!ctx || !master || bgmNodesRef.current) return
 
-        if (ctx.state === 'suspended') ctx.resume()
+        // Wait to actually start generating sound until the context is running
+        // iOS will keep it 'suspended' until an interaction happens
+        if (ctx.state === 'suspended') {
+            ctx.resume().catch(() => { })
+        }
 
         // 3 oscillators: melody, pad, bass
         const oscMelody = ctx.createOscillator()
