@@ -1382,13 +1382,23 @@ export default function GameEngine({
         }
         de.candles.length = cw
 
-        // Spawn only simple red candles for demo mode
+        // Spawn red + green candles for demo mode
         if (de.distance >= de.nextSpawnDistance) {
           const gap = 380 + Math.random() * 200
           de.nextSpawnDistance = de.distance + gap
-          const c = createCandle(de.nextCandleId++, 'red', CFG.WIDTH + 140, 90, 30)
-          c.glowIntensity = 0.5
-          de.candles.push(c)
+          // Every 3rd candle is green (in the air), rest are red
+          if (de.nextCandleId % 3 === 0) {
+            const c = createCandle(de.nextCandleId++, 'green', CFG.WIDTH + 140, 50, 22)
+            c.bodyY = CFG.GROUND - CFG.PLAYER_SIZE - 60
+            c.y = c.bodyY
+            c.bodyTop = c.bodyY + c.bodyHeight
+            c.glowIntensity = 0.8
+            de.candles.push(c)
+          } else {
+            const c = createCandle(de.nextCandleId++, 'red', CFG.WIDTH + 140, 90, 30)
+            c.glowIntensity = 0.5
+            de.candles.push(c)
+          }
         }
 
         // === SIMPLE DEMO COLLISION ===
@@ -1464,63 +1474,26 @@ export default function GameEngine({
           }
         }
 
-        // Score passed candles
+        // Score passed candles — demo doesn't accumulate score (prevents world transitions)
         for (const c of de.candles) {
           if (!c.passed && c.x + c.width < CFG.PLAYER_X) {
             c.passed = true
-            if (c.kind === 'red') de.score += CFG.RED_SCORE
           }
-          // Auto-collect greens
+          // Auto-collect greens on proximity
           if (c.kind === 'green' && !c.collected) {
             const gx = c.x + c.width / 2
             const gy = c.bodyY + c.bodyHeight / 2
-            const px = CFG.PLAYER_X + CFG.PLAYER_SIZE / 2
-            const py = dp.y + CFG.PLAYER_SIZE / 2
-            if (Math.abs(gx - px) < 35 && Math.abs(gy - py) < 35) {
+            const ppx = CFG.PLAYER_X + CFG.PLAYER_SIZE / 2
+            const ppy = dp.y + CFG.PLAYER_SIZE / 2
+            if (Math.abs(gx - ppx) < 35 && Math.abs(gy - ppy) < 35) {
               c.collected = true
-              de.score += CFG.GREEN_SCORE
             }
           }
         }
-
-        // Background elements
-        for (const s of de.stars) s.twinkle += CFG.STEP * s.twinkleSpeed
-        for (const gp of de.groundParticles) {
-          gp.x -= de.speed * CFG.STEP * gp.speed
-          gp.phase += CFG.STEP * 2 * gp.speed
-          if (gp.x < -10) gp.x = CFG.WIDTH + rand(5, 30)
-        }
-
-        // Trail — reset dead entries IN-PLACE (preserve pool size)
-        for (let ti = 0; ti < dp.trail.length; ti++) {
-          const tp = dp.trail[ti]
-          if (tp.life > 0) {
-            tp.life -= CFG.STEP
-            tp.alpha -= CFG.STEP * 1.5
-            if (tp.life <= 0) { tp.alpha = 0 }
-          }
-        }
-
-        // Particles — in-place compaction
-        let partWrite = 0
-        for (let pi = 0; pi < de.particles.length; pi++) {
-          const pp = de.particles[pi]
-          pp.life -= CFG.STEP
-          if (pp.life > 0) {
-            pp.x += pp.vx * CFG.STEP
-            pp.y += pp.vy * CFG.STEP
-            pp.vy += pp.gravity * CFG.STEP
-            de.particles[partWrite++] = pp
-          }
-        }
-        de.particles.length = Math.min(partWrite, CFG.PARTICLE_LIMIT)
-
-        // Keep demo at world 0 - no transitions
-        if (de.worldIndex !== 0) {
-          de.worldIndex = 0
-          de.worldName = WORLDS[0].name
-          for (const s of de.stars) s.color = WORLDS[0].starColor
-        }
+        // Force score to 0 so renderer always shows world 0
+        de.score = 0
+        de.worldIndex = 0
+        de.worldBannerTimer = 0
 
         // Reset demo periodically — full clean engine swap
         if (de.distance > 10000) {
