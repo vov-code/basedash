@@ -308,8 +308,11 @@ export default function Home() {
               <div className="flex flex-col flex-1 w-full min-h-0">
                 {/* CONNECT WALLET BANNER - with spacing from header and canvas */}
                 {!isConnected && (
-                  <div className="p-1.5 sm:p-2 mt-0.5 mb-0.5 bg-gradient-to-r from-[#0052FF]/5 via-[#0052FF]/8 to-[#0052FF]/5 flex items-center justify-center gap-2 flex-shrink-0 relative overflow-hidden">
-                    <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-[#0052FF]/10 to-transparent" style={{ animation: 'shimmerSweep 3s ease-in-out infinite' }} />
+                  <div className="p-1.5 sm:p-2 mt-0.5 mb-0.5 flex items-center justify-center gap-2 flex-shrink-0 relative overflow-hidden rounded-lg border border-[#0052FF]/20"
+                    style={{
+                      background: 'linear-gradient(90deg, rgba(0,82,255,0.04) 0%, rgba(0,82,255,0.1) 50%, rgba(0,82,255,0.04) 100%)',
+                      animation: 'breatheGlow 2.5s ease-in-out infinite',
+                    }}>
                     <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0052FF] flex items-center justify-center flex-shrink-0 rounded-lg relative z-10">
                       <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -442,7 +445,7 @@ export default function Home() {
 
         {/* FOOTER - z-[40], solid white background */}
         <footer className="mt-auto bg-white relative z-[40] flex-shrink-0 w-full flex flex-col justify-end min-h-[30px] sm:min-h-[36px] pb-1.5">
-          <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 flex flex-row items-center justify-between h-[20px] sm:h-[24px]">
+          <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 flex flex-row items-end justify-between h-[20px] sm:h-[24px]">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none">© {new Date().getFullYear()} base dash</span>
             <a href="https://x.com/vovweb3" target="_blank" rel="noopener noreferrer" className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none inline-flex items-center gap-0.5 active:scale-95 transition-transform cursor-pointer no-underline">built by <span className="font-black text-[#0052FF] ml-0.5 relative overflow-hidden drop-shadow-[0_0_4px_rgba(0,82,255,0.3)]">vov<span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-[shimmerVov_2.5s_ease-in-out_infinite]" style={{ animationDelay: '1s' }} /></span></a>
           </div>

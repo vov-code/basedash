@@ -249,6 +249,7 @@ export default function GameEngine({
   // --- Realtime DOM Refs (Bypassing React state for 60fps performance) ---
   const uiScoreRef = useRef<HTMLSpanElement>(null)
   const uiComboRef = useRef<HTMLSpanElement>(null)
+  const uiGreenRef = useRef<HTMLSpanElement>(null)
 
   // --- Audio Engine ---
   const {
@@ -337,10 +338,11 @@ export default function GameEngine({
     // Market mechanics removed for cleaner gameplay
 
     // --- Speed tier change detection ---
-    const currentTierIdx = SPEEDS.findIndex((s, i) => {
-      const next = SPEEDS[i + 1]
-      return !next || e.score < next.startScore
-    })
+    // --- Speed tier change detection (reverse loop, no closure) ---
+    let currentTierIdx = 0
+    for (let si = SPEEDS.length - 1; si >= 0; si--) {
+      if (e.score >= SPEEDS[si].startScore) { currentTierIdx = si; break }
+    }
     if (currentTierIdx > e.prevSpeedTierIdx) {
       e.prevSpeedTierIdx = currentTierIdx
       e.speedLinesTimer = 1.5
@@ -471,8 +473,11 @@ export default function GameEngine({
     if (!p.onGround && e.trailTimer <= 0) {
       e.trailTimer = 0.04 // ~25 trail points per second (smooth, not overwhelming)
 
-      // Find first dead trail point or overwrite oldest
-      let tIdx = p.trail.findIndex(t => t.life <= 0)
+      // Find first dead trail point or overwrite oldest (no closure = no GC)
+      let tIdx = -1
+      for (let ti = 0; ti < p.trail.length; ti++) {
+        if (p.trail[ti].life <= 0) { tIdx = ti; break }
+      }
       if (tIdx === -1) tIdx = 0
 
       const pt = p.trail[tIdx]
@@ -521,7 +526,7 @@ export default function GameEngine({
       }
 
       // Collection progress — FASTER animation so candle disappears quickly
-      if (c.collected) c.collectProgress = Math.min(1, c.collectProgress + dt * 5)
+      if (c.collected) c.collectProgress = Math.min(1, c.collectProgress + dt * 8)
 
       // Score — passed candle
       if (!c.passed) {
@@ -610,8 +615,11 @@ export default function GameEngine({
           e.shakeTimer = 0.4
           e.combo = 0  // Сброс комбо при смерти
           setDeathScore(e.score)
-          // Compute game stats
-          const dodged = e.candles.filter(c => c.kind === 'red' && c.passed && !c.collected).length
+          // Compute game stats — in-place count, no array allocation
+          let dodged = 0
+          for (let ci = 0; ci < e.candles.length; ci++) {
+            if (e.candles[ci].kind === 'red' && e.candles[ci].passed && !e.candles[ci].collected) dodged++
+          }
           const stats = {
             timeSurvived: e.gameTime,
             candlesDodged: dodged + Math.floor(e.score / CFG.RED_SCORE),
@@ -850,8 +858,9 @@ export default function GameEngine({
     if (e.shakeTimer > 0) {
       e.shakeTimer -= dt
       const intensity = e.shakeTimer * 8
-      e.shakeX = (Math.random() - 0.5) * intensity
-      e.shakeY = (Math.random() - 0.5) * intensity
+      // Sine-based shake for smooth motion instead of random jitter
+      e.shakeX = Math.sin(e.gameTime * 67) * intensity
+      e.shakeY = Math.cos(e.gameTime * 53) * intensity
     } else {
       e.shakeX = 0; e.shakeY = 0
     }
@@ -892,6 +901,7 @@ export default function GameEngine({
 
       // Write score direct to DOM to bypass React Reconciler
       if (uiScoreRef.current) uiScoreRef.current.innerText = formatMarketCap(e.score)
+      if (uiGreenRef.current) uiGreenRef.current.innerText = String(e.totalCollected)
       if (uiComboRef.current) {
         uiComboRef.current.innerText = e.combo > 1 ? `${e.combo}× combo` : ''
         uiComboRef.current.parentElement!.style.opacity = e.combo > 1 ? '1' : '0'
@@ -928,8 +938,11 @@ export default function GameEngine({
     // Jump particles
     spawnJumpDust(e, IS_MOBILE ? 3 : 6)
 
-    // Add trail point for jump (Object Pool)
-    let tIdx = p.trail.findIndex(t => t.life <= 0)
+    // Add trail point for jump (no closure = no GC)
+    let tIdx = -1
+    for (let ti = 0; ti < p.trail.length; ti++) {
+      if (p.trail[ti].life <= 0) { tIdx = ti; break }
+    }
     if (tIdx === -1) tIdx = 0
 
     const pt = p.trail[tIdx]
@@ -1648,7 +1661,7 @@ export default function GameEngine({
       {mode === 'paused' && (
         <div className="game-overlay bg-black/20 backdrop-blur-[2px]" style={{ containerType: 'size' }}>
           <div className="w-full h-full flex items-center justify-center p-4">
-            <div className="w-full max-w-[240px] border-2 border-[#0A0B14] bg-white px-5 py-6 shadow-none mx-auto text-center rounded-2xl"
+            <div className="w-full max-w-[240px] bg-white px-5 py-6 shadow-lg mx-auto text-center rounded-2xl border border-slate-200"
               style={{ transform: 'scale(min(1, calc(100cqh / 240px)))', transformOrigin: 'center' }}>
               <h2 className="text-xl font-bold text-[#0A0B14] mb-2 tracking-wide" style={{ fontFamily: 'var(--font-mono)' }}>Paused</h2>
               <p className="text-slate-500 text-[11px] mb-5 font-medium tracking-wide">Take a breath</p>
@@ -1799,7 +1812,7 @@ export default function GameEngine({
                 <div className="w-px h-3.5 bg-slate-300" />
                 <div className="flex items-center gap-1">
                   <div className="w-1.5 h-1.5 bg-[#0ECB81] rounded-sm shadow-[0_0_4px_#0ECB81]" />
-                  <span className="text-[11px] font-bold text-slate-700"
+                  <span ref={uiGreenRef} className="text-[11px] font-bold text-slate-700"
                     style={{ fontFamily: 'var(--font-mono, monospace)' }}>
                     {engineRef.current.totalCollected}
                   </span>
@@ -1862,12 +1875,12 @@ export default function GameEngine({
             </button>
           </div>
 
-          {/* Chill / whale mode — glowing banner — bottom center, above jump dots */}
+          {/* Chill / whale mode — glowing status — positioned in the sky, below world banner */}
           {engineRef.current.slowdownTimer > 0 && (
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full z-10 pointer-events-none"
+            <div className="absolute top-14 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full z-10 pointer-events-none"
               style={{ background: 'rgba(14,203,129,0.12)', border: '1px solid rgba(14,203,129,0.35)', boxShadow: '0 0 12px rgba(14,203,129,0.25)' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-[#0ECB81] animate-pulse" />
-              <p className="text-[#0ECB81] text-[9px] font-black text-center tracking-widest uppercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+              <p className="text-[#0ECB81] text-[8px] font-black text-center tracking-widest uppercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
                 {engineRef.current.whaleTimer > 0 ? 'market freeze' : 'chill market'}
               </p>
             </div>

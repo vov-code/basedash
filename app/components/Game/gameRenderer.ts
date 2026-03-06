@@ -117,12 +117,10 @@ export const drawSky = (
 
     // === BOTTOM GRADIENT FADE (sky-to-ground transition) ===
     const fadeH = CFG.GROUND * 0.15
-    const fade = ctx.createLinearGradient(0, CFG.GROUND - fadeH, 0, CFG.GROUND)
-    fade.addColorStop(0, 'rgba(255,255,255,0)')
-    fade.addColorStop(1, 'rgba(255,255,255,0.08)')
-    ctx.globalAlpha = 1
-    ctx.fillStyle = fade
-    ctx.fillRect(0, CFG.GROUND - fadeH, CFG.WIDTH, fadeH)
+    ctx.globalAlpha = 0.08
+    ctx.fillStyle = 'rgba(255,255,255,1)'
+    // Simple rect with low alpha instead of creating a gradient every frame
+    ctx.fillRect(0, CFG.GROUND - fadeH * 0.3, CFG.WIDTH, fadeH * 0.3)
 
     ctx.restore()
 }
@@ -355,16 +353,6 @@ const drawSingleCandle = (
 
     ctx.save()
 
-    // ===== COLLECTION FADE — smooth opacity reduction during collect =====
-    let bodyAlpha = 1
-    if (c.collected) {
-        const prog = c.collectProgress
-        const ease = 1 - (1 - prog) * (1 - prog) // ease-out quad
-        bodyAlpha = Math.max(0, 1 - ease)
-    }
-
-    ctx.save()
-
     // ===== TRADING WICK (Tail/Shadow) =====
     // Skip wick for collected candles (looks cleaner during fade)
     if (!c.collected) {
@@ -379,15 +367,23 @@ const drawSingleCandle = (
         ctx.globalAlpha = 1
     }
 
-    // ===== TRADING BODY (Open/Close) =====
-    ctx.globalAlpha = bodyAlpha
-    const bodyGrad = ctx.createLinearGradient(c.x, drawY, c.x + c.width, drawY)
-    bodyGrad.addColorStop(0, b)
-    bodyGrad.addColorStop(0.5, a)
-    bodyGrad.addColorStop(1, b)
+    // ===== COLLECTION FADE — smooth opacity reduction during collect =====
+    let bodyAlpha = 1
+    if (c.collected) {
+        const prog = c.collectProgress
+        const ease = 1 - (1 - prog) * (1 - prog) // ease-out quad
+        bodyAlpha = Math.max(0, 1 - ease)
+    }
 
-    ctx.fillStyle = bodyGrad
+    // ===== TRADING BODY (Open/Close) — Zero-alloc flat fills =====
+    ctx.globalAlpha = bodyAlpha
+    // Dark edges
+    ctx.fillStyle = b
     ctx.fillRect(c.x, drawY, c.width, c.bodyHeight)
+    // Bright center overlay
+    ctx.fillStyle = a
+    ctx.globalAlpha = bodyAlpha * 0.75
+    ctx.fillRect(c.x + c.width * 0.15, drawY, c.width * 0.7, c.bodyHeight)
 
     // Inner bright streak
     ctx.fillStyle = '#FFFFFF'
@@ -1022,7 +1018,7 @@ export const drawParticles = (
 // WORLD BANNER
 // ============================================================================
 
-/** Draw the world transition banner — compact pill, in-game style */
+/** Draw the world transition banner — prominent pill in the sky */
 export const drawWorldBanner = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
@@ -1030,9 +1026,9 @@ export const drawWorldBanner = (
 ): void => {
     if (e.worldBannerTimer <= 0) return
 
-    const duration = 2.0
-    const enterT = clamp(1 - (e.worldBannerTimer - (duration - 0.3)) / 0.3, 0, 1)
-    const exitT = clamp(e.worldBannerTimer / 0.4, 0, 1)
+    const duration = 3.5
+    const enterT = clamp(1 - (e.worldBannerTimer - (duration - 0.4)) / 0.4, 0, 1)
+    const exitT = clamp(e.worldBannerTimer / 0.5, 0, 1)
     const enter = 1 - (1 - enterT) * (1 - enterT) // ease-out
     const alpha = Math.min(enter, exitT)
 
@@ -1041,25 +1037,54 @@ export const drawWorldBanner = (
     ctx.save()
     ctx.globalAlpha = alpha
 
-    const fontSize = Math.max(10, Math.min(14, CFG.WIDTH * 0.035))
-    ctx.font = `800 ${fontSize}px monospace`
+    const fontSize = Math.max(12, Math.min(18, CFG.WIDTH * 0.04))
+    ctx.font = `900 ${fontSize}px monospace`
     const text = w.name.toUpperCase()
+    const tw = ctx.measureText(text).width
 
-    // Slide down from the very top (sky)
-    const slideY = -20 + enter * 20
-    const by = 25 + slideY // Much higher in the sky
+    // Slide down from the very top (sky area)
+    const slideY = -30 + enter * 30
+    const by = 38 + slideY
+    const pad = 16
 
-    // Just a clean text drop shadow
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-    ctx.shadowBlur = 8
-    ctx.shadowOffsetY = 2
+    // Semi-transparent pill background with accent color
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'
+    const pillW = tw + pad * 2 + 10
+    const pillH = fontSize + pad
+    const pillX = CFG.WIDTH / 2 - pillW / 2
+    const pillY = by - pillH / 2
+    const r = pillH / 2
+    ctx.beginPath()
+    ctx.moveTo(pillX + r, pillY)
+    ctx.lineTo(pillX + pillW - r, pillY)
+    ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + r, r)
+    ctx.arcTo(pillX + pillW, pillY + pillH, pillX + pillW - r, pillY + pillH, r)
+    ctx.lineTo(pillX + r, pillY + pillH)
+    ctx.arcTo(pillX, pillY + pillH, pillX, pillY + pillH - r, r)
+    ctx.arcTo(pillX, pillY, pillX + r, pillY, r)
+    ctx.fill()
 
-    // World name text
+    // Accent border
+    ctx.strokeStyle = w.accent
+    ctx.lineWidth = 1.5
+    ctx.stroke()
+
+    // World name text — white with subtle glow
     ctx.fillStyle = '#FFFFFF'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.letterSpacing = '0.2em'
+    ctx.letterSpacing = '0.15em'
     ctx.fillText(text, CFG.WIDTH / 2, by)
+
+    // Thin accent underline
+    const lineW = tw * 0.6 * enter
+    ctx.strokeStyle = w.accent
+    ctx.lineWidth = 2
+    ctx.globalAlpha = alpha * 0.8
+    ctx.beginPath()
+    ctx.moveTo(CFG.WIDTH / 2 - lineW / 2, by + fontSize * 0.6)
+    ctx.lineTo(CFG.WIDTH / 2 + lineW / 2, by + fontSize * 0.6)
+    ctx.stroke()
 
     ctx.restore()
 }
@@ -1126,9 +1151,11 @@ export const drawSpeedLines = (
         const progress = (1 - alpha) * CFG.WIDTH
         const startX = CFG.WIDTH / 2 - progress * 0.5
         const endX = CFG.WIDTH / 2 + progress * 0.5
+        // Deterministic offset based on index — no jitter
+        const yOff = Math.sin(i * 2.7 + e.gameTime * 3) * 4
         ctx.beginPath()
-        ctx.moveTo(startX, y + (Math.random() - 0.5) * 8)
-        ctx.lineTo(endX, y + (Math.random() - 0.5) * 8)
+        ctx.moveTo(startX, y + yOff)
+        ctx.lineTo(endX, y + yOff)
         ctx.stroke()
     }
     ctx.restore()

@@ -4,6 +4,7 @@ import { privateKeyToAccount } from 'viem/accounts'
 import { base, baseSepolia } from 'viem/chains'
 import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS } from '@/app/contracts'
 import Redis from 'ioredis'
+import { createHmac } from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,119 +39,90 @@ function getWalletClient() {
 }
 
 // ============================================================================
-// ANTI-CHEAT: Multi-layer rate limiting & abuse prevention
+// ANTI-CHEAT: Redis-backed rate limiting & HMAC-SHA256 challenges
+// Survives serverless deploys, scales across instances, no memory leaks
 // ============================================================================
 
-// Layer 1: IP-based rate limiting (sliding window)
-interface IPRateLimit {
-  count: number
-  resetTime: number
-  blockedUntil?: number
-}
-const ipRateLimitMap = new Map<string, IPRateLimit>()
-
-// Layer 2: Address-based cooldown
-const addressCooldown = new Map<string, number>()
-
-// Layer 3: Suspicious pattern detection
-const suspiciousPatterns = new Map<string, { count: number; lastSeen: number }>()
-
-// Layer 4: Simple CAPTCHA-like challenge (time-based)
-const CHALLENGE_SECRET = process.env.CHALLENGE_SECRET || 'default-challenge-secret'
+// HMAC secret — MUST be set via CHALLENGE_SECRET env var in production
+const CHALLENGE_SECRET = process.env.CHALLENGE_SECRET || ''
 
 function generateChallenge(ip: string): string {
-  const timestamp = Date.now()
-  const challenge = `${ip}-${timestamp}-${CHALLENGE_SECRET}`
-  return Buffer.from(challenge).toString('base64')
+  if (!CHALLENGE_SECRET) return ''
+  const timestamp = Date.now().toString()
+  const hmac = createHmac('sha256', CHALLENGE_SECRET)
+    .update(`${ip}:${timestamp}`)
+    .digest('hex')
+  return `${timestamp}.${hmac}`
 }
 
 function verifyChallenge(ip: string, challenge: string): boolean {
+  if (!CHALLENGE_SECRET) return true
   try {
-    const decoded = Buffer.from(challenge, 'base64').toString('utf-8')
-    const [challengeIP, timestamp] = decoded.split('-')
+    const dotIdx = challenge.indexOf('.')
+    if (dotIdx < 1) return false
+    const timestamp = challenge.slice(0, dotIdx)
+    const receivedHmac = challenge.slice(dotIdx + 1)
     const age = Date.now() - parseInt(timestamp)
-    return challengeIP === ip && age < 300000 // 5 minutes validity
+    if (age > 300_000 || age < 0 || isNaN(age)) return false
+    const expectedHmac = createHmac('sha256', CHALLENGE_SECRET)
+      .update(`${ip}:${timestamp}`)
+      .digest('hex')
+    // Constant-time comparison
+    if (expectedHmac.length !== receivedHmac.length) return false
+    let mismatch = 0
+    for (let i = 0; i < expectedHmac.length; i++) {
+      mismatch |= expectedHmac.charCodeAt(i) ^ receivedHmac.charCodeAt(i)
+    }
+    return mismatch === 0
   } catch {
     return false
   }
 }
 
-function checkRateLimit(ip: string, address: string): { allowed: boolean; challenge?: string; retryAfter?: number } {
-  const now = Date.now()
-
-  // Check for suspicious patterns
-  const pattern = suspiciousPatterns.get(ip)
-  if (pattern && pattern.count > 50 && now - pattern.lastSeen < 300000) {
-    return {
-      allowed: false,
-      retryAfter: Math.ceil((300000 - (now - pattern.lastSeen)) / 1000)
+// Redis-backed rate limiting (no in-memory Maps, no setInterval)
+async function checkRateLimit(ip: string): Promise<{ allowed: boolean; challenge?: string; retryAfter?: number }> {
+  if (!redis) return { allowed: true }
+  try {
+    const blockKey = `rl:block:${ip}`
+    const blocked = await redis.get(blockKey)
+    if (blocked) {
+      const ttl = await redis.ttl(blockKey)
+      return { allowed: false, retryAfter: Math.max(ttl, 1) }
     }
-  }
-
-  // Get or create IP record
-  const record = ipRateLimitMap.get(ip)
-
-  if (!record || now > record.resetTime) {
-    ipRateLimitMap.set(ip, { count: 1, resetTime: now + 60000 })
+    const ipKey = `rl:ip:${ip}`
+    const count = await redis.incr(ipKey)
+    if (count === 1) await redis.expire(ipKey, 60)
+    if (count >= 20) {
+      await redis.set(blockKey, '1', 'EX', 300)
+      return { allowed: false, retryAfter: 300 }
+    }
+    if (count >= 10) return { allowed: false, retryAfter: 30 }
+    if (count >= 5) {
+      const ch = generateChallenge(ip)
+      return { allowed: true, challenge: ch || undefined }
+    }
     return { allowed: true }
+  } catch (err) {
+    console.error('[RateLimit] Redis error:', err)
+    return { allowed: true } // Fail open
   }
-
-  // Check if IP is temporarily blocked
-  if (record.blockedUntil && now < record.blockedUntil) {
-    return {
-      allowed: false,
-      retryAfter: Math.ceil((record.blockedUntil - now) / 1000)
-    }
-  }
-
-  // Progressive rate limiting
-  if (record.count >= 5 && record.count < 10) {
-    // Require challenge after 5 requests
-    return { allowed: true, challenge: generateChallenge(ip) }
-  }
-
-  if (record.count >= 10 && record.count < 20) {
-    // Stricter limits - require valid challenge
-    return { allowed: false, retryAfter: 30 }
-  }
-
-  if (record.count >= 20) {
-    // Block IP temporarily
-    record.blockedUntil = now + 300000 // 5 minutes
-    ipRateLimitMap.set(ip, record)
-
-    // Mark as suspicious
-    suspiciousPatterns.set(ip, { count: (pattern?.count || 0) + 1, lastSeen: now })
-
-    return {
-      allowed: false,
-      retryAfter: 300
-    }
-  }
-
-  record.count++
-  ipRateLimitMap.set(ip, record)
-  return { allowed: true }
 }
 
-// Cleanup old entries periodically
-setInterval(() => {
-  const now = Date.now()
-  // Convert to array for iteration compatibility
-  const ipEntries = Array.from(ipRateLimitMap.entries())
-  const addressEntries = Array.from(addressCooldown.entries())
-
-  for (const [ip, record] of ipEntries) {
-    if (now > record.resetTime + 300000) {
-      ipRateLimitMap.delete(ip)
+async function checkAddressCooldown(address: string): Promise<{ allowed: boolean; retryAfter?: number }> {
+  if (!redis) return { allowed: true }
+  try {
+    const key = `rl:addr:${address.toLowerCase()}`
+    const exists = await redis.get(key)
+    if (exists) {
+      const ttl = await redis.ttl(key)
+      return { allowed: false, retryAfter: Math.max(ttl, 1) }
     }
+    await redis.set(key, '1', 'EX', 30)
+    return { allowed: true }
+  } catch {
+    return { allowed: true }
   }
-  for (const [addr, time] of addressEntries) {
-    if (now - time > 300000) {
-      addressCooldown.delete(addr)
-    }
-  }
-}, 60000) // Run every minute
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -176,8 +148,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'invalid address format' }, { status: 400 })
     }
 
-    // Check rate limit with challenge support
-    const rateLimitResult = checkRateLimit(ip, address)
+    // Check rate limit (Redis-backed, async)
+    const rateLimitResult = await checkRateLimit(ip)
 
     if (!rateLimitResult.allowed) {
       if (rateLimitResult.retryAfter) {
@@ -230,19 +202,14 @@ export async function GET(request: NextRequest) {
       // Log but allow - could be legitimate
     }
 
-    // Anti-cheat: per-address cooldown (30 seconds)
-    const addrLower = address.toLowerCase()
-    const lastSubmit = addressCooldown.get(addrLower) || 0
-    if (Date.now() - lastSubmit < 30_000) {
+    // Anti-cheat: per-address cooldown (Redis-backed)
+    const cooldownResult = await checkAddressCooldown(address)
+    if (!cooldownResult.allowed) {
       return NextResponse.json(
-        {
-          error: 'please wait between submissions',
-          retryAfter: 30 - Math.floor((Date.now() - lastSubmit) / 1000)
-        },
+        { error: 'please wait between submissions', retryAfter: cooldownResult.retryAfter },
         { status: 429 }
       )
     }
-    addressCooldown.set(addrLower, Date.now())
 
     // Verify contract is deployed
     if (CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
@@ -278,7 +245,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Score signing error:', error)
     return NextResponse.json(
-      { error: 'Failed to sign score', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -342,8 +309,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'missing game session verifier' }, { status: 403 })
     }
 
-    // Check rate limit
-    const rateLimitResult = checkRateLimit(ip, address)
+    // Check rate limit (Redis-backed, async)
+    const rateLimitResult = await checkRateLimit(ip)
     if (!rateLimitResult.allowed && rateLimitResult.retryAfter) {
       return NextResponse.json(
         { error: 'Rate limit exceeded', retryAfter: rateLimitResult.retryAfter },
@@ -351,16 +318,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Anti-cheat cooldown
-    const addrLower = address.toLowerCase()
-    const lastSubmit = addressCooldown.get(addrLower) || 0
-    if (Date.now() - lastSubmit < 30_000) {
+    // Anti-cheat cooldown (Redis-backed)
+    const cooldownResult = await checkAddressCooldown(address)
+    if (!cooldownResult.allowed) {
       return NextResponse.json(
-        { error: 'please wait between submissions', retryAfter: 30 - Math.floor((Date.now() - lastSubmit) / 1000) },
+        { error: 'please wait between submissions', retryAfter: cooldownResult.retryAfter },
         { status: 429 }
       )
     }
-    addressCooldown.set(addrLower, Date.now())
 
     // Verify contract is deployed
     if (CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
@@ -414,7 +379,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Gasless score submission error:', error)
     return NextResponse.json(
-      { error: 'Failed to submit score', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to submit score' },
       { status: 500 }
     )
   }

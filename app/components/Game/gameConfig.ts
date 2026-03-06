@@ -445,22 +445,22 @@ export const WORLDS: WorldTheme[] = [
         shimmer: 0.5,
     },
     {
-        // World 1: Warm peach → coral — first shift is dramatic
-        name: 'APE IN',
+        // World 1: Soft lavender-blue — gentle bridge from ice-blue to teal
+        name: 'BUYING THE DIP',
         startScore: 100,
-        skyTop: '#FFF8F5',
-        skyMid: '#FFE8E0',
-        skyBottom: '#FFD0C0',
-        groundTop: '#E8B0A0',
-        groundBottom: '#D09888',
-        accent: '#FF6B4A',
-        grid: 'rgba(255,107,74,0.06)',
+        skyTop: '#F8F5FF',
+        skyMid: '#EDE8FF',
+        skyBottom: '#DDD0F8',
+        groundTop: '#C0B0E0',
+        groundBottom: '#A898D0',
+        accent: '#7B68EE',
+        grid: 'rgba(123,104,238,0.06)',
         redA: '#FF5A72', redB: '#E04058',
         greenA: '#14E89A', greenB: '#0EC080',
         floorPattern: 'circuit',
-        starColor: '#FF6B4A',
-        particleColor: '#FFAA88',
-        cloudColor: 'rgba(255,107,74,0.05)',
+        starColor: '#7B68EE',
+        particleColor: '#BBAAFF',
+        cloudColor: 'rgba(123,104,238,0.05)',
         shimmer: 0.6,
     },
     {
@@ -484,7 +484,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         // World 3: Royal purple — luxurious transition
-        name: 'WHALE ALERT',
+        name: 'WHALE SPOTTED',
         startScore: 450,
         skyTop: '#FAF5FF',
         skyMid: '#EDE0FF',
@@ -522,7 +522,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         // World 5: Golden amber — warm, intense
-        name: 'FOMO ZONE',
+        name: 'FULL DEGEN',
         startScore: 1000,
         skyTop: '#FFFEF5',
         skyMid: '#FFF5D0',
@@ -541,7 +541,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         // World 6: Dark indigo — nighttime feel
-        name: '100X LEVERAGE',
+        name: 'MARGIN CALL',
         startScore: 1400,
         skyTop: '#E8E8F8',
         skyMid: '#D0D0F0',
@@ -560,7 +560,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         // World 7: Fiery crimson/magenta — danger zone
-        name: 'FLASH CRASH',
+        name: 'LIQUIDATION',
         startScore: 1900,
         skyTop: '#FFF5F8',
         skyMid: '#FFD8E0',
@@ -579,7 +579,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         // World 8: Deep space dark — cosmic noir
-        name: 'REKT',
+        name: 'GG NO RE',
         startScore: 2500,
         skyTop: '#E0E0E8',
         skyMid: '#C0C0D0',
@@ -598,7 +598,7 @@ export const WORLDS: WorldTheme[] = [
     },
     {
         // World 9: Blinding white + gold — transcendent final world
-        name: 'ASCENSION',
+        name: 'VALHALLA',
         startScore: 3200,
         skyTop: '#FFFFFF',
         skyMid: '#FFFFF0',
@@ -624,13 +624,13 @@ export const WORLDS: WorldTheme[] = [
 export const SPEEDS: SpeedTier[] = [
     { label: 'HODL', startScore: 0, multiplier: 1.08, color: '#A0B8F0', description: 'warming up', particleBoost: 0 },
     { label: 'PUMP IT', startScore: 300, multiplier: 1.22, color: '#0ECB81', description: 'speeding up', particleBoost: 0 },
-    { label: 'LEVERAGE', startScore: 800, multiplier: 1.38, color: '#F0B90B', description: 'getting fast', particleBoost: 1 },
-    { label: 'MARGIN CALL', startScore: 1600, multiplier: 1.52, color: '#FF7B90', description: 'danger zone', particleBoost: 2 },
-    { label: 'LIQUIDATION', startScore: 2800, multiplier: 1.65, color: '#F6465D', description: 'critical', particleBoost: 3 },
-    { label: 'FULL DEGEN', startScore: 4200, multiplier: 1.78, color: '#C080FF', description: 'insane mode', particleBoost: 4 },
-    { label: '100X', startScore: 6000, multiplier: 1.88, color: '#FF00FF', description: 'lightspeed', particleBoost: 5 },
+    { label: 'FOMO', startScore: 800, multiplier: 1.38, color: '#F0B90B', description: 'getting fast', particleBoost: 1 },
+    { label: 'APE MODE', startScore: 1600, multiplier: 1.52, color: '#FF7B90', description: 'danger zone', particleBoost: 2 },
+    { label: '100X', startScore: 2800, multiplier: 1.65, color: '#F6465D', description: 'critical', particleBoost: 3 },
+    { label: 'MAX COPE', startScore: 4200, multiplier: 1.78, color: '#C080FF', description: 'insane mode', particleBoost: 4 },
+    { label: 'SEND IT', startScore: 6000, multiplier: 1.88, color: '#FF00FF', description: 'lightspeed', particleBoost: 5 },
     { label: 'HYPERDRIVE', startScore: 9000, multiplier: 1.98, color: '#00FFFF', description: 'terminal velocity', particleBoost: 6 },
-    { label: 'SINGULARITY', startScore: 13000, multiplier: 2.15, color: '#FFFFFF', description: 'god mode', particleBoost: 8 },
+    { label: 'GIGABRAIN', startScore: 13000, multiplier: 2.15, color: '#FFFFFF', description: 'god mode', particleBoost: 8 },
 ]
 
 // ============================================================================
@@ -1032,7 +1032,9 @@ export const spawnPattern = (e: EngineState): void => {
 
     // Cleanup off-screen candles
     if (e.candles.length > CFG.MAX_CANDLES) {
-        e.candles = e.candles.slice(-CFG.MAX_CANDLES)
+        const start = e.candles.length - CFG.MAX_CANDLES
+        for (let i = 0; i < CFG.MAX_CANDLES; i++) e.candles[i] = e.candles[start + i]
+        e.candles.length = CFG.MAX_CANDLES
     }
 }
 
