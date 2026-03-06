@@ -17,6 +17,7 @@ export interface AudioEngine {
     startBackgroundMusic: () => void
     stopBackgroundMusic: () => void
     updateAudioParams: (speedMultiplier: number, themeIndex: number) => void
+    unlockAudio: () => void
 }
 
 export function useAudioEngine(soundEnabled: boolean): AudioEngine {
@@ -427,6 +428,7 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         sfxMilestone,
         sfxLevelUp,
         startBackgroundMusic,
-        stopBackgroundMusic
+        stopBackgroundMusic,
+        unlockAudio: initAudio
     }
 }

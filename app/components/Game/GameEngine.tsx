@@ -263,6 +263,7 @@ export default function GameEngine({
     startBackgroundMusic,
     stopBackgroundMusic,
     updateAudioParams,
+    unlockAudio,
   } = useAudioEngine(soundEnabled)
 
   useEffect(() => {
@@ -925,6 +926,9 @@ export default function GameEngine({
   // ========================================================================
 
   const startGame = useCallback(() => {
+    // Unlock audio context explicitly first to bypass iOS Safari restrictions
+    if (soundEnabled) unlockAudio()
+
     // Increment game ID — any stale RAF from a previous game will see a different ID and bail
     gameIdRef.current += 1
 
