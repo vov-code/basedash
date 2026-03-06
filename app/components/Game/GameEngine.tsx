@@ -1256,15 +1256,15 @@ export default function GameEngine({
     }
   }, [mode, update, draw])
 
-  // 1.1 + 1.2 — Demo auto-play loop behind menu — OPTIMIZED & FIXED
+  // 1.1 + 1.2 — Demo auto-play loop behind menu — FULLY REWRITTEN for stability
   useEffect(() => {
     if (mode !== 'menu') {
       if (demoRafRef.current) { cancelAnimationFrame(demoRafRef.current); demoRafRef.current = null }
       return
     }
 
-    // Create demo engine with proper initial state
-    const demoEngine = createEngine()
+    // Demo engine is LOCAL to this effect — never touches engineRef
+    let demoEngine = createEngine()
     demoEngine.alive = true
     demoEngine.showTutorial = false
     demoEngine.player.y = CFG.GROUND - CFG.PLAYER_SIZE
@@ -1273,19 +1273,22 @@ export default function GameEngine({
     let prev = performance.now()
     let demoAcc = 0
     let jumpCooldown = 0
+    let cancelled = false
 
     const demoLoop = (t: number) => {
-      if (mode !== 'menu') return
+      if (cancelled) return
 
       const dt = Math.min(0.033, (t - prev) / 1000)
       prev = t
       demoAcc += dt
 
-      // Physics tick with fixed step
+      // Cap accumulated time to prevent spiral
+      if (demoAcc > CFG.STEP * 4) demoAcc = CFG.STEP * 2
+
       while (demoAcc >= CFG.STEP) {
         const de = demoEngine
+        const dp = de.player
 
-        // Update game state
         de.gameTime += CFG.STEP
         de.difficulty = clamp(de.score / 4000, 0, 1)
         const sMult = getSpeed(de.score).multiplier
@@ -1296,88 +1299,128 @@ export default function GameEngine({
         de.groundOffset += de.speed * CFG.STEP
         de.cloudOffset += de.speed * CFG.STEP
 
-        // Player physics — asymmetric gravity like real game
-        const dp = de.player
+        // Player physics
         const dGrav = dp.velocityY < 0 ? CFG.GRAVITY_UP : CFG.GRAVITY_DOWN
         dp.velocityY += dGrav * CFG.STEP
         dp.velocityY = Math.min(dp.velocityY, CFG.MAX_FALL)
         dp.y += dp.velocityY * CFG.STEP
 
-        // Ensure scale validation in demo loop as well
-        if (isNaN(dp.scale) || !isFinite(dp.scale)) dp.scale = 1;
-        if (isNaN(dp.y) || !isFinite(dp.y)) dp.y = CFG.GROUND - CFG.PLAYER_SIZE;
+        // NaN safety
+        if (isNaN(dp.scale) || !isFinite(dp.scale)) dp.scale = 1
+        if (isNaN(dp.y) || !isFinite(dp.y)) dp.y = CFG.GROUND - CFG.PLAYER_SIZE
 
-        // EXACT ground collision with landing squash
+        // Ground collision
         if (dp.y >= CFG.GROUND - CFG.PLAYER_SIZE) {
           dp.y = CFG.GROUND - CFG.PLAYER_SIZE
-          if (dp.velocityY > 150) {
-            dp.squash = clamp(dp.velocityY / 800, 0.1, 0.25)
-          }
+          if (dp.velocityY > 150) dp.squash = clamp(dp.velocityY / 800, 0.1, 0.25)
           dp.velocityY = 0
           dp.onGround = true
           dp.jumpCount = 0
+          dp.rotation = Math.round(dp.rotation / (Math.PI / 2)) * (Math.PI / 2)
         } else {
           dp.onGround = false
         }
+        if (dp.y < 0) { dp.y = 0; dp.velocityY = 0 }
 
-        // Rotation — GD-style constant spin, snap on ground
+        // Rotation
         if (dp.onGround) {
           const snapTarget = Math.round(dp.rotation / (Math.PI / 2)) * (Math.PI / 2)
           dp.rotation = lerp(dp.rotation, snapTarget, CFG.STEP * 20)
         } else {
           dp.rotation += 11.5 * CFG.STEP
+          if (dp.rotation > 62.83) dp.rotation -= 62.83
         }
         dp.squash = lerp(dp.squash, 0, CFG.STEP * 12)
         dp.scale = 1 + dp.squash * (dp.velocityY < 0 ? -0.3 : 0.4)
         dp.tilt = lerp(dp.tilt, clamp(dp.velocityY / 800, -1, 1), CFG.STEP * CFG.TILT_SPEED)
 
-        // Move candles
+        // Move candles — in-place compaction (NO .filter())
         for (const c of de.candles) {
           c.x -= de.speed * CFG.STEP
           c.phase += CFG.STEP * c.flickerSpeed
+          if (c.collected) c.collectProgress = Math.min(1, c.collectProgress + CFG.STEP * 5)
         }
-        de.candles = de.candles.filter(c => c.x + c.width > -100)
+        let cw = 0
+        for (let ci = 0; ci < de.candles.length; ci++) {
+          const c = de.candles[ci]
+          if (c.x + c.width > -100 && !(c.collected && c.collectProgress >= 1)) {
+            de.candles[cw++] = c
+          }
+        }
+        de.candles.length = cw
 
         // Spawn
         if (de.distance >= de.nextSpawnDistance) spawnPattern(de)
 
-        // AI: auto-jump — perfectly predictive and highly defensive
+        // === DEMO COLLISION: cube bounces off reds (respawn-style) ===
+        const px1 = CFG.PLAYER_X + 2
+        const py1 = dp.y + 2
+        const px2 = CFG.PLAYER_X + CFG.PLAYER_SIZE - 2
+        const py2 = dp.y + CFG.PLAYER_SIZE - 2
+        let demoHit = false
+        for (const c of de.candles) {
+          if (c.collected || c.kind !== 'red') continue
+          if (c.x > CFG.PLAYER_X + CFG.PLAYER_SIZE + 20) continue
+          if (c.x + c.width < CFG.PLAYER_X - 10) continue
+          const cx1 = c.x + 1
+          const cy1 = c.bodyY + 1
+          const cx2 = c.x + c.width - 1
+          const cy2 = c.bodyY + c.bodyHeight - 1
+          if (px1 < cx2 && px2 > cx1 && py1 < cy2 && py2 > cy1) {
+            demoHit = true
+            break
+          }
+        }
+        if (demoHit) {
+          // Demo "death" — just bounce player up and reset nearby candles
+          dp.y = CFG.GROUND - CFG.PLAYER_SIZE
+          dp.velocityY = CFG.JUMP * 0.8
+          dp.onGround = false
+          dp.jumpCount = 0
+          dp.squash = -0.2
+          // Remove all candles near the player to prevent instant re-death
+          let dw = 0
+          for (let di = 0; di < de.candles.length; di++) {
+            if (de.candles[di].x > CFG.PLAYER_X + CFG.PLAYER_SIZE + 40) {
+              de.candles[dw++] = de.candles[di]
+            }
+          }
+          de.candles.length = dw
+          jumpCooldown = 0.3
+        }
+
+        // AI jump logic
         jumpCooldown -= CFG.STEP
-
-        // 1. Find the nearest threatening red candle ahead
-        const nearestIndex = de.candles.findIndex(c =>
-          c.kind === 'red' &&
-          c.x + c.width > CFG.PLAYER_X - 10 // slightly behind player head
-        )
-
-        const nearest = nearestIndex !== -1 ? de.candles[nearestIndex] : null
+        let nearestIdx = -1
+        for (let ci = 0; ci < de.candles.length; ci++) {
+          if (de.candles[ci].kind === 'red' && de.candles[ci].x + de.candles[ci].width > CFG.PLAYER_X - 10) {
+            nearestIdx = ci
+            break
+          }
+        }
+        const nearest = nearestIdx !== -1 ? de.candles[nearestIdx] : null
 
         if (nearest) {
           const distToCandle = nearest.x - (CFG.PLAYER_X + CFG.PLAYER_SIZE)
           const candleSpeedFactor = de.speed * 0.25
 
-          // A. Initial Ground Jump (Triggers slightly earlier now)
           if (jumpCooldown <= 0 && dp.onGround && distToCandle < (120 + candleSpeedFactor) && distToCandle > 0) {
             dp.velocityY = CFG.JUMP
             dp.onGround = false
             dp.squash = -0.12
             dp.jumpCount = 1
-            jumpCooldown = 0.1 // Short cooldown
+            jumpCooldown = 0.1
           }
 
-          // B. Defensive Double Jump (NOT blocked by initial jump cooldown)
           if (!dp.onGround && dp.jumpCount < 2) {
             const playerBottomY = dp.y + CFG.PLAYER_SIZE
             const candleTopY = nearest.bodyY
+            const isDroppingInto = dp.velocityY > 0 && (playerBottomY > candleTopY - 30) && distToCandle < 100 && distToCandle > -30
+            const isTall = nearest.height >= 65 && distToCandle < (80 + candleSpeedFactor * 0.5) && distToCandle > -30
+            const isHittingNext = nearestIdx + 1 < de.candles.length && de.candles[nearestIdx + 1]?.kind === 'red' &&
+              (de.candles[nearestIdx + 1].x - (CFG.PLAYER_X + CFG.PLAYER_SIZE)) < 160 && dp.velocityY > 0
 
-            // Panic conditions to instantly double jump
-            const isDroppingIntoCandle = dp.velocityY > 0 && (playerBottomY > candleTopY - 30) && distToCandle < 100 && distToCandle > -30
-            const isTallObstacle = nearest.height >= 65 && distToCandle < (80 + candleSpeedFactor * 0.5) && distToCandle > -30
-
-            const isHittingNext = de.candles[nearestIndex + 1]?.kind === 'red' &&
-              (de.candles[nearestIndex + 1].x - (CFG.PLAYER_X + CFG.PLAYER_SIZE)) < 160 && dp.velocityY > 0
-
-            if (isDroppingIntoCandle || isTallObstacle || isHittingNext) {
+            if (isDroppingInto || isTall || isHittingNext) {
               dp.velocityY = CFG.DOUBLE_JUMP
               dp.jumpCount = 2
               jumpCooldown = 0.3
@@ -1385,11 +1428,13 @@ export default function GameEngine({
           }
         }
 
-        // Auto-collect greens
+        // Score passed candles
         for (const c of de.candles) {
           if (!c.passed && c.x + c.width < CFG.PLAYER_X) {
             c.passed = true
+            if (c.kind === 'red') de.score += CFG.RED_SCORE
           }
+          // Auto-collect greens
           if (c.kind === 'green' && !c.collected) {
             const gx = c.x + c.width / 2
             const gy = c.bodyY + c.bodyHeight / 2
@@ -1397,6 +1442,7 @@ export default function GameEngine({
             const py = dp.y + CFG.PLAYER_SIZE / 2
             if (Math.abs(gx - px) < 35 && Math.abs(gy - py) < 35) {
               c.collected = true
+              de.score += CFG.GREEN_SCORE
             }
           }
         }
@@ -1409,38 +1455,46 @@ export default function GameEngine({
           if (gp.x < -10) gp.x = CFG.WIDTH + rand(5, 30)
         }
 
-        // Clean up demo trail — in-place mutation (no GC pressure, no new arrays)
-        let trailWrite = 0
-        for (let ti = 0; ti < de.player.trail.length; ti++) {
-          const tp = de.player.trail[ti]
+        // Trail — reset dead entries IN-PLACE (preserve pool size)
+        for (let ti = 0; ti < dp.trail.length; ti++) {
+          const tp = dp.trail[ti]
           if (tp.life > 0) {
             tp.life -= CFG.STEP
             tp.alpha -= CFG.STEP * 1.5
-            if (tp.life > 0) de.player.trail[trailWrite++] = tp
+            if (tp.life <= 0) { tp.alpha = 0 }
           }
         }
-        de.player.trail.length = trailWrite
 
-        // Clean up demo particles — in-place mutation
+        // Particles — in-place compaction
         let partWrite = 0
         for (let pi = 0; pi < de.particles.length; pi++) {
           const pp = de.particles[pi]
           pp.life -= CFG.STEP
-          if (pp.life > 0) de.particles[partWrite++] = pp
+          if (pp.life > 0) {
+            pp.x += pp.vx * CFG.STEP
+            pp.y += pp.vy * CFG.STEP
+            pp.vy += pp.gravity * CFG.STEP
+            de.particles[partWrite++] = pp
+          }
         }
-        de.particles.length = partWrite
+        de.particles.length = Math.min(partWrite, CFG.PARTICLE_LIMIT)
 
-        // Reset occasionally — full clean state
+        // World transitions in demo
+        const newWorldIdx = getWorldIndex(de.score)
+        if (newWorldIdx !== de.worldIndex) {
+          de.worldIndex = newWorldIdx
+          de.worldName = WORLDS[newWorldIdx].name
+          for (const s of de.stars) s.color = WORLDS[newWorldIdx].starColor
+        }
+
+        // Reset demo periodically — full clean engine swap
         if (de.distance > 10000) {
-          de.particles.length = 0
-          de.player.trail.length = 0
-          const fresh = createEngine()
-          Object.assign(de, fresh)
-          de.alive = true
-          de.showTutorial = false
-          de.player.y = CFG.GROUND - CFG.PLAYER_SIZE
-          de.player.onGround = true
-          de.particles = []
+          demoEngine = createEngine()
+          demoEngine.alive = true
+          demoEngine.showTutorial = false
+          demoEngine.player.y = CFG.GROUND - CFG.PLAYER_SIZE
+          demoEngine.player.onGround = true
+          jumpCooldown = 0
         }
 
         demoAcc -= CFG.STEP
@@ -1448,14 +1502,13 @@ export default function GameEngine({
 
       // Draw demo frame
       const canvas = canvasRef.current
-      if (canvas) {
+      if (canvas && !cancelled) {
         const ctx = canvas.getContext('2d')
         if (ctx) {
           const demoDpr = Math.min(window.devicePixelRatio || 1, CFG.MAX_DPR)
           ctx.setTransform(1, 0, 0, 1, 0, 0)
           ctx.imageSmoothingEnabled = true
           ctx.imageSmoothingQuality = 'high'
-          // Draw frame to internal logic size
           drawFrame(ctx, demoEngine, {
             w: CFG.WIDTH,
             h: CFG.HEIGHT,
@@ -1471,6 +1524,7 @@ export default function GameEngine({
 
     demoRafRef.current = requestAnimationFrame(demoLoop)
     return () => {
+      cancelled = true
       if (demoRafRef.current) cancelAnimationFrame(demoRafRef.current)
       demoRafRef.current = null
     }
@@ -1547,7 +1601,7 @@ export default function GameEngine({
       {/* ===================== MENU OVERLAY ===================== */}
       {mode === 'menu' && (
         <div className="game-overlay flex items-center justify-center p-4" style={{ containerType: 'size', background: 'transparent' }}>
-          <div className="border border-white/70 bg-white/45 backdrop-blur-md px-8 pt-6 pb-5 sm:px-10 sm:pt-7 sm:pb-6 shadow-[0_16px_48px_rgba(0,0,0,0.06),0_0_0_1px_rgba(0,82,255,0.04),inset_0_1px_0_rgba(255,255,255,0.6)] relative flex flex-col items-center gap-3.5 sm:gap-4 rounded-[20px]"
+          <div className="border border-white/70 bg-white/80 backdrop-blur-xl px-8 pt-6 pb-5 sm:px-10 sm:pt-7 sm:pb-6 shadow-[0_16px_48px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,82,255,0.06),inset_0_1px_0_rgba(255,255,255,0.7)] relative flex flex-col items-center gap-3.5 sm:gap-4 rounded-[20px]"
             style={{ width: '100%', maxWidth: '260px', transform: 'scale(min(1, calc(100cqh / 280px)))', transformOrigin: 'center', animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
 
             {/* Best Score Display */}
