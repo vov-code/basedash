@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Outfit, Space_Grotesk, JetBrains_Mono } from 'next/font/google'
 import './styles/globals.css'
 import { Providers } from './components/Providers'
+import { Analytics } from '@vercel/analytics/react'
 
 // ============================================
 // FONT CONFIGURATION — Premium trio
@@ -181,6 +182,7 @@ export default function RootLayout({
       </head>
       <body className="fixed inset-0 overflow-hidden font-outfit antialiased bg-base-white text-gray-900 touch-none overscroll-none overscroll-y-none">
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   )
