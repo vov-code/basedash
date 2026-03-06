@@ -565,8 +565,9 @@ export default function GameEngine({
     const py2 = p.y + CFG.PLAYER_SIZE - HITBOX_PAD
 
     for (const c of e.candles) {
-      if (c.collected || c.x + c.width < CFG.PLAYER_X - 10) continue
-      if (c.x > CFG.PLAYER_X + CFG.PLAYER_SIZE + 10) continue
+      // Early exit — must be wider than green grab radius (25px) to avoid skipping collectible greens
+      if (c.collected || c.x + c.width < CFG.PLAYER_X - 30) continue
+      if (c.x > CFG.PLAYER_X + CFG.PLAYER_SIZE + 30) continue
 
       // Stricter candle hitbox (no margin) for Red
       const cx1 = c.x + 1
