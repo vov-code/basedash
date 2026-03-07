@@ -1038,34 +1038,54 @@ export const drawWorldBanner = (
     ctx.globalAlpha = alpha
 
     const centerX = CFG.WIDTH / 2
-    // Position below HUD area (y=65) with slide-down entrance
-    const bannerY = 65 + (-15 + enter * 15)
+    // Position below HUD area (y=70) with slide-down entrance
+    const bannerY = 70 + (-15 + enter * 15)
 
     // "entered in:" label — small, subdued
     const labelSize = Math.max(8, Math.min(10, CFG.WIDTH * 0.02))
-    ctx.font = `600 ${labelSize}px monospace`
-    ctx.fillStyle = 'rgba(255,255,255,0.45)'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText('entered in:', centerX, bannerY)
-
     // World name — bold, white
-    const nameSize = Math.max(13, Math.min(17, CFG.WIDTH * 0.035))
-    ctx.font = `900 ${nameSize}px monospace`
-    ctx.fillStyle = '#FFFFFF'
-    ctx.fillText(w.name.toUpperCase(), centerX, bannerY + labelSize + nameSize * 0.55)
+    const nameSize = Math.max(14, Math.min(18, CFG.WIDTH * 0.038))
 
-    // Thin accent underline
-    const tw = ctx.measureText(w.name.toUpperCase()).width
-    const lineW = tw * 0.5 * enter
-    const lineY = bannerY + labelSize + nameSize * 0.55 + nameSize * 0.5
+    // Semi-transparent dark pill background for visibility
+    ctx.font = `900 ${nameSize}px monospace`
+    const nameWidth = ctx.measureText(w.name.toUpperCase()).width
+    const pillPadX = 18
+    const pillPadY = 8
+    const pillW = Math.max(nameWidth + pillPadX * 2, 100)
+    const pillH = labelSize + nameSize + pillPadY * 2 + 6
+    const pillX = centerX - pillW / 2
+    const pillY = bannerY - pillPadY - 2
+    const pillR = 8
+
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'
+    ctx.beginPath()
+    ctx.moveTo(pillX + pillR, pillY)
+    ctx.lineTo(pillX + pillW - pillR, pillY)
+    ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + pillR, pillR)
+    ctx.arcTo(pillX + pillW, pillY + pillH, pillX + pillW - pillR, pillY + pillH, pillR)
+    ctx.lineTo(pillX + pillR, pillY + pillH)
+    ctx.arcTo(pillX, pillY + pillH, pillX, pillY + pillH - pillR, pillR)
+    ctx.arcTo(pillX, pillY, pillX + pillR, pillY, pillR)
+    ctx.fill()
+
+    // Accent border
     ctx.strokeStyle = w.accent
     ctx.lineWidth = 1.5
-    ctx.globalAlpha = alpha * 0.5
-    ctx.beginPath()
-    ctx.moveTo(centerX - lineW / 2, lineY)
-    ctx.lineTo(centerX + lineW / 2, lineY)
+    ctx.globalAlpha = alpha * 0.6
     ctx.stroke()
+    ctx.globalAlpha = alpha
+
+    // "entered in:" text
+    ctx.font = `600 ${labelSize}px monospace`
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText('entered in:', centerX, bannerY + 2)
+
+    // World name
+    ctx.font = `900 ${nameSize}px monospace`
+    ctx.fillStyle = '#FFFFFF'
+    ctx.fillText(w.name.toUpperCase(), centerX, bannerY + labelSize + nameSize * 0.5 + 4)
 
     ctx.restore()
 }

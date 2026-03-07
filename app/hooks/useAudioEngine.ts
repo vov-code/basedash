@@ -94,11 +94,11 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             osc.frequency.exponentialRampToValueAtTime(slideFreq, dur)
         }
 
-        // Smoother envelope — soft attack, long natural decay
+        // Smoother envelope — soft attack, natural decay
         gain.gain.setValueAtTime(0, 0)
-        gain.gain.linearRampToValueAtTime(1.0, 0.008)
-        gain.gain.setValueAtTime(0.9, dur * 0.3)
-        gain.gain.exponentialRampToValueAtTime(0.001, dur + 0.1)
+        gain.gain.linearRampToValueAtTime(1.0, 0.02)
+        gain.gain.setValueAtTime(0.8, dur * 0.4)
+        gain.gain.exponentialRampToValueAtTime(0.001, dur + 0.15)
 
         osc.connect(gain)
         gain.connect(offlineCtx.destination)

@@ -557,13 +557,16 @@ a:hover {
 
 /* Breathe Glow — Wallet connect banner pulsing effect */
 @keyframes breatheGlow {
-  0%, 100% {
-    box-shadow: 0 0 8px rgba(0, 82, 255, 0.08), inset 0 0 8px rgba(0, 82, 255, 0.03);
-    border-color: rgba(0, 82, 255, 0.15);
+
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(0, 82, 255, 0.06), inset 0 0 6px rgba(0, 82, 255, 0.02);
+    border-color: rgba(0, 82, 255, 0.12);
   }
+
   50% {
-    box-shadow: 0 0 18px rgba(0, 82, 255, 0.2), inset 0 0 12px rgba(0, 82, 255, 0.06);
-    border-color: rgba(0, 82, 255, 0.35);
+    box-shadow: 0 0 22px rgba(0, 82, 255, 0.3), inset 0 0 16px rgba(0, 82, 255, 0.08);
+    border-color: rgba(0, 82, 255, 0.45);
   }
 }
 
