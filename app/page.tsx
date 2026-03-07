@@ -163,7 +163,7 @@ export default function Home() {
   // MAIN APP (always renders — entry popup is overlay on top)
   // ========================================================================
   return (
-    <div className="fixed inset-0 w-full bg-[#FAFAFA] text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 w-full bg-white text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] overflow-hidden flex flex-col">
       {/* GLOBAL PARTICLE BACKGROUND - z-0, covers full length of site */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" style={{ maxHeight: 'calc(100dvh - 80px)' }}>
         <ParticleChaos />
@@ -266,8 +266,8 @@ export default function Home() {
         />
 
         {/* MAIN CONTENT - z-[20], under header but above background */}
-        <main className="flex-1 flex flex-col overflow-hidden h-full min-h-0 w-full relative z-[20]">
-          <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col relative w-full h-full min-h-0">
+        <main className="flex-1 flex flex-col overflow-hidden min-h-0 w-full relative z-[20]">
+          <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col relative min-h-0">
 
             {/* TAB NAVIGATION - Always visible */}
             <div className="w-full px-2 sm:px-3 py-1 relative z-20 flex-shrink-0">
@@ -303,7 +303,7 @@ export default function Home() {
 
             {/* GAME TAB */}
             {activeTab === 'game' && (
-              <div className="flex flex-col flex-1 w-full min-h-0">
+              <div className="flex flex-col flex-1 w-full min-h-0 gap-0.5">
                 {/* CONNECT WALLET BANNER - with spacing from header and canvas */}
                 {!isConnected && (
                   <div className="w-full px-2 sm:px-3 flex-shrink-0">
@@ -349,7 +349,7 @@ export default function Home() {
                 </div>
 
                 {/* Game Canvas — Proportional flex, capped at 55% viewport */}
-                <div className="w-full mt-0.5 mb-0.5 flex-shrink-0 h-[36vh] sm:h-[40vh] relative z-20 flex flex-col items-center justify-center fade-in">
+                <div className="w-full flex-[3] min-h-0 relative z-20 flex flex-col items-center justify-center fade-in">
                   <div
                     className="relative w-full h-full max-w-[600px] sm:rounded-[20px] overflow-hidden border-y sm:border-x border-[#0052FF]/10 bg-white mx-auto shadow-[0_8px_30px_rgba(0,0,0,0.12)] touch-none"
                   >
@@ -365,7 +365,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="w-full px-2 sm:px-4 pt-0.5 pb-0.5 flex-1 min-h-0 relative z-20 flex flex-col">
+                <div className="w-full px-2 sm:px-4 flex-[2] min-h-0 relative z-20 flex flex-col">
                   {/* Note: In a future PR we will pull score/combo state UP to page.tsx via Zustand, for now passing 0/0 to initial mount layout */}
                   <DashboardGrid score={0} combo={0} />
                 </div>
