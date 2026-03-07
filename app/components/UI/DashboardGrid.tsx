@@ -7,7 +7,7 @@ interface DashboardGridProps {
 
 export const DashboardGrid: React.FC<DashboardGridProps> = ({ score, combo }) => {
     return (
-        <div className="w-full h-full grid grid-cols-2 grid-rows-[1.08fr_1fr_1fr] gap-2 sm:gap-2.5 max-w-lg mx-auto">
+        <div className="w-full grid grid-cols-2 grid-rows-[auto_auto_auto] gap-1.5 sm:gap-2 max-w-lg mx-auto">
             {/* Liquidation Watch — full width */}
             <div className="col-span-2 flex-1 bg-white/70 backdrop-blur-md rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 border border-[#F6465D]/12 flex items-center justify-between group hover:border-[#F6465D]/25 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(246,70,93,0.08)] transition-all duration-300 relative overflow-hidden">
                 <div className="absolute right-0 top-0 w-28 h-full bg-gradient-to-l from-[#F6465D]/5 to-transparent pointer-events-none" />
