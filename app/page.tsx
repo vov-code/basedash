@@ -303,10 +303,10 @@ export default function Home() {
 
             {/* GAME TAB */}
             {activeTab === 'game' && (
-              <div className="flex flex-col flex-1 w-full min-h-0 gap-0.5">
+              <div className="flex flex-col flex-1 w-full min-h-0 gap-1.5">
                 {/* CONNECT WALLET BANNER - with spacing from header and canvas */}
                 {!isConnected && (
-                  <div className="w-full px-2 sm:px-3 flex-shrink-0">
+                  <div className="w-full flex-shrink-0">
                     <div className="flex items-center justify-center gap-2 p-1.5 sm:p-2 relative overflow-hidden rounded-lg border border-[#0052FF]/20"
                       style={{
                         background: 'linear-gradient(90deg, rgba(0,82,255,0.06) 0%, rgba(0,82,255,0.14) 50%, rgba(0,82,255,0.06) 100%)',
@@ -325,8 +325,8 @@ export default function Home() {
                 )}
 
                 {/* GAME HINTS — tap to jump blocks */}
-                <div className="w-full px-2 sm:px-3 py-0.5 relative z-20 flex-shrink-0">
-                  <div className="flex items-stretch gap-1 sm:gap-2 mx-auto">
+                <div className="w-full px-2 sm:px-3 relative z-20 flex-1 min-h-0 flex flex-col">
+                  <div className="flex items-stretch gap-1 sm:gap-2 mx-auto h-full">
                     <div className="flex-1 flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-white/60 backdrop-blur-sm rounded-lg border border-slate-200/60 min-w-0 justify-center shadow-sm">
                       <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0052FF]/10 rounded flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0052FF]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
@@ -365,7 +365,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="w-full px-2 sm:px-4 py-1 flex-1 min-h-0 relative z-20 flex flex-col">
+                <div className="w-full px-2 sm:px-4 flex-1 min-h-0 relative z-20 flex flex-col">
                   {/* Note: In a future PR we will pull score/combo state UP to page.tsx via Zustand, for now passing 0/0 to initial mount layout */}
                   <DashboardGrid score={0} combo={0} />
                 </div>

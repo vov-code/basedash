@@ -33,7 +33,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ score, combo }) =>
                     <span className="text-[7px] sm:text-[8px] text-slate-400 tracking-[0.15em] uppercase font-bold leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Network</span>
                     <div className="w-1.5 h-1.5 bg-[#0052FF] rounded-full animate-pulse shadow-[0_0_6px_rgba(0,82,255,0.5)] flex-shrink-0" />
                 </div>
-                <div className="flex flex-col z-10 mt-1.5">
+                <div className="flex flex-col z-10 gap-0.5">
                     <span className="text-[11px] sm:text-[12px] font-black text-slate-800 leading-none tracking-tight" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Base L2</span>
                     <span className="text-[7px] sm:text-[8px] text-[#0052FF]/70 mt-1 font-bold leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Optimistic</span>
                 </div>
@@ -46,7 +46,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ score, combo }) =>
                     <span className="text-[7px] sm:text-[8px] text-slate-400 tracking-[0.15em] uppercase font-bold leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Risk Level</span>
                     <span className="text-[8px] sm:text-[9px] font-black text-[#D4A002] leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>{combo > 0 ? `${100 * combo}X` : '100X'}</span>
                 </div>
-                <div className="flex flex-col gap-1.5 z-10 mt-1.5">
+                <div className="flex flex-col gap-1 z-10 mt-1">
                     <span className="text-[11px] sm:text-[12px] font-black text-slate-800 leading-none tracking-tight" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Degen Mode</span>
                     <div className="w-full h-[3px] bg-slate-100 rounded-full overflow-hidden flex-shrink-0">
                         <div className="h-full bg-gradient-to-r from-[#F0B90B] to-[#F6465D] w-[85%] rounded-full relative">
@@ -63,7 +63,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ score, combo }) =>
                     <span className="text-[7px] sm:text-[8px] text-slate-400 tracking-[0.15em] uppercase font-bold leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Security</span>
                     <span className="text-[8px] sm:text-[9px] font-black text-[#0ECB81] uppercase leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>OK</span>
                 </div>
-                <div className="flex flex-col z-10 mt-1.5">
+                <div className="flex flex-col z-10 gap-0.5">
                     <span className="text-[11px] sm:text-[12px] font-black text-slate-800 leading-none tracking-tight" style={{ fontFamily: 'var(--font-mono, monospace)' }}>On-Chain</span>
                     <span className="text-[7px] sm:text-[8px] text-slate-400 mt-1 font-bold leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Verified</span>
                 </div>
@@ -76,7 +76,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ score, combo }) =>
                     <span className="text-[7px] sm:text-[8px] text-[#8B5CF6]/60 tracking-[0.15em] uppercase font-bold leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Award Pool</span>
                     <div className="w-1.5 h-1.5 bg-[#8B5CF6] rounded-full animate-ping shadow-[0_0_6px_rgba(139,92,246,0.5)] flex-shrink-0" />
                 </div>
-                <div className="flex flex-col relative z-10 mt-1.5">
+                <div className="flex flex-col relative z-10 gap-0.5">
                     <span className="text-[11px] sm:text-[12px] font-black text-[#8B5CF6] leading-none tracking-tight" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Rewards</span>
                     <span className="text-[7px] sm:text-[8px] text-[#8B5CF6]/60 mt-1 font-bold animate-[pulse_2s_infinite] leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Coming Soon</span>
                 </div>
