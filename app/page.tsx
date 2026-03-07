@@ -367,7 +367,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="w-full px-2 sm:px-4 pb-1 sm:pb-1.5 pt-1 sm:pt-1.5 flex-[2] relative z-20 flex flex-col min-h-[100px]">
+                <div className="w-full px-2 sm:px-4 pb-1 sm:pb-1.5 pt-1 sm:pt-1.5 flex-1 min-h-0 relative z-20 flex flex-col overflow-y-auto">
                   {/* Note: In a future PR we will pull score/combo state UP to page.tsx via Zustand, for now passing 0/0 to initial mount layout */}
                   <DashboardGrid score={0} combo={0} />
                 </div>

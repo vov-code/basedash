@@ -48,7 +48,7 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             compressor.connect(audioCtxRef.current.destination)
 
             masterGainRef.current = audioCtxRef.current.createGain()
-            masterGainRef.current.gain.value = 0.32
+            masterGainRef.current.gain.value = 0.22
             masterGainRef.current.connect(compressor)
         }
         if (audioCtxRef.current.state === 'suspended') {
@@ -94,17 +94,17 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             osc.frequency.exponentialRampToValueAtTime(slideFreq, dur)
         }
 
-        // Smoother envelope — soft attack, natural decay
+        // Very smooth envelope — slow attack, gradual decay, no clicks
         gain.gain.setValueAtTime(0, 0)
-        gain.gain.linearRampToValueAtTime(1.0, 0.02)
-        gain.gain.setValueAtTime(0.8, dur * 0.4)
-        gain.gain.exponentialRampToValueAtTime(0.001, dur + 0.15)
+        gain.gain.linearRampToValueAtTime(0.9, Math.min(0.04, dur * 0.3))
+        gain.gain.setValueAtTime(0.7, dur * 0.5)
+        gain.gain.exponentialRampToValueAtTime(0.001, dur + 0.2)
 
         osc.connect(gain)
         gain.connect(offlineCtx.destination)
 
         osc.start(0)
-        osc.stop(dur + 0.15)
+        osc.stop(dur + 0.2)
 
         offlineCtx.startRendering().then((renderedBuffer) => {
             toneCacheRef.current!.set(cacheKey, renderedBuffer)
@@ -113,81 +113,76 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
     }, [soundEnabled, initAudio])
 
-    // =====================================================================
-    // SFX — WARM, RELAXING, CRYSTAL-CLEAR SOUNDS
-    // =====================================================================
-
-    // JUMP — Soft bubble pop, gentle and satisfying
+    // JUMP — Soft, rounded pop
     const sfxJump = useCallback(() => {
-        playTone(440, 'sine', 0.08, 0.08, 330)     // A4→E4 gentle drop
-        playTone(880, 'sine', 0.01, 0.06)           // A5 tiny shimmer
+        playTone(392, 'sine', 0.05, 0.15, 294)      // G4→D4 gentle
     }, [playTone])
 
-    // DOUBLE JUMP — Rising two-note wind chime
+    // DOUBLE JUMP — Two soft chimes
     const sfxDoubleJump = useCallback(() => {
-        playTone(523, 'sine', 0.08, 0.08, 392)      // C5→G4
-        setTimeout(() => playTone(784, 'sine', 0.04, 0.1), 60) // G5 bell
+        playTone(440, 'sine', 0.05, 0.15, 349)       // A4→F4
+        setTimeout(() => playTone(659, 'sine', 0.03, 0.2), 80)
     }, [playTone])
 
-    // DASH — Soft wind swoosh
+    // DASH — Soft wind
     const sfxDash = useCallback(() => {
-        playTone(196, 'triangle', 0.04, 0.18, 65)   // G3→low sweep
+        playTone(196, 'triangle', 0.03, 0.25, 98)    // G3→G2
     }, [playTone])
 
-    // COLLECT — Musical two-note bell chime (major 6th — warm interval)
+    // COLLECT — Warm bell chime
     const sfxCollect = useCallback(() => {
-        playTone(1046, 'sine', 0.06, 0.22)           // C6
-        setTimeout(() => playTone(1568, 'sine', 0.04, 0.35), 65) // G6 — perfect 5th, long shimmer
+        playTone(784, 'sine', 0.04, 0.3)              // G5 — long, warm
+        setTimeout(() => playTone(1046, 'sine', 0.025, 0.4), 80) // C6 shimmer
     }, [playTone])
 
-    // POWERUP — Ascending major arpeggio with sparkle (CMaj9)
+    // POWERUP — Gentle ascending arpeggio
     const sfxPowerup = useCallback(() => {
-        const notes = [523, 659, 784, 988, 1174]   // C-E-G-B-D (CMaj9)
+        const notes = [523, 659, 784, 988, 1174]
         notes.forEach((freq, i) => {
-            setTimeout(() => playTone(freq, 'sine', 0.05 - i * 0.005, 0.2 + i * 0.05), i * 45)
+            setTimeout(() => playTone(freq, 'sine', 0.03 - i * 0.003, 0.25 + i * 0.05), i * 60)
         })
     }, [playTone])
 
-    // DEATH — Gentle descending minor sweep (compassionate, not harsh)
+    // DEATH — Very soft descending tone
     const sfxHit = useCallback(() => {
-        playTone(349, 'triangle', 0.08, 0.4, 131)    // F4→C3 slow drop
-        setTimeout(() => playTone(220, 'sine', 0.05, 0.3, 73), 120)  // A3→D2
+        playTone(294, 'sine', 0.06, 0.5, 131)         // D4→C3 slow
+        setTimeout(() => playTone(196, 'triangle', 0.03, 0.4, 65), 150)
     }, [playTone])
 
-    // SELECT — Soft crystal tap
+    // SELECT — Soft tap
     const sfxSelect = useCallback(() => {
-        playTone(880, 'sine', 0.04, 0.08, 784)
+        playTone(659, 'sine', 0.03, 0.12, 587)
     }, [playTone])
 
-    // COMBO — Ascending pentatonic scale, each combo higher
+    // COMBO — Ascending pentatonic, soft
     const sfxCombo = useCallback((combo: number) => {
         const pentatonic = [392, 440, 523, 587, 659, 784, 880, 988, 1046, 1174, 1318]
         const idx = Math.min(combo, pentatonic.length - 1)
         const note = pentatonic[idx]
-        playTone(note, 'sine', 0.05, 0.18)
-        setTimeout(() => playTone(note * 1.498, 'sine', 0.02, 0.22), 50) // Perfect 5th bell
+        playTone(note, 'sine', 0.03, 0.25)
+        setTimeout(() => playTone(note * 1.498, 'sine', 0.015, 0.3), 70)
     }, [playTone])
 
-    // MILESTONE — Triumphant ascending chord (wider voicing, more space)
+    // MILESTONE — Gentle ascending chord
     const sfxMilestone = useCallback(() => {
         const seq = [
-            { f: 523, d: 80 },   // C5
-            { f: 659, d: 80 },   // E5
-            { f: 784, d: 80 },   // G5
-            { f: 988, d: 100 },  // B5
-            { f: 1046, d: 300 }, // C6 — resolve with sustain
+            { f: 523, d: 100 },
+            { f: 659, d: 100 },
+            { f: 784, d: 100 },
+            { f: 988, d: 120 },
+            { f: 1046, d: 400 },
         ]
         let t = 0
         seq.forEach(({ f, d }) => {
-            setTimeout(() => playTone(f, 'sine', 0.05, d / 1000 + 0.15), t)
+            setTimeout(() => playTone(f, 'sine', 0.03, d / 1000 + 0.2), t)
             t += d
         })
     }, [playTone])
 
-    // LEVEL UP / NEW RECORD — Sparkling cascade
+    // LEVEL UP — Soft sparkling cascade
     const sfxLevelUp = useCallback(() => {
         [523, 659, 784, 1046, 1318, 1568].forEach((freq, i) => {
-            setTimeout(() => playTone(freq, 'sine', 0.035, 0.16 + i * 0.03), i * 35)
+            setTimeout(() => playTone(freq, 'sine', 0.025, 0.2 + i * 0.04), i * 50)
         })
     }, [playTone])
 
