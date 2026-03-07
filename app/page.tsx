@@ -446,7 +446,7 @@ export default function Home() {
         <footer className="flex-shrink-0 bg-white z-[40] w-full">
           <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 py-[3px] flex flex-row items-baseline justify-between">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none">© {new Date().getFullYear()} base dash</span>
-            <a href="https://x.com/vovweb3" target="_blank" rel="noopener noreferrer" className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none inline-flex items-baseline gap-0.5 active:scale-95 transition-transform cursor-pointer no-underline">built by <span className="font-black text-[#0052FF] ml-0.5 drop-shadow-[0_0_4px_rgba(0,82,255,0.3)]">vov</span></a>
+            <a href="https://x.com/vovweb3" target="_blank" rel="noopener noreferrer" className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none cursor-pointer no-underline">built by <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-[#0052FF] via-[#4d8aff] to-[#0052FF] bg-[length:200%_auto] animate-[shimmer_2.5s_linear_infinite] drop-shadow-[0_0_4px_rgba(0,82,255,0.3)]">vov</span></a>
           </div>
         </footer>
       </div>
