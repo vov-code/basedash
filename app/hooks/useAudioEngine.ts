@@ -299,6 +299,14 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             const NOTE_INTERVAL = BASE_INTERVAL / tempoMult
 
             while (nextNoteTime < audioCtxRef.current.currentTime + 1.2) {
+                // If we fell behind (tab was backgrounded), skip ahead — keep noteIdx, reset time
+                if (nextNoteTime < audioCtxRef.current.currentTime - 0.5) {
+                    nextNoteTime = audioCtxRef.current.currentTime + 0.05
+                    // Smooth re-entry after pause
+                    gain.gain.setTargetAtTime(0, audioCtxRef.current.currentTime, 0.01)
+                    gain.gain.setTargetAtTime(0.03, audioCtxRef.current.currentTime + 0.05, 0.2)
+                    continue
+                }
                 const melodyNote = melodyPattern[noteIdx % melodyPattern.length]
                 const bassNote = bassPattern[Math.floor(noteIdx / 2) % bassPattern.length]
                 const isDownbeat = noteIdx % 4 === 0

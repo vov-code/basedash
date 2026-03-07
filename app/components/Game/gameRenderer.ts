@@ -1018,7 +1018,7 @@ export const drawParticles = (
 // WORLD BANNER
 // ============================================================================
 
-/** Draw the world transition banner — minimalist "entered in:" */
+/** Draw the world transition banner — minimalist single-line strip */
 export const drawWorldBanner = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
@@ -1038,26 +1038,25 @@ export const drawWorldBanner = (
     ctx.globalAlpha = alpha
 
     const centerX = CFG.WIDTH / 2
-    // Position below HUD area (y=70) with slide-down entrance
-    const bannerY = 70 + (-15 + enter * 15)
+    const bannerY = 55 + (-10 + enter * 10)
 
-    // "entered in:" label — small, subdued
-    const labelSize = Math.max(8, Math.min(10, CFG.WIDTH * 0.02))
-    // World name — bold, white
-    const nameSize = Math.max(14, Math.min(18, CFG.WIDTH * 0.038))
+    // Single combined text for measurement
+    const fontSize = Math.max(10, Math.min(13, CFG.WIDTH * 0.027))
+    ctx.font = `800 ${fontSize}px monospace`
+    const worldText = `WORLD: ${w.name.toUpperCase()}`
+    const textW = ctx.measureText(worldText).width
 
-    // Semi-transparent dark pill background for visibility
-    ctx.font = `900 ${nameSize}px monospace`
-    const nameWidth = ctx.measureText(w.name.toUpperCase()).width
-    const pillPadX = 18
-    const pillPadY = 8
-    const pillW = Math.max(nameWidth + pillPadX * 2, 100)
-    const pillH = labelSize + nameSize + pillPadY * 2 + 6
+    // Slim frosted pill
+    const pillPadX = 16
+    const pillPadY = 5
+    const pillW = textW + pillPadX * 2
+    const pillH = fontSize + pillPadY * 2
     const pillX = centerX - pillW / 2
-    const pillY = bannerY - pillPadY - 2
-    const pillR = 8
+    const pillY = bannerY - pillPadY
+    const pillR = pillH / 2  // Full round ends
 
-    ctx.fillStyle = 'rgba(0,0,0,0.4)'
+    // Frosted glass background
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'
     ctx.beginPath()
     ctx.moveTo(pillX + pillR, pillY)
     ctx.lineTo(pillX + pillW - pillR, pillY)
@@ -1068,24 +1067,26 @@ export const drawWorldBanner = (
     ctx.arcTo(pillX, pillY, pillX + pillR, pillY, pillR)
     ctx.fill()
 
-    // Accent border
+    // Subtle accent border
     ctx.strokeStyle = w.accent
-    ctx.lineWidth = 1.5
-    ctx.globalAlpha = alpha * 0.6
+    ctx.lineWidth = 1
+    ctx.globalAlpha = alpha * 0.4
     ctx.stroke()
     ctx.globalAlpha = alpha
 
-    // "entered in:" text
-    ctx.font = `600 ${labelSize}px monospace`
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'
+    // "WORLD:" in muted, name in white
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText('entered in:', centerX, bannerY + 2)
+    const textY = bannerY + fontSize * 0.4
 
-    // World name
-    ctx.font = `900 ${nameSize}px monospace`
+    ctx.font = `600 ${fontSize * 0.85}px monospace`
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'
+    const labelW = ctx.measureText('WORLD: ').width
+    ctx.fillText('WORLD:', centerX - (textW - labelW) / 2, textY)
+
+    ctx.font = `900 ${fontSize}px monospace`
     ctx.fillStyle = '#FFFFFF'
-    ctx.fillText(w.name.toUpperCase(), centerX, bannerY + labelSize + nameSize * 0.5 + 4)
+    ctx.fillText(w.name.toUpperCase(), centerX + labelW / 2, textY)
 
     ctx.restore()
 }

@@ -306,7 +306,7 @@ export default function Home() {
               <div className="flex flex-col flex-1 w-full min-h-0 gap-2">
                 {/* CONNECT WALLET BANNER - with spacing from header and canvas */}
                 {!isConnected && (
-                  <div className="w-full px-2 sm:px-3 flex-shrink-0">
+                  <div className="w-full flex-shrink-0">
                     <div className="flex items-center justify-center gap-2 p-2.5 sm:p-3 relative overflow-hidden rounded-lg border border-[#0052FF]/20"
                       style={{
                         background: 'linear-gradient(90deg, rgba(0,82,255,0.06) 0%, rgba(0,82,255,0.14) 50%, rgba(0,82,255,0.06) 100%)',

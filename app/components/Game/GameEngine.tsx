@@ -1877,7 +1877,7 @@ export default function GameEngine({
 
           {/* Chill / whale mode — glowing status — just below world banner */}
           {engineRef.current.slowdownTimer > 0 && (
-            <div className="absolute top-[86px] left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full z-10 pointer-events-none"
+            <div className="absolute top-[72px] left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full z-10 pointer-events-none"
               style={{ background: 'rgba(14,203,129,0.12)', border: '1px solid rgba(14,203,129,0.35)', boxShadow: '0 0 12px rgba(14,203,129,0.25)' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-[#0ECB81] animate-pulse" />
               <p className="text-[#0ECB81] text-[8px] font-black text-center tracking-widest uppercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
