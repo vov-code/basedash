@@ -163,7 +163,7 @@ export default function Home() {
   // MAIN APP (always renders — entry popup is overlay on top)
   // ========================================================================
   return (
-    <div className="h-[100dvh] w-full bg-white text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] overflow-hidden flex flex-col">
+    <div className="relative h-[100dvh] w-full bg-white text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] overflow-hidden flex flex-col">
       {/* GLOBAL PARTICLE BACKGROUND - z-0, covers full length of site */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" style={{ maxHeight: 'calc(100dvh - 80px)' }}>
         <ParticleChaos />
@@ -256,7 +256,7 @@ export default function Home() {
         1. Remove touch-none from global to allow scrolling on Wallet/Leaderboard.
         2. Set min-h-[100dvh] so it takes up exactly the visible browser screen
       */}
-      <div className="absolute inset-0 z-10 flex flex-col overflow-hidden lg:hidden select-none">
+      <div className="flex-1 min-h-0 z-10 flex flex-col overflow-hidden lg:hidden select-none">
 
         <Header
           isConnected={isConnected}
