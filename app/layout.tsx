@@ -162,7 +162,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`fixed inset-0 overflow-hidden bg-base-white touch-none overscroll-none ${outfit.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
+      className={`h-full w-full overflow-hidden bg-white touch-none overscroll-none ${outfit.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
     >
       <head>
         <link rel="stylesheet" href="/onchainkit.css" />
@@ -180,7 +180,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://mainnet.base.org" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://sepolia.base.org" crossOrigin="anonymous" />
       </head>
-      <body className="fixed inset-0 overflow-hidden font-outfit antialiased bg-base-white text-gray-900 touch-none overscroll-none overscroll-y-none">
+      <body className="h-full w-full overflow-hidden font-outfit antialiased bg-white text-gray-900 touch-none overscroll-none m-0 p-0">
         <Providers>{children}</Providers>
         <Analytics />
       </body>
