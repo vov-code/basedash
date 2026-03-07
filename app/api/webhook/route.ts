@@ -18,14 +18,14 @@ function verifySignature(payload: string, signature: string): boolean {
 }
 
 /**
- * Webhook для обработки транзакций Base Mini App
+ * Webhook for processing Base Mini App transactions
  * Handles: score submissions, check-ins, and other on-chain events
  */
 export async function POST(request: NextRequest) {
   try {
     const rawBody = await request.text()
     const signature = request.headers.get('x-webhook-signature') || ''
-    
+
     // Verify signature if provided (production)
     if (process.env.NODE_ENV === 'production' && signature) {
       const isValid = verifySignature(rawBody, signature)
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, message: 'Already processed' })
       }
       processedTransactions.set(transactionHash, now)
-      
+
       // Cleanup old entries (keep last 5 minutes)
       if (processedTransactions.size > 100) {
         const entries = Array.from(processedTransactions.entries())

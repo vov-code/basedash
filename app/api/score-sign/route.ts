@@ -19,7 +19,7 @@ const publicClient = createPublicClient({
   transport: http(),
 })
 
-// Wallet client для отправки gasless транзакций
+// Wallet client for gasless transactions
 let walletClient: ReturnType<typeof createWalletClient> | null = null
 
 function getWalletClient() {
@@ -27,6 +27,9 @@ function getWalletClient() {
     const pk = process.env.SCORE_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY
     if (!pk) {
       throw new Error('PRIVATE_KEY or SCORE_SIGNER_PRIVATE_KEY not configured')
+    }
+    if (!process.env.SCORE_SIGNER_PRIVATE_KEY && process.env.NODE_ENV === 'production') {
+      console.warn('[SECURITY] SCORE_SIGNER_PRIVATE_KEY not set, falling back to PRIVATE_KEY. Use a dedicated signer key in production.')
     }
     const account = privateKeyToAccount(pk as `0x${string}`)
     walletClient = createWalletClient({
@@ -45,6 +48,9 @@ function getWalletClient() {
 
 // HMAC secret — MUST be set via CHALLENGE_SECRET env var in production
 const CHALLENGE_SECRET = process.env.CHALLENGE_SECRET || ''
+if (!CHALLENGE_SECRET && process.env.NODE_ENV === 'production') {
+  console.warn('[SECURITY] CHALLENGE_SECRET not set! Anti-cheat challenge verification is disabled.')
+}
 
 function generateChallenge(ip: string): string {
   if (!CHALLENGE_SECRET) return ''
@@ -240,7 +246,7 @@ export async function GET(request: NextRequest) {
       signature,
       signer: account.address,
       timestamp: Date.now(),
-      gasless: false, // По умолчанию возвращаем подпись для обычной отправки
+      gasless: false, // Default: return signature for user to submit
     })
   } catch (error) {
     console.error('Score signing error:', error)
@@ -252,7 +258,7 @@ export async function GET(request: NextRequest) {
 }
 
 // ============================================================================
-// POST endpoint для GASLESS отправки очков (Relayer)
+// POST endpoint for GASLESS score submission (Relayer)
 // ============================================================================
 
 export async function POST(request: NextRequest) {
@@ -356,7 +362,7 @@ export async function POST(request: NextRequest) {
 
     const signature = await account.signMessage({ message: { raw: msgHash } })
 
-    // Отправляем транзакцию через relayer (владелец платит газ)
+    // Submit transaction via relayer (owner pays gas)
     const hash = await walletClient.writeContract({
       chain,
       address: CONTRACT_ADDRESS,

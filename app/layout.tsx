@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Outfit, Space_Grotesk, JetBrains_Mono } from 'next/font/google'
 import './styles/globals.css'
 import { Providers } from './components/Providers'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Analytics } from '@vercel/analytics/react'
 
 // ============================================
@@ -181,7 +182,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://sepolia.base.org" crossOrigin="anonymous" />
       </head>
       <body className="h-full w-full overflow-hidden font-outfit antialiased bg-white text-gray-900 touch-none overscroll-none m-0 p-0">
-        <Providers>{children}</Providers>
+        <Providers><ErrorBoundary>{children}</ErrorBoundary></Providers>
         <Analytics />
       </body>
     </html>

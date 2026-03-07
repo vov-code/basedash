@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Redis from 'ioredis'
+import { randomBytes } from 'crypto'
 
 /**
  * Game Sessions API — stores game results with short IDs
@@ -33,13 +34,8 @@ const redisUrl = process.env.REDIS_URL || process.env.KV_URL
 const redis = redisUrl ? new Redis(redisUrl) : null
 
 function generateId(): string {
-    // Short 8-char alphanumeric ID
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
-    let id = ''
-    for (let i = 0; i < 8; i++) {
-        id += chars[Math.floor(Math.random() * chars.length)]
-    }
-    return id
+    // Cryptographically secure 8-char alphanumeric ID
+    return randomBytes(6).toString('base64url').slice(0, 8)
 }
 
 // POST — Create session

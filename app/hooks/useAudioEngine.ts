@@ -81,6 +81,12 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             return
         }
 
+        // Evict oldest entries if cache grows too large
+        if (toneCacheRef.current.size > 100) {
+            const keys = Array.from(toneCacheRef.current.keys())
+            for (let i = 0; i < 20; i++) toneCacheRef.current.delete(keys[i])
+        }
+
         const OfflineContext = window.OfflineAudioContext || (window as any).webkitOfflineAudioContext
         const tailLen = 0.15
         const renderLen = dur + tailLen
