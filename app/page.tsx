@@ -443,7 +443,10 @@ export default function Home() {
           </div>
         </main>
 
-        <footer className="mt-auto bg-white relative z-[40] flex-shrink-0 w-full" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        {/* Bottom spacer for fixed footer */}
+        <div className="flex-shrink-0 h-5" />
+
+        <footer className="fixed bottom-0 left-0 right-0 bg-white z-[40]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 py-[3px] flex flex-row items-baseline justify-between">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none">© {new Date().getFullYear()} base dash</span>
             <a href="https://x.com/vovweb3" target="_blank" rel="noopener noreferrer" className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none inline-flex items-baseline gap-0.5 active:scale-95 transition-transform cursor-pointer no-underline">built by <span className="font-black text-[#0052FF] ml-0.5 relative overflow-hidden drop-shadow-[0_0_4px_rgba(0,82,255,0.3)]">vov<span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-[shimmerVov_2.5s_ease-in-out_infinite]" style={{ animationDelay: '1s' }} /></span></a>
