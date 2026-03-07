@@ -349,7 +349,7 @@ export default function Home() {
                 </div>
 
                 {/* Game Canvas — Proportional flex, capped at 55% viewport */}
-                <div className="w-full flex-[3] min-h-0 relative z-20 flex flex-col items-center justify-center fade-in">
+                <div className="w-full flex-shrink-0 max-h-[45vh] relative z-20 flex flex-col items-center justify-center fade-in" style={{ height: '45vh' }}>
                   <div
                     className="relative w-full h-full max-w-[600px] sm:rounded-[20px] overflow-hidden border-y sm:border-x border-[#0052FF]/10 bg-white mx-auto shadow-[0_8px_30px_rgba(0,0,0,0.12)] touch-none"
                   >
@@ -365,7 +365,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="w-full px-2 sm:px-4 py-1 relative z-20">
+                <div className="w-full px-2 sm:px-4 py-1 flex-1 min-h-0 relative z-20 flex flex-col">
                   {/* Note: In a future PR we will pull score/combo state UP to page.tsx via Zustand, for now passing 0/0 to initial mount layout */}
                   <DashboardGrid score={0} combo={0} />
                 </div>
@@ -444,9 +444,9 @@ export default function Home() {
         </main>
 
         <footer className="flex-shrink-0 bg-white z-[40] w-full">
-          <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 h-[16px] flex flex-row items-center justify-between">
+          <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 h-[16px] flex flex-row items-end justify-between">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none">© {new Date().getFullYear()} base dash</span>
-            <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none cursor-pointer" onClick={() => window.open('https://x.com/vovweb3', '_blank')}>built by <span className="font-black text-[#0052FF]">vov</span></span>
+            <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none cursor-pointer" onClick={() => window.open('https://x.com/vovweb3', '_blank')}>built by <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-[#0052FF] via-[#4d8aff] to-[#0052FF] bg-[length:200%_auto] animate-[shimmer_2.5s_linear_infinite]">vov</span></span>
           </div>
         </footer>
       </div>
