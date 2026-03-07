@@ -303,11 +303,11 @@ export default function Home() {
 
             {/* GAME TAB */}
             {activeTab === 'game' && (
-              <div className="flex flex-col flex-1 w-full min-h-0 gap-1">
+              <div className="flex flex-col flex-1 w-full min-h-0 gap-2">
                 {/* CONNECT WALLET BANNER - with spacing from header and canvas */}
                 {!isConnected && (
                   <div className="w-full px-2 sm:px-3 flex-shrink-0">
-                    <div className="flex items-center justify-center gap-2 p-1.5 sm:p-2 relative overflow-hidden rounded-lg border border-[#0052FF]/20"
+                    <div className="flex items-center justify-center gap-2 p-2.5 sm:p-3 relative overflow-hidden rounded-lg border border-[#0052FF]/20"
                       style={{
                         background: 'linear-gradient(90deg, rgba(0,82,255,0.06) 0%, rgba(0,82,255,0.14) 50%, rgba(0,82,255,0.06) 100%)',
                         animation: 'breatheGlow 2s ease-in-out infinite',
@@ -327,19 +327,19 @@ export default function Home() {
                 {/* GAME HINTS — tap to jump blocks */}
                 <div className="w-full px-2 sm:px-3 relative z-20 flex-shrink-0">
                   <div className="flex items-stretch gap-1 sm:gap-1.5 mx-auto">
-                    <div className="flex-1 flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-white/60 backdrop-blur-sm rounded-lg border border-slate-200/60 min-w-0 justify-center shadow-sm">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/60 backdrop-blur-sm rounded-lg border border-slate-200/60 min-w-0 justify-center shadow-sm">
                       <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0052FF]/10 rounded flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0052FF]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
                       </div>
                       <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-600 lowercase tracking-wider truncate text-center">tap to jump</span>
                     </div>
-                    <div className="flex-1 flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-white/60 backdrop-blur-sm rounded-lg border border-[#F6465D]/15 min-w-0 justify-center shadow-sm">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/60 backdrop-blur-sm rounded-lg border border-[#F6465D]/15 min-w-0 justify-center shadow-sm">
                       <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#F6465D]/10 rounded flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#F6465D]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       </div>
                       <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-600 lowercase tracking-wider truncate text-center">dodge <span className="text-[#F6465D]">red</span></span>
                     </div>
-                    <div className="flex-1 flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-white/60 backdrop-blur-sm rounded-lg border border-[#0ECB81]/15 min-w-0 justify-center shadow-sm">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/60 backdrop-blur-sm rounded-lg border border-[#0ECB81]/15 min-w-0 justify-center shadow-sm">
                       <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0ECB81]/10 rounded flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0ECB81]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                       </div>
