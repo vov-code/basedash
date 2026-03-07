@@ -237,17 +237,17 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         // Warm sine for melody, detuned triangle for pad width
         oscMelody.type = 'sine'
         oscPad.type = 'triangle'
-        oscPad.detune.value = 8   // Warm chorus effect
+        oscPad.detune.value = 5   // Subtle chorus effect
         oscBass.type = 'sine'
 
-        // Softer low-pass — lo-fi warmth
+        // Warm low-pass — lo-fi smooth tone
         filter.type = 'lowpass'
-        filter.frequency.value = 1000
-        filter.Q.value = 0.5
+        filter.frequency.value = 800
+        filter.Q.value = 0.3
 
-        // Gentle fade-in over 3 seconds
+        // Gentle fade-in over 4 seconds
         gain.gain.setValueAtTime(0, ctx.currentTime)
-        gain.gain.linearRampToValueAtTime(0.035, ctx.currentTime + 3)
+        gain.gain.linearRampToValueAtTime(0.025, ctx.currentTime + 4)
 
         oscMelody.connect(filter)
         oscPad.connect(filter)
@@ -301,35 +301,35 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
                 const isDownbeat = noteIdx % 4 === 0
 
                 // Simple layering by world
-                let melodyVol = 0.032
-                const padVol = currentTheme >= 2 ? 0.015 : 0.005
-                const bassVol = currentTheme >= 3 ? 0.02 : 0.005
+                let melodyVol = 0.025
+                const padVol = currentTheme >= 2 ? 0.012 : 0.004
+                const bassVol = currentTheme >= 3 ? 0.015 : 0.004
                 const padFreq = note * 0.5
                 const bassFreq = bassRoot
 
                 // World 5+: slightly richer
-                if (currentTheme >= 5) melodyVol = 0.036
+                if (currentTheme >= 5) melodyVol = 0.028
 
                 // Smooth legato glide
-                const glideTime = NOTE_INTERVAL * 0.2
+                const glideTime = NOTE_INTERVAL * 0.25  // 25% portamento — dreamier
                 oscMelody.frequency.setTargetAtTime(note, nextNoteTime, glideTime)
                 oscPad.frequency.setTargetAtTime(padFreq, nextNoteTime, glideTime)
                 oscBass.frequency.setTargetAtTime(bassFreq, nextNoteTime, glideTime * 3)
 
-                // Gentle breathing envelope
-                const accentVol = isDownbeat ? 1.15 : 1.0
+                // Very gentle breathing envelope — almost constant volume
+                const accentVol = isDownbeat ? 1.08 : 1.0
                 const totalVol = melodyVol * accentVol
 
-                gain.gain.setTargetAtTime(totalVol, nextNoteTime, 0.06)
+                gain.gain.setTargetAtTime(totalVol, nextNoteTime, 0.1)      // Slow attack
                 gain.gain.setTargetAtTime(
-                    totalVol * 0.5,
-                    nextNoteTime + NOTE_INTERVAL * 0.6,
-                    0.08
+                    totalVol * 0.65,                                         // Gentle dip
+                    nextNoteTime + NOTE_INTERVAL * 0.7,
+                    0.12                                                     // Very slow decay
                 )
 
-                // Warm filter
-                const cutoff = 800 + currentTheme * 80 + (isDownbeat ? 150 : 0)
-                filter.frequency.setTargetAtTime(Math.min(cutoff, 1800), nextNoteTime, 0.06)
+                // Warm filter — never harsh
+                const cutoff = 700 + currentTheme * 60 + (isDownbeat ? 100 : 0)
+                filter.frequency.setTargetAtTime(Math.min(cutoff, 1400), nextNoteTime, 0.1)
 
                 noteIdx = (noteIdx + 1) % pattern.length
                 nextNoteTime += NOTE_INTERVAL

@@ -533,7 +533,9 @@ export default function GameEngine({
         if (c.kind === 'red' && c.x + c.width < CFG.PLAYER_X) {
           c.passed = true
           if (!c.collected) {
-            const pts = CFG.RED_SCORE * e.scoreMultiplier // Flat score, no combo mult
+            // Balanced scoring: diminishing combo bonus (log scale)
+            const comboBonus = Math.max(1, 1 + Math.log2(Math.max(1, e.combo)))
+            const pts = CFG.RED_SCORE * comboBonus * e.scoreMultiplier
             e.score += Math.round(pts)
             e.scorePulse = 1
           }
@@ -715,7 +717,7 @@ export default function GameEngine({
           e.nearMissText = 'close'
           e.nearMissX = c.x + c.width / 2
           e.nearMissY = c.bodyY - 20
-          e.score += 5
+          e.score += 10 // Near-miss bonus — balanced
           sfxNearMiss()
         }
       }
@@ -1873,9 +1875,9 @@ export default function GameEngine({
             </button>
           </div>
 
-          {/* Chill / whale mode — glowing status — below world banner area */}
+          {/* Chill / whale mode — glowing status — just below world banner */}
           {engineRef.current.slowdownTimer > 0 && (
-            <div className="absolute top-[110px] left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full z-10 pointer-events-none"
+            <div className="absolute top-[86px] left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full z-10 pointer-events-none"
               style={{ background: 'rgba(14,203,129,0.12)', border: '1px solid rgba(14,203,129,0.35)', boxShadow: '0 0 12px rgba(14,203,129,0.25)' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-[#0ECB81] animate-pulse" />
               <p className="text-[#0ECB81] text-[8px] font-black text-center tracking-widest uppercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>

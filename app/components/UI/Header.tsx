@@ -34,12 +34,12 @@ export const Header: React.FC<HeaderProps> = ({ isConnected, address, handleConn
                         !isConnected ? (
                             <button
                                 onClick={handleConnect}
-                                className="h-7 sm:h-8 px-2.5 sm:px-3 flex items-center gap-1.5 bg-gradient-to-r from-[#0052FF] to-[#0040CC] text-white rounded-lg shadow-[0_4px_14px_rgba(0,82,255,0.35)] transition-all active:scale-95 animate-[pulse_2.5s_ease-in-out_infinite]"
+                                className="h-6 sm:h-7 px-1.5 sm:px-2 flex items-center gap-1 bg-gradient-to-r from-[#0052FF] to-[#0040CC] text-white rounded-md shadow-[0_4px_14px_rgba(0,82,255,0.35)] transition-all active:scale-95 animate-[pulse_2.5s_ease-in-out_infinite]"
                             >
-                                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                                 </svg>
-                                <span className="text-[8px] sm:text-[9px] font-black tracking-wide whitespace-nowrap">connect</span>
+                                <span className="text-[7px] sm:text-[8px] font-black tracking-wide whitespace-nowrap">connect</span>
                             </button>
                         ) : (
                             <div className="flex items-center gap-1.5 sm:gap-2">

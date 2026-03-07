@@ -367,7 +367,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="w-full px-2 sm:px-4 pb-2.5 sm:pb-4 pt-1 sm:pt-2 flex-[2] relative z-20 flex flex-col min-h-[120px]">
+                <div className="w-full px-2 sm:px-4 pb-1 sm:pb-1.5 pt-1 sm:pt-1.5 flex-[2] relative z-20 flex flex-col min-h-[100px]">
                   {/* Note: In a future PR we will pull score/combo state UP to page.tsx via Zustand, for now passing 0/0 to initial mount layout */}
                   <DashboardGrid score={0} combo={0} />
                 </div>
@@ -446,9 +446,9 @@ export default function Home() {
         </main>
 
         <footer className="mt-auto bg-white relative z-[40] flex-shrink-0 w-full">
-          <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 py-1 flex flex-row items-baseline justify-between">
-            <span className="text-[7px] sm:text-[8px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none">© {new Date().getFullYear()} base dash</span>
-            <a href="https://x.com/vovweb3" target="_blank" rel="noopener noreferrer" className="text-[7px] sm:text-[8px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none inline-flex items-baseline gap-0.5 active:scale-95 transition-transform cursor-pointer no-underline">built by <span className="font-black text-[#0052FF] ml-0.5 relative overflow-hidden drop-shadow-[0_0_4px_rgba(0,82,255,0.3)]">vov<span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-[shimmerVov_2.5s_ease-in-out_infinite]" style={{ animationDelay: '1s' }} /></span></a>
+          <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 py-[3px] flex flex-row items-baseline justify-between">
+            <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none">© {new Date().getFullYear()} base dash</span>
+            <a href="https://x.com/vovweb3" target="_blank" rel="noopener noreferrer" className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none inline-flex items-baseline gap-0.5 active:scale-95 transition-transform cursor-pointer no-underline">built by <span className="font-black text-[#0052FF] ml-0.5 relative overflow-hidden drop-shadow-[0_0_4px_rgba(0,82,255,0.3)]">vov<span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-[shimmerVov_2.5s_ease-in-out_infinite]" style={{ animationDelay: '1s' }} /></span></a>
           </div>
         </footer>
       </div>
