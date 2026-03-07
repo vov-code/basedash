@@ -267,10 +267,10 @@ export default function Home() {
 
         {/* MAIN CONTENT - z-[20], under header but above background */}
         <main className="flex-1 flex flex-col overflow-hidden min-h-0 w-full relative z-[20]">
-          <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col relative min-h-0">
+          <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col relative min-h-0 gap-2">
 
             {/* TAB NAVIGATION - Always visible */}
-            <div className="w-full px-2 sm:px-3 py-1 relative z-20 flex-shrink-0">
+            <div className="w-full px-2 sm:px-3 pt-1 relative z-20 flex-shrink-0">
               <div className="flex justify-center items-center gap-1 p-0.5 bg-white/60 backdrop-blur-md rounded-xl border border-slate-200/50 shadow-inner">
                 <button onClick={() => setActiveTab('game')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-[#F0F4FF] text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
                   <div className="flex items-center gap-0.5">
