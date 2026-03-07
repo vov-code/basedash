@@ -443,7 +443,7 @@ export default function Home() {
           </div>
         </main>
 
-        <footer className="flex-shrink-0 bg-white z-[40] w-full">
+        <footer className="flex-shrink-0 bg-white z-[40] w-full mt-2">
           <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 h-[16px] flex flex-row items-end justify-between">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none">© {new Date().getFullYear()} base dash</span>
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none cursor-pointer" onClick={() => window.open('https://x.com/vovweb3', '_blank')}>built by <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-[#0052FF] via-[#4d8aff] to-[#0052FF] bg-[length:200%_auto] animate-[shimmer_2.5s_linear_infinite]">vov</span></span>
