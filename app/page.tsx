@@ -163,7 +163,7 @@ export default function Home() {
   // MAIN APP (always renders — entry popup is overlay on top)
   // ========================================================================
   return (
-    <div className="fixed inset-0 w-full h-[100dvh] bg-[#FAFAFA] text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 w-full bg-[#FAFAFA] text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] overflow-hidden flex flex-col">
       {/* GLOBAL PARTICLE BACKGROUND - z-0, covers full length of site */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" style={{ maxHeight: 'calc(100dvh - 80px)' }}>
         <ParticleChaos />
@@ -171,9 +171,7 @@ export default function Home() {
 
       {/* HEADER BACKGROUND BLUR AND GRID */}
       <div className="fixed top-0 left-0 right-0 h-28 bg-white/60 backdrop-blur-xl z-[1] pointer-events-none mask-image-b" style={{ maskImage: 'linear-gradient(to bottom, black 60%, transparent)' }} />
-      <div className="fixed inset-0 pointer-events-none z-[1] opacity-[0.03]" style={{
-        backgroundImage: 'repeating-linear-gradient(0deg, #0052FF 0, #0052FF 1px, transparent 1px, transparent 80px), repeating-linear-gradient(90deg, #0052FF 0, #0052FF 1px, transparent 1px, transparent 80px)'
-      }} />
+
 
       {/* ENTRY POPUP OVERLAY - Brutalist Degen Style */}
       {!hasEntered && (
@@ -258,7 +256,7 @@ export default function Home() {
         1. Remove touch-none from global to allow scrolling on Wallet/Leaderboard.
         2. Set min-h-[100dvh] so it takes up exactly the visible browser screen
       */}
-      <div className="absolute inset-0 z-10 flex flex-col h-full overflow-hidden lg:hidden select-none">
+      <div className="absolute inset-0 z-10 flex flex-col overflow-hidden lg:hidden select-none">
 
         <Header
           isConnected={isConnected}
@@ -272,7 +270,7 @@ export default function Home() {
           <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col relative w-full h-full min-h-0">
 
             {/* TAB NAVIGATION - Always visible */}
-            <div className="w-full px-2 sm:px-3 py-1.5 sm:py-2 relative z-20 flex-shrink-0">
+            <div className="w-full px-2 sm:px-3 py-1 relative z-20 flex-shrink-0">
               <div className="flex justify-center items-center gap-1 p-0.5 bg-white/60 backdrop-blur-md rounded-xl border border-slate-200/50 shadow-inner">
                 <button onClick={() => setActiveTab('game')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-[#F0F4FF] text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
                   <div className="flex items-center gap-0.5">
@@ -308,7 +306,7 @@ export default function Home() {
               <div className="flex flex-col flex-1 w-full min-h-0">
                 {/* CONNECT WALLET BANNER - with spacing from header and canvas */}
                 {!isConnected && (
-                  <div className="w-full px-2 sm:px-3 mt-0.5 mb-0.5 flex-shrink-0">
+                  <div className="w-full px-2 sm:px-3 flex-shrink-0">
                     <div className="flex items-center justify-center gap-2 p-1.5 sm:p-2 relative overflow-hidden rounded-lg border border-[#0052FF]/20"
                       style={{
                         background: 'linear-gradient(90deg, rgba(0,82,255,0.06) 0%, rgba(0,82,255,0.14) 50%, rgba(0,82,255,0.06) 100%)',
@@ -327,7 +325,7 @@ export default function Home() {
                 )}
 
                 {/* GAME HINTS — tap to jump blocks */}
-                <div className="w-full px-2 sm:px-3 py-1 relative z-20 flex-shrink-0">
+                <div className="w-full px-2 sm:px-3 py-0.5 relative z-20 flex-shrink-0">
                   <div className="flex items-stretch gap-1 sm:gap-2 mx-auto">
                     <div className="flex-1 flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-white/60 backdrop-blur-sm rounded-lg border border-slate-200/60 min-w-0 justify-center shadow-sm">
                       <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0052FF]/10 rounded flex items-center justify-center flex-shrink-0">
@@ -351,7 +349,7 @@ export default function Home() {
                 </div>
 
                 {/* Game Canvas — Proportional flex, capped at 55% viewport */}
-                <div className="w-full px-0 sm:px-0 mt-0.5 sm:mt-1 mb-0.5 sm:mb-1 flex-shrink-0 h-[42vh] sm:h-[45vh] relative z-20 flex flex-col items-center justify-center fade-in">
+                <div className="w-full mt-0.5 mb-0.5 flex-shrink-0 h-[36vh] sm:h-[40vh] relative z-20 flex flex-col items-center justify-center fade-in">
                   <div
                     className="relative w-full h-full max-w-[600px] sm:rounded-[20px] overflow-hidden border-y sm:border-x border-[#0052FF]/10 bg-white mx-auto shadow-[0_8px_30px_rgba(0,0,0,0.12)] touch-none"
                   >
@@ -367,7 +365,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="w-full px-2 sm:px-4 pb-1 sm:pb-1.5 pt-1 sm:pt-1.5 flex-1 min-h-0 relative z-20 flex flex-col overflow-y-auto">
+                <div className="w-full px-2 sm:px-4 pt-0.5 pb-0.5 flex-1 min-h-0 relative z-20 flex flex-col">
                   {/* Note: In a future PR we will pull score/combo state UP to page.tsx via Zustand, for now passing 0/0 to initial mount layout */}
                   <DashboardGrid score={0} combo={0} />
                 </div>
