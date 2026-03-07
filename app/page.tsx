@@ -258,7 +258,7 @@ export default function Home() {
         1. Remove touch-none from global to allow scrolling on Wallet/Leaderboard.
         2. Set min-h-[100dvh] so it takes up exactly the visible browser screen
       */}
-      <div className="absolute inset-0 z-10 flex flex-col h-[100dvh] overflow-hidden lg:hidden select-none">
+      <div className="absolute inset-0 z-10 flex flex-col h-full overflow-hidden lg:hidden select-none">
 
         <Header
           isConnected={isConnected}
@@ -351,7 +351,7 @@ export default function Home() {
                 </div>
 
                 {/* Game Canvas — Proportional flex, capped at 55% viewport */}
-                <div className="w-full px-0 sm:px-0 mt-0.5 sm:mt-1 mb-0.5 sm:mb-1 flex-[3] min-h-[140px] max-h-[55vh] relative z-20 flex flex-col items-center justify-center fade-in">
+                <div className="w-full px-0 sm:px-0 mt-0.5 sm:mt-1 mb-0.5 sm:mb-1 flex-shrink-0 h-[42vh] sm:h-[45vh] relative z-20 flex flex-col items-center justify-center fade-in">
                   <div
                     className="relative w-full h-full max-w-[600px] sm:rounded-[20px] overflow-hidden border-y sm:border-x border-[#0052FF]/10 bg-white mx-auto shadow-[0_8px_30px_rgba(0,0,0,0.12)] touch-none"
                   >
@@ -445,7 +445,7 @@ export default function Home() {
           </div>
         </main>
 
-        <footer className="mt-auto bg-white relative z-[40] flex-shrink-0 w-full">
+        <footer className="mt-auto bg-white relative z-[40] flex-shrink-0 w-full" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 py-[3px] flex flex-row items-baseline justify-between">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none">© {new Date().getFullYear()} base dash</span>
             <a href="https://x.com/vovweb3" target="_blank" rel="noopener noreferrer" className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none inline-flex items-baseline gap-0.5 active:scale-95 transition-transform cursor-pointer no-underline">built by <span className="font-black text-[#0052FF] ml-0.5 relative overflow-hidden drop-shadow-[0_0_4px_rgba(0,82,255,0.3)]">vov<span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-[shimmerVov_2.5s_ease-in-out_infinite]" style={{ animationDelay: '1s' }} /></span></a>
