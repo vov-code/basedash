@@ -6,7 +6,7 @@ interface ParticleChaosProps {
     opacity?: number
 }
 
-export default function ParticleChaos({ opacity = 0.4 }: ParticleChaosProps) {
+export default function ParticleChaos({ opacity = 1.0 }: ParticleChaosProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
 
     useEffect(() => {
@@ -44,18 +44,18 @@ export default function ParticleChaos({ opacity = 0.4 }: ParticleChaosProps) {
         }
 
         // Scrolling candlestick bars — the signature look (enhanced visibility)
-        const barCount = isLowEnd ? 20 : 40
+        const barCount = isLowEnd ? 15 : 30
         const bars: Bar[] = []
         for (let i = 0; i < barCount; i++) {
             const isGreen = Math.random() > 0.45
             bars.push({
                 x: Math.random() * w * 1.5,
-                y: h * 0.15 + Math.random() * h * 0.7,
-                bodyH: 15 + Math.random() * 40,
-                wickH: 8 + Math.random() * 18,
+                y: -50 + Math.random() * h * 1.2, // Spread them everywhere
+                bodyH: 30 + Math.random() * 60,   // Bigger
+                wickH: 15 + Math.random() * 30,   // Bigger
                 isGreen,
-                speed: 0.2 + Math.random() * 0.4,
-                alpha: 0.08 + Math.random() * 0.06,
+                speed: 0.15 + Math.random() * 0.3,
+                alpha: 0.2 + Math.random() * 0.15, // Way brighter so they show through glass
             })
         }
 
@@ -68,12 +68,12 @@ export default function ParticleChaos({ opacity = 0.4 }: ParticleChaosProps) {
             tick++
 
             // === SCROLLING CANDLESTICK BARS ===
-            const barW = isLowEnd ? 6 : 8
+            const barW = isLowEnd ? 10 : 14 // Fatter candles
             for (const bar of bars) {
                 bar.x -= bar.speed
                 if (bar.x < -barW * 2) {
                     bar.x = w + barW * 2 + Math.random() * 60
-                    bar.y = h * 0.15 + Math.random() * h * 0.7
+                    bar.y = -50 + Math.random() * h * 1.2
                 }
 
                 ctx.fillStyle = bar.isGreen ? `rgba(14,203,129,${bar.alpha})` : `rgba(246,70,93,${bar.alpha})`
@@ -111,16 +111,16 @@ export default function ParticleChaos({ opacity = 0.4 }: ParticleChaosProps) {
 
     return (
         <div
-            className="absolute inset-x-0 bottom-0 top-[30%] pointer-events-none z-0"
+            className="absolute inset-0 pointer-events-none z-0"
             style={{
-                background: 'linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(0,82,255,0.02) 100%)',
+                background: 'linear-gradient(180deg, rgba(248,250,252,0) 0%, rgba(0,82,255,0.03) 100%)',
                 opacity
             }}
         >
             <canvas
                 ref={canvasRef}
                 className="w-full h-full block"
-                style={{ opacity: 0.8 }}
+                style={{ opacity: 1 }}
             />
         </div>
     )
