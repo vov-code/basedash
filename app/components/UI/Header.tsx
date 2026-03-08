@@ -34,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({ isConnected, address, handleConn
                         !isConnected ? (
                             <button
                                 onClick={handleConnect}
-                                className="h-6 sm:h-7 w-6 sm:w-7 aspect-square min-w-[24px] min-h-[24px] sm:min-w-[28px] sm:min-h-[28px] flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-[#0052FF] to-[#0040CC] text-white rounded-md shadow-[0_4px_14px_rgba(0,82,255,0.35)] transition-all active:scale-95 animate-[pulse_2.5s_ease-in-out_infinite]"
+                                className="h-6 sm:h-7 w-6 sm:w-7 aspect-square min-w-[24px] min-h-[24px] sm:min-w-[28px] sm:min-h-[28px] flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-[#0052FF] to-[#0040CC] text-white rounded-none shadow-[0_4px_14px_rgba(0,82,255,0.35)] transition-all active:scale-95 animate-[pulse_2.5s_ease-in-out_infinite]"
                             >
                                 <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -42,13 +42,13 @@ export const Header: React.FC<HeaderProps> = ({ isConnected, address, handleConn
                             </button>
                         ) : (
                             <div className="flex items-center gap-1.5 sm:gap-2">
-                                <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.75 sm:py-1 bg-[#f0fdf4] border border-[#bbf7d0] rounded-lg shadow-sm">
-                                    <span className="w-1.5 h-1.5 bg-[#22c55e] rounded-full animate-pulse" />
+                                <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.75 sm:py-1 bg-[#f0fdf4] border border-[#bbf7d0] rounded-none shadow-sm">
+                                    <span className="w-1.5 h-1.5 bg-[#22c55e] rounded-none animate-pulse" />
                                     <span className="font-mono text-[8px] sm:text-[9px] font-bold text-[#15803d]">
                                         {address?.slice(0, 4)}..{address?.slice(-4)}
                                     </span>
                                 </div>
-                                <button onClick={() => disconnectWallet()} className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center bg-slate-100 active:bg-slate-200 rounded-lg transition-colors" title="Disconnect">
+                                <button onClick={() => disconnectWallet()} className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center bg-slate-100 active:bg-slate-200 rounded-none transition-colors" title="Disconnect">
                                     <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                                     </svg>

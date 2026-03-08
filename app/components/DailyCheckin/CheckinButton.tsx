@@ -62,8 +62,8 @@ export default function DailyCheckinButton() {
 
   if (!address) {
     return (
-      <div className="rounded-2xl border border-slate-200/60 p-5 bg-gradient-to-br from-slate-50/80 to-white text-center backdrop-blur-sm">
-        <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-[#0052FF]/10 to-[#0052FF]/5 flex items-center justify-center">
+      <div className="rounded-none border border-slate-200/60 p-5 bg-gradient-to-br from-slate-50/80 to-white text-center backdrop-blur-sm">
+        <div className="w-12 h-12 mx-auto mb-3 rounded-none bg-gradient-to-br from-[#0052FF]/10 to-[#0052FF]/5 flex items-center justify-center">
           <svg className="w-6 h-6 text-[#0052FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
@@ -72,7 +72,7 @@ export default function DailyCheckinButton() {
         <p className="text-[9px] text-slate-500 mb-4 font-medium" style={mono}>connect to start earning streak rewards</p>
         <button
           onClick={connectWallet}
-          className="w-full px-4 py-2.5 rounded-xl text-[10px] font-black bg-gradient-to-r from-[#0052FF] to-[#003FCC] text-white transition-all active:scale-[0.98] shadow-[0_4px_12px_rgba(0,82,255,0.25)] lowercase tracking-widest"
+          className="w-full px-4 py-2.5 rounded-none text-[10px] font-black bg-gradient-to-r from-[#0052FF] to-[#003FCC] text-white transition-all active:scale-[0.98] shadow-[0_4px_12px_rgba(0,82,255,0.25)] lowercase tracking-widest"
           style={mono}
         >
           connect wallet
@@ -87,9 +87,9 @@ export default function DailyCheckinButton() {
 
   if (!isLinked) {
     return (
-      <div className="rounded-2xl border border-[#0052FF]/15 p-5 bg-gradient-to-br from-[#0052FF]/[0.04] to-white backdrop-blur-sm">
+      <div className="rounded-none border border-[#0052FF]/15 p-5 bg-gradient-to-br from-[#0052FF]/[0.04] to-white backdrop-blur-sm">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0052FF] to-[#003FCC] flex items-center justify-center flex-shrink-0 shadow-[0_4px_8px_rgba(0,82,255,0.2)]">
+          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-[#0052FF] to-[#003FCC] flex items-center justify-center flex-shrink-0 shadow-[0_4px_8px_rgba(0,82,255,0.2)]">
             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
             </svg>
@@ -111,14 +111,14 @@ export default function DailyCheckinButton() {
             value={fidInput}
             onChange={(e) => setFidInput(e.target.value.replace(/[^\d]/g, ''))}
             placeholder="enter fid (e.g., 12345)"
-            className="w-full rounded-xl border border-slate-200 bg-white/80 px-3.5 py-2.5 text-[10px] text-slate-800 outline-none focus:border-[#0052FF] focus:ring-2 focus:ring-[#0052FF]/15 transition-all font-bold"
+            className="w-full rounded-none border border-slate-200 bg-white/80 px-3.5 py-2.5 text-[10px] text-slate-800 outline-none focus:border-[#0052FF] focus:ring-2 focus:ring-[#0052FF]/15 transition-all font-bold"
             style={mono}
           />
 
           <button
             onClick={handleLinkWallet}
             disabled={isLinkPending || fidValue <= BigInt(0)}
-            className={`w-full py-2.5 rounded-xl text-[10px] font-black transition-all lowercase tracking-widest ${isLinkPending || fidValue <= BigInt(0)
+            className={`w-full py-2.5 rounded-none text-[10px] font-black transition-all lowercase tracking-widest ${isLinkPending || fidValue <= BigInt(0)
               ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
               : 'bg-gradient-to-r from-[#0052FF] to-[#003FCC] text-white active:scale-[0.98] shadow-[0_4px_12px_rgba(0,82,255,0.25)]'
               }`}
@@ -136,11 +136,11 @@ export default function DailyCheckinButton() {
   // ============================================================================
 
   return (
-    <div className="rounded-2xl border border-slate-200/60 p-5 bg-gradient-to-br from-white to-slate-50/50 backdrop-blur-sm">
+    <div className="rounded-none border border-slate-200/60 p-5 bg-gradient-to-br from-white to-slate-50/50 backdrop-blur-sm">
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2.5">
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${canCheckIn
+          <div className={`w-9 h-9 rounded-none flex items-center justify-center flex-shrink-0 transition-all ${canCheckIn
             ? 'bg-gradient-to-br from-[#F0B90B] to-[#D4A002] shadow-[0_4px_8px_rgba(240,185,11,0.25)]'
             : 'bg-gradient-to-br from-[#0ECB81] to-[#059669] shadow-[0_4px_8px_rgba(14,203,129,0.2)]'
             }`}>
@@ -165,7 +165,7 @@ export default function DailyCheckinButton() {
         </div>
 
         {/* Streak Badge */}
-        <div className="text-center px-2.5 py-1.5 rounded-xl bg-gradient-to-br from-[#0ECB81]/10 to-[#0ECB81]/5 border border-[#0ECB81]/15">
+        <div className="text-center px-2.5 py-1.5 rounded-none bg-gradient-to-br from-[#0ECB81]/10 to-[#0ECB81]/5 border border-[#0ECB81]/15">
           <p className="text-[18px] font-black text-[#0ECB81] leading-none" style={mono}>{checkInStatus.streak}</p>
           <p className="text-[6px] font-bold text-[#0ECB81]/60 uppercase tracking-widest mt-0.5" style={mono}>streak</p>
         </div>
@@ -180,9 +180,9 @@ export default function DailyCheckinButton() {
               {checkInStatus.streak >= 30 ? 'max' : checkInStatus.streak >= 14 ? 'elite' : checkInStatus.streak >= 7 ? 'pro' : checkInStatus.streak >= 3 ? 'hot' : 'start'}
             </span>
           </div>
-          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-slate-100 rounded-none overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-[#0ECB81] to-[#059669] rounded-full transition-all duration-500"
+              className="h-full bg-gradient-to-r from-[#0ECB81] to-[#059669] rounded-none transition-all duration-500"
               style={{ width: `${Math.min(100, (checkInStatus.streak / 30) * 100)}%` }}
             />
           </div>
@@ -193,7 +193,7 @@ export default function DailyCheckinButton() {
       <button
         onClick={dailyCheckIn}
         disabled={isCheckInPending || !canCheckIn}
-        className={`w-full py-2.5 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-2 lowercase tracking-widest ${isCheckInPending || !canCheckIn
+        className={`w-full py-2.5 rounded-none text-[10px] font-black transition-all flex items-center justify-center gap-2 lowercase tracking-widest ${isCheckInPending || !canCheckIn
           ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
           : 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white active:scale-[0.98] shadow-[0_4px_12px_rgba(240,185,11,0.25)]'
           }`}
@@ -201,7 +201,7 @@ export default function DailyCheckinButton() {
       >
         {isCheckInPending ? (
           <>
-            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-none animate-spin" />
             confirming...
           </>
         ) : canCheckIn ? 'check in now' : 'already checked in'}
@@ -210,7 +210,7 @@ export default function DailyCheckinButton() {
       {/* Status + Rewards Toggle */}
       <div className="mt-3 flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <span className={`w-1.5 h-1.5 rounded-full ${canSubmitScore ? 'bg-[#0ECB81] animate-pulse shadow-[0_0_4px_rgba(14,203,129,0.5)]' : 'bg-slate-300'}`} />
+          <span className={`w-1.5 h-1.5 rounded-none ${canSubmitScore ? 'bg-[#0ECB81] animate-pulse shadow-[0_0_4px_rgba(14,203,129,0.5)]' : 'bg-slate-300'}`} />
           <span className="text-[7px] font-bold text-slate-400" style={mono}>
             scores: <span className={canSubmitScore ? 'text-[#0ECB81]' : 'text-slate-400'}>{canSubmitScore ? 'ready' : 'wallet required'}</span>
           </span>
@@ -232,7 +232,7 @@ export default function DailyCheckinButton() {
             {STREAK_REWARDS.map((reward, i) => (
               <div
                 key={i}
-                className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-all ${checkInStatus.streak >= reward.days
+                className={`flex items-center justify-between px-2.5 py-1.5 rounded-none transition-all ${checkInStatus.streak >= reward.days
                   ? 'bg-[#0ECB81]/8 border border-[#0ECB81]/15'
                   : 'bg-slate-50 border border-slate-100 opacity-50'
                   }`}

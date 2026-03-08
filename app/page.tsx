@@ -40,7 +40,7 @@ function GameHistorySection() {
       <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] mb-2" style={mono}>recent games</h3>
       <div className="space-y-1.5">
         {gameHistory.slice(0, 5).map((g, i) => (
-          <div key={g.id || i} className="flex items-center justify-between px-3 py-2.5 rounded-xl border border-slate-100 bg-gradient-to-r from-white to-slate-50/50 transition-all hover:border-slate-200">
+          <div key={g.id || i} className="flex items-center justify-between px-3 py-2.5 rounded-none border border-slate-100 bg-gradient-to-r from-white to-slate-50/50 transition-all hover:border-slate-200">
             <div className="flex flex-col gap-1">
               <span className="text-[12px] font-black text-slate-800 leading-none" style={mono}>{formatMarketCap(g.score)}</span>
               <div className="flex items-center gap-2">
@@ -178,9 +178,9 @@ export default function Home() {
           style={{ background: 'linear-gradient(165deg, rgba(255,255,255,0.98) 0%, rgba(245,248,255,0.95) 35%, rgba(235,240,255,0.92) 65%, rgba(224,234,255,0.90) 100%)' }}>
 
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-[15%] left-[10%] w-48 h-48 bg-[#0052FF]/[0.08] rounded-full blur-3xl animate-[float_8s_ease-in-out_infinite]" />
-            <div className="absolute bottom-[20%] right-[15%] w-64 h-64 bg-[#0052FF]/[0.06] rounded-full blur-3xl animate-[float_12s_ease-in-out_infinite_reverse]" />
-            <div className="absolute top-[50%] left-[50%] w-40 h-40 bg-[#0ECB81]/[0.06] rounded-full blur-3xl animate-[float_10s_ease-in-out_infinite_2s]" />
+            <div className="absolute top-[15%] left-[10%] w-48 h-48 bg-[#0052FF]/[0.08] rounded-none blur-3xl animate-[float_8s_ease-in-out_infinite]" />
+            <div className="absolute bottom-[20%] right-[15%] w-64 h-64 bg-[#0052FF]/[0.06] rounded-none blur-3xl animate-[float_12s_ease-in-out_infinite_reverse]" />
+            <div className="absolute top-[50%] left-[50%] w-40 h-40 bg-[#0ECB81]/[0.06] rounded-none blur-3xl animate-[float_10s_ease-in-out_infinite_2s]" />
           </div>
 
           <div className="absolute inset-0 pointer-events-none z-10 opacity-[0.05]" style={{
@@ -203,14 +203,14 @@ export default function Home() {
             <div className="flex gap-2.5" style={{ opacity: 0, animation: 'fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both' }}>
               <button
                 onClick={handleEnter}
-                className="flex-1 py-2 text-white font-black tracking-widest text-[9.5px] transition-all duration-150 active:translate-y-[2px] active:scale-95 bg-[#0ECB81] relative group cursor-pointer border-b-[3px] border-[#0B9A62] uppercase rounded-sm"
+                className="flex-1 py-2 text-white font-black tracking-widest text-[9.5px] transition-all duration-150 active:translate-y-[2px] active:scale-95 bg-[#0ECB81] relative group cursor-pointer border-b-[3px] border-[#0B9A62] uppercase rounded-none"
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
                 <span className="relative z-10">Yes</span>
               </button>
               <button
                 onClick={handleEnter}
-                className="flex-1 py-2 text-white font-black tracking-widest text-[9.5px] transition-all duration-150 active:translate-y-[2px] active:scale-95 bg-[#F6465D] relative group cursor-pointer border-b-[3px] border-[#B93445] uppercase rounded-sm"
+                className="flex-1 py-2 text-white font-black tracking-widest text-[9.5px] transition-all duration-150 active:translate-y-[2px] active:scale-95 bg-[#F6465D] relative group cursor-pointer border-b-[3px] border-[#B93445] uppercase rounded-none"
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
                 <span className="relative z-10">Yes</span>
@@ -228,9 +228,9 @@ export default function Home() {
       {/* Desktop block gate - z-50 */}
       <div className={`${!desktopBypass ? 'hidden lg:flex' : 'hidden'} relative z-50 h-full w-full items-center justify-center bg-[#F5F8FF] overflow-hidden`} suppressHydrationWarning>
         <div className="absolute inset-0 z-0">
-          <div className="absolute top-[20%] left-[20%] w-64 h-64 bg-[#0052FF]/8 rounded-full blur-3xl animate-[float_8s_ease-in-out_infinite]" />
-          <div className="absolute bottom-[20%] right-[20%] w-80 h-80 bg-[#0ecb81]/5 rounded-full blur-3xl animate-[float_10s_ease-in-out_infinite_reverse]" />
-          <div className="absolute top-[40%] right-[30%] w-48 h-48 bg-[#f0b90b]/8 rounded-full blur-3xl animate-[float_12s_ease-in-out_infinite_1s]" />
+          <div className="absolute top-[20%] left-[20%] w-64 h-64 bg-[#0052FF]/8 rounded-none blur-3xl animate-[float_8s_ease-in-out_infinite]" />
+          <div className="absolute bottom-[20%] right-[20%] w-80 h-80 bg-[#0ecb81]/5 rounded-none blur-3xl animate-[float_10s_ease-in-out_infinite_reverse]" />
+          <div className="absolute top-[40%] right-[30%] w-48 h-48 bg-[#f0b90b]/8 rounded-none blur-3xl animate-[float_12s_ease-in-out_infinite_1s]" />
           <div className="absolute inset-0 bg-white/20 backdrop-blur-[100px]" />
         </div>
 
@@ -270,8 +270,8 @@ export default function Home() {
 
             {/* TAB NAVIGATION - Always visible */}
             <div className="w-full px-2 sm:px-3 pt-0.5 relative z-20 flex-shrink-0">
-              <div className="flex justify-center items-center gap-1 p-0.5 bg-white/60 backdrop-blur-md rounded-xl border border-slate-200/50 shadow-inner">
-                <button onClick={() => setActiveTab('game')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-[#F0F4FF] text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
+              <div className="flex justify-center items-center gap-1 p-0.5 bg-white/60 backdrop-blur-md rounded-none border border-slate-200/50 shadow-inner">
+                <button onClick={() => setActiveTab('game')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-none transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-[#F0F4FF] text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
                   <div className="flex items-center gap-0.5">
                     <svg className="w-2.5 h-2.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                     <span className="text-[9px] sm:text-[10px] font-black tracking-wide leading-none">trade</span>
@@ -279,7 +279,7 @@ export default function Home() {
                   <span className="text-[6px] sm:text-[7px] font-semibold opacity-70 leading-none mt-[1px]">play demo</span>
                 </button>
 
-                <button onClick={() => setActiveTab('profile')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'profile' ? 'bg-[#F0F4FF] text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
+                <button onClick={() => setActiveTab('profile')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-none transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'profile' ? 'bg-[#F0F4FF] text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
                   <div className="flex items-center gap-0.5">
                     <svg className="w-2.5 h-2.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
                     <span className="text-[9px] sm:text-[10px] font-black tracking-wide leading-none">wallet</span>
@@ -287,7 +287,7 @@ export default function Home() {
                   <span className="text-[6px] sm:text-[7px] font-semibold opacity-70 leading-none mt-[1px]">profile</span>
                 </button>
 
-                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-1.5 sm:px-2 h-[22px] sm:h-[24px] flex flex-col items-center justify-center rounded-lg transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white scale-100 ring-1 ring-[#F0B90B] z-10' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)] z-0'}`}>
+                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-1.5 sm:px-2 h-[22px] sm:h-[24px] flex flex-col items-center justify-center rounded-none transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white scale-100 ring-1 ring-[#F0B90B] z-10' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)] z-0'}`}>
                   {activeTab !== 'leaderboard' && <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-[#F0B90B] to-transparent opacity-20 -translate-x-full animate-[shimmerSweep_2.5s_ease-in-out_infinite]" />}
                   <div className="flex items-center gap-0.5 relative z-10">
                     <svg className={`w-2.5 h-2.5 hidden sm:block transition-transform duration-300 ${(activeTab as string) !== 'leaderboard' ? 'group-hover:scale-110 text-[#F0B90B]' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
@@ -306,12 +306,12 @@ export default function Home() {
                 {/* CONNECT WALLET BANNER - with spacing from header and canvas */}
                 {!isConnected && (
                   <div className="w-full flex-shrink-0">
-                    <div className="flex items-center justify-center gap-2 px-2.5 py-1.5 sm:py-2 relative overflow-hidden rounded-lg border border-[#0052FF]/20"
+                    <div className="flex items-center justify-center gap-2 px-2.5 py-1.5 sm:py-2 relative overflow-hidden rounded-none border border-[#0052FF]/20"
                       style={{
                         background: 'linear-gradient(90deg, rgba(0,82,255,0.06) 0%, rgba(0,82,255,0.14) 50%, rgba(0,82,255,0.06) 100%)',
                         animation: 'breatheGlow 2s ease-in-out infinite',
                       }}>
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0052FF] flex items-center justify-center flex-shrink-0 rounded-md relative z-10">
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0052FF] flex items-center justify-center flex-shrink-0 rounded-none relative z-10">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
@@ -326,19 +326,19 @@ export default function Home() {
                 {/* GAME HINTS — tap to jump blocks */}
                 <div className="w-full px-2 sm:px-3 relative z-20 flex-shrink-0">
                   <div className="flex items-stretch gap-1 sm:gap-1.5 mx-auto">
-                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/60 backdrop-blur-sm rounded-lg border border-slate-200/60 min-w-0 justify-center shadow-sm">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/60 backdrop-blur-sm rounded-none border border-slate-200/60 min-w-0 justify-center shadow-sm">
                       <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0052FF]/10 rounded flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0052FF]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
                       </div>
                       <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-600 lowercase tracking-wider truncate text-center">tap to jump</span>
                     </div>
-                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/60 backdrop-blur-sm rounded-lg border border-[#F6465D]/15 min-w-0 justify-center shadow-sm">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/60 backdrop-blur-sm rounded-none border border-[#F6465D]/15 min-w-0 justify-center shadow-sm">
                       <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#F6465D]/10 rounded flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#F6465D]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       </div>
                       <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-600 lowercase tracking-wider truncate text-center">dodge <span className="text-[#F6465D]">red</span></span>
                     </div>
-                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/60 backdrop-blur-sm rounded-lg border border-[#0ECB81]/15 min-w-0 justify-center shadow-sm">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/60 backdrop-blur-sm rounded-none border border-[#0ECB81]/15 min-w-0 justify-center shadow-sm">
                       <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0ECB81]/10 rounded flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0ECB81]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                       </div>
@@ -382,7 +382,7 @@ export default function Home() {
                 {isConnected && address ? (
                   <div className="space-y-3 max-w-md mx-auto">
                     <h2 className="text-lg font-black text-slate-900 tracking-tight lowercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>your wallet</h2>
-                    <div className="p-4 sm:p-5 bg-gradient-to-br from-[#0052FF] to-[#0040CC] rounded-2xl shadow-[0_12px_24px_rgba(0,82,255,0.2)] text-white relative overflow-hidden">
+                    <div className="p-4 sm:p-5 bg-gradient-to-br from-[#0052FF] to-[#0040CC] rounded-none shadow-[0_12px_24px_rgba(0,82,255,0.2)] text-white relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-3xl -translate-y-1/2 translate-x-1/3" />
                       <div className="relative z-10 flex flex-col justify-between sm:flex-row sm:items-end gap-4">
                         <div>
@@ -390,10 +390,10 @@ export default function Home() {
                           <p className="font-mono text-lg sm:text-xl font-black text-white tracking-tight leading-none">{address.slice(0, 6)}...{address.slice(-4)}</p>
                         </div>
                         <div className="flex gap-1.5">
-                          <div className="bg-white/10 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-white/20">
+                          <div className="bg-white/10 backdrop-blur-md px-2.5 py-1.5 rounded-none border border-white/20">
                             <p className="text-[7px] font-bold text-white/50 uppercase tracking-[0.2em] mb-0.5" style={{ fontFamily: 'var(--font-mono, monospace)' }}>network</p>
                             <p className="text-[10px] font-black text-white flex items-center gap-1 leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#0ECB81] animate-pulse shadow-[0_0_4px_#0ECB81]" />
+                              <span className="w-1.5 h-1.5 rounded-none bg-[#0ECB81] animate-pulse shadow-[0_0_4px_#0ECB81]" />
                               {networkLabel}
                             </p>
                           </div>
@@ -401,13 +401,13 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="p-3 rounded-xl border border-[#0ECB81]/15 bg-[#0ECB81]/[0.04] flex flex-col items-center justify-center text-center">
+                      <div className="p-3 rounded-none border border-[#0ECB81]/15 bg-[#0ECB81]/[0.04] flex flex-col items-center justify-center text-center">
                         <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>time in game</p>
                         <p className="mt-1 text-lg font-black text-[#0ECB81] leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
                           {typeof window !== 'undefined' ? (parseInt(localStorage.getItem('base_dash_time') || '0') / 60).toFixed(1) : 0}m
                         </p>
                       </div>
-                      <div className="p-3 rounded-xl border bg-gradient-to-br flex flex-col items-center justify-center text-center" style={{ borderColor: `${streakTier.color}20`, background: `linear-gradient(135deg, white, ${streakTier.bg})` }}>
+                      <div className="p-3 rounded-none border bg-gradient-to-br flex flex-col items-center justify-center text-center" style={{ borderColor: `${streakTier.color}20`, background: `linear-gradient(135deg, white, ${streakTier.bg})` }}>
                         <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>streak</p>
                         <p className="mt-1 text-lg font-black leading-none flex items-center gap-1" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
                           {streakTier.emoji} {checkInStatus.streak}
@@ -416,7 +416,7 @@ export default function Home() {
                     </div>
 
                     {/* Streak Multiplier Card */}
-                    <div className="rounded-2xl border p-3 sm:p-4 relative overflow-hidden" style={{ borderColor: `${streakTier.color}15`, background: `linear-gradient(135deg, white 60%, ${streakTier.bg} 100%)` }}>
+                    <div className="rounded-none border p-3 sm:p-4 relative overflow-hidden" style={{ borderColor: `${streakTier.color}15`, background: `linear-gradient(135deg, white 60%, ${streakTier.bg} 100%)` }}>
                       <div className="absolute right-0 top-0 w-24 h-24 pointer-events-none" style={{ background: `radial-gradient(circle, ${streakTier.color}10, transparent 70%)` }} />
                       <div className="flex items-center justify-between mb-2.5 relative z-10">
                         <div className="flex items-center gap-2">
@@ -436,7 +436,7 @@ export default function Home() {
                       <div className="flex items-center gap-1 relative z-10">
                         {STREAK_TIERS.slice(1).map((tier, i) => (
                           <div key={tier.days} className="flex-1 flex flex-col items-center gap-1">
-                            <div className="w-full h-[3px] rounded-full transition-all" style={{ background: checkInStatus.streak >= tier.days ? tier.color : '#e2e8f0' }} />
+                            <div className="w-full h-[3px] rounded-none transition-all" style={{ background: checkInStatus.streak >= tier.days ? tier.color : '#e2e8f0' }} />
                             <span className="text-[7px] font-bold leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: checkInStatus.streak >= tier.days ? tier.color : '#cbd5e1' }}>
                               {tier.emoji}{tier.days}d
                             </span>
@@ -456,7 +456,7 @@ export default function Home() {
                   </div>
                 ) : (
                   <div className="py-14 text-center max-w-xs mx-auto">
-                    <div className="w-14 h-14 mx-auto mb-4 bg-gradient-to-br from-[#0052FF] to-[#0040CC] rounded-2xl shadow-[0_12px_24px_rgba(0,82,255,0.25)] flex items-center justify-center animate-[float_4s_ease-in-out_infinite]">
+                    <div className="w-14 h-14 mx-auto mb-4 bg-gradient-to-br from-[#0052FF] to-[#0040CC] rounded-none shadow-[0_12px_24px_rgba(0,82,255,0.25)] flex items-center justify-center animate-[float_4s_ease-in-out_infinite]">
                       <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                       </svg>
@@ -465,7 +465,7 @@ export default function Home() {
                     <p className="text-slate-500 text-[11px] font-medium mb-5 leading-relaxed">save your session on-chain, access the leaderboard, and claim your rewards.</p>
                     <button
                       onClick={handleConnect}
-                      className="w-full bg-[#0052FF] text-white py-3 text-[12px] font-black tracking-wide hover:bg-[#0040CC] transition-all shadow-[0_8px_16px_rgba(0,82,255,0.2)] active:scale-[0.98] rounded-xl flex items-center justify-center gap-2 animate-[pulse_2s_ease-in-out_infinite]"
+                      className="w-full bg-[#0052FF] text-white py-3 text-[12px] font-black tracking-wide hover:bg-[#0040CC] transition-all shadow-[0_8px_16px_rgba(0,82,255,0.2)] active:scale-[0.98] rounded-none flex items-center justify-center gap-2 animate-[pulse_2s_ease-in-out_infinite]"
                       style={{ fontFamily: 'var(--font-mono, monospace)' }}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>

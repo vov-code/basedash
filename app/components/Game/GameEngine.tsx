@@ -1638,7 +1638,7 @@ export default function GameEngine({
             style={{ width: '100%', maxWidth: '260px', transform: 'scale(min(1, calc(100cqh / 280px)))', transformOrigin: 'center', animation: 'menuFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
 
             {/* Best Score Display */}
-            <div className="w-full bg-gradient-to-br from-[#FFFBEB] to-[#FFF3CC] px-3 py-2.5 border border-[#F0B90B]/25 text-center rounded-xl shadow-[0_2px_8px_rgba(240,185,11,0.1)]"
+            <div className="w-full bg-gradient-to-br from-[#FFFBEB] to-[#FFF3CC] px-3 py-2.5 border border-[#F0B90B]/25 text-center rounded-none shadow-[0_2px_8px_rgba(240,185,11,0.1)]"
               style={{ animation: 'menuFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both', animationDelay: '0.05s' }}>
               <p className="text-[7px] font-black text-[#D4A002] tracking-[0.18em] mb-1 lowercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>best pnl</p>
               <p className="font-black text-[#B78905] leading-none text-base sm:text-lg tracking-tighter" style={{ fontFamily: 'var(--font-mono, monospace)' }}>{formatMarketCap(best)}</p>
@@ -1647,7 +1647,7 @@ export default function GameEngine({
             {/* Start Button */}
             <button
               onClick={(e) => { e.stopPropagation(); startGame() }}
-              className="w-full relative overflow-hidden px-3 py-2.5 text-[11px] font-black tracking-[0.2em] lowercase text-white transition-all duration-300 active:scale-95 group rounded-xl"
+              className="w-full relative overflow-hidden px-3 py-2.5 text-[11px] font-black tracking-[0.2em] lowercase text-white transition-all duration-300 active:scale-95 group rounded-none"
               style={{
                 background: 'linear-gradient(135deg, #0052FF 0%, #003FCC 100%)',
                 boxShadow: '0 6px 24px rgba(0,82,255,0.35), 0 0 0 1px rgba(0,82,255,0.2)',
@@ -1657,7 +1657,7 @@ export default function GameEngine({
               }}
             >
               <span className="relative z-10">start trade</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 animate-[shimmerVov_2.5s_ease-in-out_infinite] rounded-xl" />
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 animate-[shimmerVov_2.5s_ease-in-out_infinite] rounded-none" />
             </button>
 
             {/* Hint Text */}
@@ -1673,13 +1673,13 @@ export default function GameEngine({
       {mode === 'paused' && (
         <div className="game-overlay bg-black/20 backdrop-blur-[2px]" style={{ containerType: 'size' }}>
           <div className="w-full h-full flex items-center justify-center p-4">
-            <div className="w-full max-w-[240px] bg-white px-5 py-6 shadow-lg mx-auto text-center rounded-2xl border border-slate-200"
+            <div className="w-full max-w-[240px] bg-white px-5 py-6 shadow-lg mx-auto text-center rounded-none border border-slate-200"
               style={{ transform: 'scale(min(1, calc(100cqh / 240px)))', transformOrigin: 'center' }}>
               <h2 className="text-xl font-bold text-[#0A0B14] mb-2 tracking-wide" style={{ fontFamily: 'var(--font-mono)' }}>Paused</h2>
               <p className="text-slate-500 text-[11px] mb-5 font-medium tracking-wide">Take a breath</p>
               <button
                 onClick={() => setMode('playing')}
-                className="w-full bg-[#0052FF] px-4 py-3 text-[12px] font-semibold text-white hover:bg-[#0040CC] border-2 border-[#0052FF] transition-colors rounded-xl tracking-wide"
+                className="w-full bg-[#0052FF] px-4 py-3 text-[12px] font-semibold text-white hover:bg-[#0040CC] border-2 border-[#0052FF] transition-colors rounded-none tracking-wide"
               >
                 Resume
               </button>
@@ -1692,12 +1692,12 @@ export default function GameEngine({
       {mode === 'gameover' && (
         <div className="game-overlay" style={{ containerType: 'size', background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)', animation: 'deathFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}>
           <div className="w-full h-full flex items-center justify-center p-1 sm:p-2">
-            <div className="w-full max-w-[280px] rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200/60 shadow-[0_20px_60px_rgba(0,0,0,0.15)] px-3 py-2.5 sm:py-3 mx-auto relative overflow-hidden"
+            <div className="w-full max-w-[280px] rounded-none bg-white/95 backdrop-blur-md border border-slate-200/60 shadow-[0_20px_60px_rgba(0,0,0,0.15)] px-3 py-2.5 sm:py-3 mx-auto relative overflow-hidden"
               style={{ transform: 'scale(min(1, calc(100cqh / 280px)))', transformOrigin: 'center' }}>
 
               <div className="flex items-center justify-center gap-1 mb-1.5">
                 {isNewRecord && (
-                  <div className="flex h-3.5 w-3.5 items-center justify-center bg-[#F0B90B] border border-[#B78905] rounded-full">
+                  <div className="flex h-3.5 w-3.5 items-center justify-center bg-[#F0B90B] border border-[#B78905] rounded-none">
                     <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                   </div>
                 )}
@@ -1707,18 +1707,18 @@ export default function GameEngine({
               </div>
 
               <div className="mb-1.5 grid grid-cols-2 gap-1.5">
-                <div className="bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 text-center flex flex-col justify-center">
+                <div className="bg-slate-50 px-2 py-1 rounded-none border border-slate-200 text-center flex flex-col justify-center">
                   <p className="text-[7px] font-black text-slate-400 lowercase tracking-widest mb-0.5">pnl</p>
                   <p className="text-[11px] sm:text-[12px] font-black text-slate-900 leading-none">{formatMarketCap(deathScore)}</p>
                 </div>
-                <div className="bg-[#eef4ff] px-2 py-1 rounded-lg border border-[#0052FF]/20 text-center flex flex-col justify-center">
+                <div className="bg-[#eef4ff] px-2 py-1 rounded-none border border-[#0052FF]/20 text-center flex flex-col justify-center">
                   <p className="text-[7px] font-black text-[#6CACFF] lowercase tracking-widest mb-0.5">mode</p>
                   <p className="text-[9px] sm:text-[10px] font-black leading-none lowercase tracking-widest" style={{ color: getSpeed(score).color }}>{speedName.toLowerCase()}</p>
                 </div>
               </div>
 
               {nearRecordDiff !== null && (
-                <div className="mb-1.5 bg-[#FFFBEB] px-2 py-1 rounded-lg border border-[#F0B90B]/30 text-center flex items-center justify-center gap-1">
+                <div className="mb-1.5 bg-[#FFFBEB] px-2 py-1 rounded-none border border-[#F0B90B]/30 text-center flex items-center justify-center gap-1">
                   <svg className="w-2.5 h-2.5 text-[#F0B90B]" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" /></svg>
                   <p className="text-[7px] font-black text-[#B78905] lowercase tracking-widest">-{nearRecordDiff} from max</p>
                 </div>
@@ -1746,7 +1746,7 @@ export default function GameEngine({
               )}
 
               {(submitted || isScoreConfirmed) ? (
-                <div className="mb-1.5 bg-[#e8f8f0] border border-[#0ECB81] px-2 py-1 rounded-lg flex flex-col items-center justify-center">
+                <div className="mb-1.5 bg-[#e8f8f0] border border-[#0ECB81] px-2 py-1 rounded-none flex flex-col items-center justify-center">
                   <div className="flex items-center gap-1">
                     <svg className="w-3 h-3 text-[#0ECB81]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                     <span className="text-[8px] font-black text-[#0ECB81] lowercase tracking-widest">saved!</span>
@@ -1760,16 +1760,16 @@ export default function GameEngine({
               ) : isNewRecord ? (
                 isConnected && canSubmitScore && deathScore > 0 ? (
                   submitting ? (
-                    <button disabled className="mb-1.5 w-full bg-slate-100 text-slate-400 py-2 text-[8px] sm:text-[9px] font-black lowercase tracking-widest rounded-lg border border-slate-200">
+                    <button disabled className="mb-1.5 w-full bg-slate-100 text-slate-400 py-2 text-[8px] sm:text-[9px] font-black lowercase tracking-widest rounded-none border border-slate-200">
                       submitting...
                     </button>
                   ) : (
-                    <button onClick={submitScore} className="mb-1.5 w-full bg-[#0052FF] text-white py-2 text-[8px] sm:text-[9px] font-black lowercase tracking-widest active:bg-[#003FCC] active:scale-[0.98] rounded-lg border border-[#0052FF] transition-all shadow-[0_4px_12px_rgba(0,82,255,0.2)] animate-[pulse_2s_ease-in-out_infinite]">
+                    <button onClick={submitScore} className="mb-1.5 w-full bg-[#0052FF] text-white py-2 text-[8px] sm:text-[9px] font-black lowercase tracking-widest active:bg-[#003FCC] active:scale-[0.98] rounded-none border border-[#0052FF] transition-all shadow-[0_4px_12px_rgba(0,82,255,0.2)] animate-[pulse_2s_ease-in-out_infinite]">
                       save record (free)
                     </button>
                   )
                 ) : !isConnected ? (
-                  <button onClick={handleConnectWallet} disabled={connectingWallet} className="mb-1.5 w-full bg-[#0052FF] text-white py-2 text-[8px] sm:text-[9px] font-black lowercase tracking-widest active:bg-[#003FCC] active:scale-[0.98] rounded-lg border border-[#0052FF] transition-all shadow-[0_4px_12px_rgba(0,82,255,0.2)] disabled:opacity-50">
+                  <button onClick={handleConnectWallet} disabled={connectingWallet} className="mb-1.5 w-full bg-[#0052FF] text-white py-2 text-[8px] sm:text-[9px] font-black lowercase tracking-widest active:bg-[#003FCC] active:scale-[0.98] rounded-none border border-[#0052FF] transition-all shadow-[0_4px_12px_rgba(0,82,255,0.2)] disabled:opacity-50">
                     {connectingWallet ? 'connecting...' : 'connect to save'}
                   </button>
                 ) : (
@@ -1779,7 +1779,7 @@ export default function GameEngine({
 
               {error && <p className="text-[#F6465D] text-[6px] sm:text-[7px] font-black mb-1.5 bg-[#FFF0F2] px-2 py-1 rounded text-center border border-[#F6465D]/30 lowercase tracking-widest">{error.toLowerCase()}</p>}
 
-              <button onClick={startGame} className={`w-full border border-slate-200 bg-white px-2 py-2 text-[9px] sm:text-[10px] font-black text-slate-800 lowercase tracking-widest active:bg-slate-900 active:text-white active:border-slate-900 active:scale-[0.98] transition-all rounded-lg ${retryVisible ? 'opacity-100' : 'opacity-0 scale-95 pointer-events-none'}`} style={retryVisible ? { animation: 'retryPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards' } : undefined}>
+              <button onClick={startGame} className={`w-full border border-slate-200 bg-white px-2 py-2 text-[9px] sm:text-[10px] font-black text-slate-800 lowercase tracking-widest active:bg-slate-900 active:text-white active:border-slate-900 active:scale-[0.98] transition-all rounded-none ${retryVisible ? 'opacity-100' : 'opacity-0 scale-95 pointer-events-none'}`} style={retryVisible ? { animation: 'retryPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards' } : undefined}>
                 run it back
               </button>
 
@@ -1795,7 +1795,7 @@ export default function GameEngine({
                       navigator.clipboard.writeText(`${shareText}\n${shareUrl}`).catch(() => { })
                     }
                   }}
-                  className="w-full mt-1 border border-[#8B5CF6] bg-[#8B5CF6]/10 px-2 py-1.5 text-[8px] font-black text-[#8B5CF6] lowercase tracking-widest hover:bg-[#8B5CF6] hover:text-white active:scale-[0.98] transition-all rounded-lg flex items-center justify-center gap-1.5"
+                  className="w-full mt-1 border border-[#8B5CF6] bg-[#8B5CF6]/10 px-2 py-1.5 text-[8px] font-black text-[#8B5CF6] lowercase tracking-widest hover:bg-[#8B5CF6] hover:text-white active:scale-[0.98] transition-all rounded-none flex items-center justify-center gap-1.5"
                 >
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" /></svg>
                   share result
@@ -1813,7 +1813,7 @@ export default function GameEngine({
           <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5 z-10">
             <div className="flex flex-col items-start gap-1">
               {/* Current Score */}
-              <div className="flex items-center gap-2.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-xl border border-white/80 shadow-sm pointer-events-none"
+              <div className="flex items-center gap-2.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-none border border-white/80 shadow-sm pointer-events-none"
                 style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
                 <span
                   ref={uiScoreRef}
@@ -1823,7 +1823,7 @@ export default function GameEngine({
                 </span>
                 <div className="w-px h-3.5 bg-slate-300" />
                 <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 bg-[#0ECB81] rounded-sm shadow-[0_0_4px_#0ECB81]" />
+                  <div className="w-1.5 h-1.5 bg-[#0ECB81] rounded-none shadow-[0_0_4px_#0ECB81]" />
                   <span ref={uiGreenRef} className="text-[11px] font-bold text-slate-700"
                     style={{ fontFamily: 'var(--font-mono, monospace)' }}>
                     {engineRef.current.totalCollected}
@@ -1832,7 +1832,7 @@ export default function GameEngine({
               </div>
               {/* ATH (Best) indicator */}
               {best > 0 && (
-                <div className="flex items-center gap-1.5 px-2 py-1 bg-[#FFF8DC]/90 backdrop-blur border border-[#F0B90B]/40 rounded-lg shadow-sm">
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-[#FFF8DC]/90 backdrop-blur border border-[#F0B90B]/40 rounded-none shadow-sm">
                   <svg className="w-2.5 h-2.5 text-[#D4A002]" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
@@ -1846,7 +1846,7 @@ export default function GameEngine({
 
             {/* Combo badge (Hidden by default, shown via Ref bypass) */}
             <div
-              className="flex items-center px-2 py-1 bg-[#FFF8DC]/90 backdrop-blur border border-[#F0B90B]/40 rounded-lg shadow-sm transition-opacity duration-300"
+              className="flex items-center px-2 py-1 bg-[#FFF8DC]/90 backdrop-blur border border-[#F0B90B]/40 rounded-none shadow-sm transition-opacity duration-300"
               style={{ opacity: (engineRef.current?.combo ?? 0) > 1 ? 1 : 0 }}
             >
               <span
@@ -1860,7 +1860,7 @@ export default function GameEngine({
 
           {/* Premium HUD — Right: World + Speed + Sound */}
           <div className="absolute top-3 right-3 flex flex-col items-end gap-2 z-10">
-            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-xl border border-white/80 shadow-sm pointer-events-none"
+            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-none border border-white/80 shadow-sm pointer-events-none"
               style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
               <span className="text-[9px] font-bold text-slate-600 lowercase leading-none tracking-[0.14em]"
                 style={{ fontFamily: 'var(--font-mono, monospace)' }}>
@@ -1876,7 +1876,7 @@ export default function GameEngine({
             {/* Sound toggle — clean, premium */}
             <button
               onClick={() => setSoundEnabled(prev => !prev)}
-              className="h-[30px] w-[30px] flex items-center justify-center bg-white/80 backdrop-blur border border-slate-200/80 rounded-lg text-slate-500 hover:text-[#0052FF] hover:border-[#0052FF]/30 active:scale-95 transition-all shadow-sm z-20 touch-manipulation"
+              className="h-[30px] w-[30px] flex items-center justify-center bg-white/80 backdrop-blur border border-slate-200/80 rounded-none text-slate-500 hover:text-[#0052FF] hover:border-[#0052FF]/30 active:scale-95 transition-all shadow-sm z-20 touch-manipulation"
               title={soundEnabled ? 'mute' : 'unmute'}
             >
               {soundEnabled ? (
@@ -1889,7 +1889,7 @@ export default function GameEngine({
 
           {/* Chill / whale mode — minimalist glowing status */}
           {engineRef.current.slowdownTimer > 0 && (
-            <div className="absolute top-[65px] left-1/2 -translate-x-1/2 flex items-center gap-1 px-2.5 py-0.5 rounded-full z-10 pointer-events-none backdrop-blur-sm"
+            <div className="absolute top-[65px] left-1/2 -translate-x-1/2 flex items-center gap-1 px-2.5 py-0.5 rounded-none z-10 pointer-events-none backdrop-blur-sm"
               style={{ background: 'linear-gradient(90deg, transparent, rgba(14,203,129,0.06), transparent)', borderBottom: '1px solid rgba(14,203,129,0.3)', boxShadow: '0 2px 8px rgba(14,203,129,0.1)' }}>
               <p className="text-[#0ECB81] text-[7px] font-bold text-center tracking-[0.2em] uppercase" style={{ fontFamily: 'var(--font-mono, monospace)', textShadow: '0 0 4px rgba(14,203,129,0.4)' }}>
                 {engineRef.current.whaleTimer > 0 ? 'market freeze' : 'chill market'}
@@ -1902,7 +1902,7 @@ export default function GameEngine({
           {/* Jump indicators — glowing dots */}
           <div className="absolute bottom-2 right-2 flex gap-1.5 z-10">
             {Array.from({ length: getJumps(score) }).map((_, i) => (
-              <div key={i} className={`w-3 h-3 border transition-all duration-300 rounded-sm ${i < engineRef.current.player.maxJumps - engineRef.current.player.jumpCount ? 'border-[#4d8dff]/60 bg-[#0052FF] shadow-[0_0_6px_rgba(0,82,255,0.6)] scale-100' : 'border-white/10 bg-white/10 scale-90'}`} />
+              <div key={i} className={`w-3 h-3 border transition-all duration-300 rounded-none ${i < engineRef.current.player.maxJumps - engineRef.current.player.jumpCount ? 'border-[#4d8dff]/60 bg-[#0052FF] shadow-[0_0_6px_rgba(0,82,255,0.6)] scale-100' : 'border-white/10 bg-white/10 scale-90'}`} />
             ))}
           </div>
         </>

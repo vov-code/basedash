@@ -57,7 +57,7 @@ export function LeaderboardEntry({ entry, rank, isSelf, selfRef }: { entry: Play
             <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
                 {/* Rank */}
                 <div
-                    className={`flex h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-lg text-xs sm:text-sm font-black ${rank <= 3 ? meta.bg + ' border' : 'text-slate-400'}`}
+                    className={`flex h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-none text-xs sm:text-sm font-black ${rank <= 3 ? meta.bg + ' border' : 'text-slate-400'}`}
                     style={{ fontFamily: 'var(--font-mono, monospace)' }}
                 >
                     {rank <= 3 ? meta.label : rank}
@@ -70,7 +70,7 @@ export function LeaderboardEntry({ entry, rank, isSelf, selfRef }: { entry: Play
                             className="inline-flex items-center gap-1.5 transition-all text-left group py-0.5"
                         >
                             <div
-                                className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex-shrink-0 shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] ring-1 ring-black/5"
+                                className="w-4 h-4 sm:w-5 sm:h-5 rounded-none flex-shrink-0 shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] ring-1 ring-black/5"
                                 style={{ backgroundColor: `rgb(${p1}, ${p2}, ${p3})`, backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(0,0,0,0.05) 100%)` }}
                             />
                             <span className="font-mono text-[10px] sm:text-[11px] font-bold text-slate-600 truncate min-w-0 group-hover:text-[#0052FF] transition-colors">
@@ -83,7 +83,7 @@ export function LeaderboardEntry({ entry, rank, isSelf, selfRef }: { entry: Play
                             )}
                         </button>
                         {isSelf && (
-                            <span className="bg-[#0052FF]/10 px-1.5 py-0.5 rounded-md text-[8px] uppercase tracking-wider font-black text-[#0052FF]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                            <span className="bg-[#0052FF]/10 px-1.5 py-0.5 rounded-none text-[8px] uppercase tracking-wider font-black text-[#0052FF]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
                                 you
                             </span>
                         )}
