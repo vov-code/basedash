@@ -226,189 +226,248 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             ctx.resume().catch(() => { })
         }
 
-        // 4 oscillators for smooth, dreamy sound
-        const oscLead = ctx.createOscillator()     // Main melody — warm and lyrical
-        const oscArp = ctx.createOscillator()       // Arpeggio — crystalline shimmer
-        const oscPad = ctx.createOscillator()        // Warm pad — lush harmonic bed
-        const oscBass = ctx.createOscillator()       // Sub-bass — gentle pulse
-        const gain = ctx.createGain()
-        const filter = ctx.createBiquadFilter()
+        // === 5 OSCILLATORS — Lo-fi Chillwave Engine ===
+        const oscMelody = ctx.createOscillator()    // Lead melody — pentatonic, dreamy
+        const oscChime = ctx.createOscillator()     // High chime — bell-like sparkle
+        const oscPad1 = ctx.createOscillator()       // Pad layer 1 — warm bed
+        const oscPad2 = ctx.createOscillator()       // Pad layer 2 — detuned chorus
+        const oscBass = ctx.createOscillator()       // Sub bass — deep warmth
 
-        oscLead.type = 'sine'
-        oscArp.type = 'sine'
-        oscPad.type = 'triangle'
-        oscPad.detune.value = 8        // Gentle chorus for dreamy warmth
+        const bgmGain = ctx.createGain()
+        const bgmFilter = ctx.createBiquadFilter()
+
+        // === SIGNAL CHAIN ===
+        oscMelody.type = 'sine'
+        oscChime.type = 'sine'
+        oscPad1.type = 'triangle'
+        oscPad2.type = 'triangle'
+        oscPad2.detune.value = 6  // subtle chorus width
         oscBass.type = 'sine'
 
-        filter.type = 'lowpass'
-        filter.frequency.value = 2200   // Warm, open filter — no harshness
-        filter.Q.value = 0.5
+        bgmFilter.type = 'lowpass'
+        bgmFilter.frequency.value = 1800
+        bgmFilter.Q.value = 0.3  // zero resonance — pure warmth
 
-        // Smooth fade-in
-        gain.gain.setValueAtTime(0, ctx.currentTime)
-        gain.gain.linearRampToValueAtTime(0.035, ctx.currentTime + 3.5)
+        // Slow fade in over 4 seconds
+        bgmGain.gain.setValueAtTime(0, ctx.currentTime)
+        bgmGain.gain.linearRampToValueAtTime(0.032, ctx.currentTime + 4)
 
-        oscLead.connect(filter)
-        oscArp.connect(filter)
-        oscPad.connect(filter)
-        oscBass.connect(filter)
-        filter.connect(gain)
-        gain.connect(master)
+        // Wire everything through filter → gain → master
+        oscMelody.connect(bgmFilter)
+        oscChime.connect(bgmFilter)
+        oscPad1.connect(bgmFilter)
+        oscPad2.connect(bgmFilter)
+        oscBass.connect(bgmFilter)
+        bgmFilter.connect(bgmGain)
+        bgmGain.connect(master)
 
-        oscLead.start()
-        oscArp.start()
-        oscPad.start()
+        oscMelody.start()
+        oscChime.start()
+        oscPad1.start()
+        oscPad2.start()
         oscBass.start()
 
-        bgmNodesRef.current = { oscs: [oscLead, oscArp, oscPad, oscBass], gain }
+        bgmNodesRef.current = { oscs: [oscMelody, oscChime, oscPad1, oscPad2, oscBass], gain: bgmGain }
 
-        // ===============================================================
-        // MELODIES — Dreamy, relaxing, major-key lullabies
-        // ===============================================================
-        // Smooth flowing melodies using stepwise motion and gentle intervals.
-        // Each world uses ascending keys for emotional lift:
-        //   World 0-1: C major — peaceful, welcoming
-        //   World 2-3: D major — warm, uplifting
-        //   World 4-5: E major — bright, euphoric
-        //   World 6-7: F major — lush, nostalgic
-        //   World 8+:  G major — soaring, transcendent
+        // =================================================================
+        // COMPOSITION — 5 distinct world moods, pentatonic melodies
+        // =================================================================
+        //
+        // The music uses pentatonic scales (5 notes, no semitones = never
+        // sounds dissonant, always pleasant). Each world changes key AND
+        // character:
+        //
+        // World 0-1: Am pentatonic — ambient, meditative (A C D E G)
+        // World 2-3: C  pentatonic — warm, hopeful     (C D E G A)
+        // World 4-5: D  pentatonic — ethereal, bright   (D E F# A B)
+        // World 6-7: E  pentatonic — mystical, intense  (E F# G# B C#)
+        // World 8+:  G  pentatonic — triumphant, open   (G A B D E)
+        //
+        // Melody uses 32-step looping patterns with rest notes (0 = silence)
+        // to create breathing musical phrases, not constant noise.
 
-        const melodyPatterns: number[][] = [
-            // C major — peaceful flowing (C-E-G-C6-B-G-E-D-C-D-E-G-A-G-E-C)
-            [523, 659, 784, 1046, 988, 784, 659, 587,
-                523, 587, 659, 784, 880, 784, 659, 523],
-            // D major — warm ascending (D-F#-A-D6-C#6-A-F#-E-D-E-F#-A-B-A-F#-D)
-            [587, 740, 880, 1175, 1108, 880, 740, 659,
-                587, 659, 740, 880, 988, 880, 740, 587],
-            // E major — bright shimmer (E-G#-B-E6-D#6-B-G#-F#-E-F#-G#-B-C#6-B-G#-E)
-            [659, 830, 988, 1318, 1244, 988, 830, 740,
-                659, 740, 830, 988, 1108, 988, 830, 659],
-            // F major — lush nostalgic (F-A-C6-F6-E6-C6-A-G-F-G-A-C6-D6-C6-A-F)
-            [349, 440, 523, 698, 659, 523, 440, 392,
-                349, 392, 440, 523, 587, 523, 440, 349],
-            // G major — soaring (G-B-D6-G6-F#6-D6-B-A-G-A-B-D6-E6-D6-B-G)
-            [392, 494, 587, 784, 740, 587, 494, 440,
-                392, 440, 494, 587, 659, 587, 494, 392],
+        const melodies: number[][] = [
+            // Am pentatonic — floating ambient (lots of rests)
+            [440, 0, 523, 0, 587, 523, 0, 659,
+                0, 784, 659, 0, 523, 587, 0, 440,
+                523, 659, 0, 784, 0, 659, 523, 0,
+                587, 0, 440, 523, 0, 587, 659, 0],
+            // C pentatonic — warm rising phrases
+            [523, 587, 0, 659, 784, 0, 880, 784,
+                659, 0, 587, 523, 0, 587, 659, 784,
+                0, 880, 1046, 880, 0, 784, 659, 0,
+                587, 659, 784, 0, 659, 587, 523, 0],
+            // D pentatonic — bright shimmer
+            [587, 659, 740, 0, 880, 988, 0, 880,
+                740, 659, 0, 587, 659, 0, 880, 988,
+                0, 1175, 988, 0, 880, 740, 659, 0,
+                587, 0, 740, 880, 0, 988, 880, 740],
+            // E pentatonic — mystical
+            [659, 0, 740, 830, 0, 988, 1108, 0,
+                988, 830, 0, 740, 659, 740, 0, 830,
+                988, 0, 1108, 1318, 1108, 0, 988, 830,
+                0, 740, 830, 0, 988, 0, 830, 740],
+            // G pentatonic — soaring triumph
+            [784, 880, 0, 988, 1175, 0, 1318, 1175,
+                988, 0, 880, 784, 880, 0, 1175, 1318,
+                0, 1568, 1318, 0, 1175, 988, 0, 880,
+                784, 0, 988, 1175, 0, 1318, 1175, 988],
         ]
 
-        // Arpeggio patterns — gentle high-register tinkling
-        const arpPatterns: number[][] = [
-            // C major — crystalline (C6-E6-G6-E6 | D6-F6-A6-F6)
-            [1046, 1318, 1568, 1318, 1046, 1568, 1318, 1046,
-                1175, 1397, 1760, 1397, 1175, 1760, 1397, 1175],
-            // D major arps
-            [1175, 1480, 1760, 1480, 1175, 1760, 1480, 1175,
-                1318, 1568, 1975, 1568, 1318, 1975, 1568, 1318],
-            // E major arps
-            [1318, 1661, 1975, 1661, 1318, 1975, 1661, 1318,
-                1480, 1864, 2217, 1864, 1480, 2217, 1864, 1480],
-            // F major arps
-            [1397, 1760, 2093, 1760, 1397, 2093, 1760, 1397,
-                1568, 1975, 2349, 1975, 1568, 2349, 1975, 1568],
-            // G major arps
-            [1568, 1975, 2349, 1975, 1568, 2349, 1975, 1568,
-                1760, 2217, 2637, 2217, 1760, 2637, 2217, 1760],
+        // Chime patterns — sparse high-register bells (many rests)
+        const chimes: number[][] = [
+            // Am — occasional bell tones
+            [0, 0, 1046, 0, 0, 0, 1318, 0,
+                0, 1568, 0, 0, 0, 1046, 0, 0,
+                0, 0, 0, 1318, 0, 0, 1568, 0,
+                0, 0, 1046, 0, 0, 0, 0, 0],
+            // C — brighter chimes
+            [0, 1046, 0, 0, 1318, 0, 0, 1568,
+                0, 0, 0, 1046, 0, 1318, 0, 0,
+                1568, 0, 0, 2093, 0, 0, 1568, 0,
+                0, 1318, 0, 0, 1046, 0, 0, 0],
+            // D — crystalline
+            [0, 1175, 0, 1480, 0, 0, 1760, 0,
+                0, 0, 1480, 0, 0, 1175, 0, 1760,
+                0, 0, 2349, 0, 0, 1760, 0, 0,
+                1480, 0, 0, 1175, 0, 0, 1760, 0],
+            // E — ethereal
+            [0, 0, 1318, 0, 0, 1661, 0, 0,
+                1975, 0, 0, 0, 1318, 0, 1661, 0,
+                0, 0, 1975, 0, 0, 2637, 0, 0,
+                1975, 0, 0, 1661, 0, 0, 0, 1318],
+            // G — triumphant
+            [1568, 0, 0, 1975, 0, 0, 2349, 0,
+                0, 1975, 0, 0, 1568, 0, 0, 1975,
+                0, 2349, 0, 0, 2637, 0, 0, 2349,
+                0, 0, 1975, 0, 0, 1568, 0, 0],
         ]
 
-        // Bass patterns — gentle root-third movement (not driving octaves)
-        const bassPatterns: number[][] = [
-            // C major bass — soft root-third
-            [131, 131, 165, 165, 147, 147, 131, 131,
-                131, 165, 147, 131, 165, 147, 131, 131],
-            // D major bass
-            [147, 147, 185, 185, 165, 165, 147, 147,
-                147, 185, 165, 147, 185, 165, 147, 147],
-            // E major bass
-            [165, 165, 208, 208, 185, 185, 165, 165,
-                165, 208, 185, 165, 208, 185, 165, 165],
-            // F major bass
-            [175, 175, 220, 220, 196, 196, 175, 175,
-                175, 220, 196, 175, 220, 196, 175, 175],
-            // G major bass
-            [196, 196, 247, 247, 220, 220, 196, 196,
-                196, 247, 220, 196, 247, 220, 196, 196],
+        // Pad root notes — slow chord changes (1 per 8 steps)
+        const padRoots: number[][] = [
+            [220, 220, 262, 262, 294, 294, 220, 220],  // Am: A-C-D-A
+            [262, 262, 294, 294, 330, 330, 262, 262],  // C:  C-D-E-C
+            [294, 294, 370, 370, 440, 440, 294, 294],  // D:  D-F#-A-D
+            [330, 330, 415, 415, 494, 494, 330, 330],  // E:  E-G#-B-E
+            [392, 392, 440, 440, 494, 494, 392, 392],  // G:  G-A-B-G
         ]
 
-        let noteIdx = 0
-        let nextNoteTime = ctx.currentTime + 0.5
-        const BASE_INTERVAL = 0.32  // Relaxed tempo — smooth and dreamy
+        // Bass patterns — root notes only, very simple
+        const bassNotes: number[][] = [
+            [110, 110, 131, 131, 147, 147, 110, 110],
+            [131, 131, 147, 147, 165, 165, 131, 131],
+            [147, 147, 185, 185, 220, 220, 147, 147],
+            [165, 165, 208, 208, 247, 247, 165, 165],
+            [196, 196, 220, 220, 247, 247, 196, 196],
+        ]
 
-        const schedulePattern = () => {
+        let step = 0
+        let nextTime = ctx.currentTime + 0.8
+        const BASE_TEMPO = 0.28  // base note interval
+
+        const tick = () => {
             if (!bgmNodesRef.current || !audioCtxRef.current) return
 
-            const currentSpeed = bgmSpeedRef.current || 1
-            const currentTheme = bgmThemeRef.current || 0
+            const speed = bgmSpeedRef.current || 1
+            const world = bgmThemeRef.current || 0
 
-            const patIdx = Math.min(Math.floor(currentTheme / 2), melodyPatterns.length - 1)
-            const melody = melodyPatterns[patIdx]
-            const arps = arpPatterns[patIdx]
-            const bass = bassPatterns[patIdx]
+            const pi = Math.min(Math.floor(world / 2), melodies.length - 1)
+            const mel = melodies[pi]
+            const chm = chimes[pi]
+            const pad = padRoots[pi]
+            const bas = bassNotes[pi]
 
-            // Gentle tempo sync — less aggressive than before
-            const tempoMult = 0.95 + currentSpeed * 0.05
-            const NOTE_INTERVAL = BASE_INTERVAL / tempoMult
+            // Tempo reacts clearly to game speed
+            const tempoScale = 0.85 + speed * 0.15
+            const interval = BASE_TEMPO / tempoScale
 
-            while (nextNoteTime < audioCtxRef.current.currentTime + 1.2) {
-                // Skip-ahead if tab was backgrounded
-                if (nextNoteTime < audioCtxRef.current.currentTime - 0.5) {
-                    nextNoteTime = audioCtxRef.current.currentTime + 0.05
-                    gain.gain.setTargetAtTime(0, audioCtxRef.current.currentTime, 0.01)
-                    gain.gain.setTargetAtTime(0.03, audioCtxRef.current.currentTime + 0.05, 0.3)
+            while (nextTime < audioCtxRef.current.currentTime + 1.0) {
+                // Skip-ahead recovery for background tabs
+                if (nextTime < audioCtxRef.current.currentTime - 0.5) {
+                    nextTime = audioCtxRef.current.currentTime + 0.05
+                    bgmGain.gain.setTargetAtTime(0, audioCtxRef.current.currentTime, 0.01)
+                    bgmGain.gain.setTargetAtTime(0.028, audioCtxRef.current.currentTime + 0.1, 0.4)
                     continue
                 }
 
-                const melodyNote = melody[noteIdx % melody.length]
-                const arpNote = arps[noteIdx % arps.length]
-                const bassNote = bass[Math.floor(noteIdx / 2) % bass.length]
-                const isDownbeat = noteIdx % 4 === 0
-                const isHalfBeat = noteIdx % 2 === 0
-                const isBarStart = noteIdx % 16 === 0
+                const melNote = mel[step % mel.length]
+                const chmNote = chm[step % chm.length]
+                const padNote = pad[Math.floor(step / 4) % pad.length]
+                const basNote = bas[Math.floor(step / 4) % bas.length]
 
-                // Softer, more balanced volume layers
-                let leadVol = 0.022
-                let arpVol = 0.004
-                let padVol = 0.010
-                let bassVol = 0.004
+                const beat4 = step % 4 === 0
+                const beat8 = step % 8 === 0
+                const bar = step % 32 === 0
 
-                // World 0-1: Gentle melody + warm pad — welcoming
-                if (currentTheme >= 2) { padVol = 0.014; leadVol = 0.025; arpVol = 0.008 }
-                // World 4-5: Arpeggios shimmer in
-                if (currentTheme >= 4) { bassVol = 0.012; leadVol = 0.028; arpVol = 0.012 }
-                // World 6+: Full lush arrangement
-                if (currentTheme >= 6) { leadVol = 0.032; padVol = 0.018; bassVol = 0.016; arpVol = 0.016 }
+                // === VOLUME LAYERS — world-progressive ===
+                let melVol = 0.020
+                let chmVol = 0.003
+                let padVol = 0.008
+                let basVol = 0.003
 
-                // Pad — 4th below melody for warm consonance
-                const padFreq = melodyNote * 0.75
+                // World 2+: warmer, chimes come in
+                if (world >= 2) { melVol = 0.024; chmVol = 0.007; padVol = 0.012 }
+                // World 4+: full shimmer
+                if (world >= 4) { melVol = 0.027; chmVol = 0.010; basVol = 0.010; padVol = 0.015 }
+                // World 6+: lush everything
+                if (world >= 6) { melVol = 0.030; chmVol = 0.013; basVol = 0.014; padVol = 0.018 }
+                // World 8+: maximal richness
+                if (world >= 8) { melVol = 0.033; chmVol = 0.015; basVol = 0.016; padVol = 0.020 }
 
-                // Smooth portamento — longer glides for dreamy feel
-                const glide = NOTE_INTERVAL * 0.18
-                oscLead.frequency.setTargetAtTime(melodyNote, nextNoteTime, glide)
-                oscArp.frequency.setTargetAtTime(arpNote, nextNoteTime, glide * 0.7)
-                oscPad.frequency.setTargetAtTime(padFreq, nextNoteTime, glide * 3)   // Very slow pad = lush
-                oscBass.frequency.setTargetAtTime(bassNote, nextNoteTime, glide * 0.4)
+                // === MELODY — only plays if note > 0 (rests = silence) ===
+                const glide = interval * 0.15
+                if (melNote > 0) {
+                    oscMelody.frequency.setTargetAtTime(melNote, nextTime, glide)
+                }
 
-                // Gentle breathing rhythm — much softer than EDM pump
-                const accent = isBarStart ? 1.15 : (isDownbeat ? 1.08 : (isHalfBeat ? 1.0 : 0.88))
-                const totalVol = (leadVol + arpVol + padVol + bassVol) * accent
+                // === CHIME — sparkle on non-zero notes ===
+                if (chmNote > 0) {
+                    oscChime.frequency.setTargetAtTime(chmNote, nextTime, glide * 0.3)
+                }
 
-                // Smooth envelope — slower attack, gentler release
-                gain.gain.setTargetAtTime(totalVol, nextNoteTime, 0.04)
-                gain.gain.setTargetAtTime(
-                    totalVol * 0.6,
-                    nextNoteTime + NOTE_INTERVAL * 0.6,
-                    0.06
+                // === PAD — slow chord movement ===
+                oscPad1.frequency.setTargetAtTime(padNote, nextTime, glide * 4)
+                oscPad2.frequency.setTargetAtTime(padNote * 1.498, nextTime, glide * 4) // perfect 5th
+
+                // === BASS — deep, slow ===
+                oscBass.frequency.setTargetAtTime(basNote, nextTime, glide * 2)
+
+                // === DYNAMICS — gentle breathing ===
+                const hasMelody = melNote > 0
+                const hasChime = chmNote > 0
+                const accentMult = bar ? 1.12 : (beat8 ? 1.05 : (beat4 ? 1.0 : 0.92))
+
+                const totalVol = (
+                    (hasMelody ? melVol : melVol * 0.15) +
+                    (hasChime ? chmVol : 0) +
+                    padVol +
+                    basVol
+                ) * accentMult
+
+                // Smooth envelope — long attack for lo-fi feel
+                bgmGain.gain.setTargetAtTime(totalVol, nextTime, 0.05)
+                bgmGain.gain.setTargetAtTime(
+                    totalVol * 0.65,
+                    nextTime + interval * 0.65,
+                    0.07
                 )
 
-                // Filter — warm and open, opens slightly more with worlds
-                const cutoff = 1600 + currentTheme * 80 + (isDownbeat ? 150 : 0) + (isBarStart ? 200 : 0)
-                filter.frequency.setTargetAtTime(Math.min(cutoff, 2800), nextNoteTime, 0.06)
+                // Filter — opens with worlds, breathes on beats
+                const baseCut = 1400 + world * 100
+                const beatCut = beat4 ? 200 : (beat8 ? 300 : 0)
+                const barCut = bar ? 400 : 0
+                bgmFilter.frequency.setTargetAtTime(
+                    Math.min(baseCut + beatCut + barCut, 3000),
+                    nextTime, 0.05
+                )
 
-                noteIdx = (noteIdx + 1) % melody.length
-                nextNoteTime += NOTE_INTERVAL
+                step++
+                nextTime += interval
             }
-            bgmIntervalRef.current = setTimeout(schedulePattern, NOTE_INTERVAL * 1000 * 0.5)
+
+            bgmIntervalRef.current = setTimeout(tick, interval * 1000 * 0.45)
         }
-        schedulePattern()
+        tick()
 
     }, [soundEnabled, initAudio])
 

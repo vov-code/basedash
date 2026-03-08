@@ -325,21 +325,21 @@ export default function Home() {
 
                 {/* GAME HINTS — tap to jump blocks */}
                 <div className="w-full px-2 sm:px-3 relative z-20 flex-shrink-0">
-                  <div className="flex items-stretch gap-1 sm:gap-1.5 mx-auto">
-                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-slate-900 min-w-0 justify-center shadow-[2px_2px_0_#0F172A] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none">
-                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0052FF]/10 flex items-center justify-center flex-shrink-0 border border-[#0052FF]/30">
+                  <div className="flex items-stretch gap-1.5 mx-auto">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white border-2 border-slate-900 min-w-0 justify-center shadow-[3px_3px_0_#0F172A]">
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0052FF]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0052FF]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
                       </div>
                       <span className="text-[9px] sm:text-[10px] font-mono font-black text-slate-900 uppercase tracking-widest truncate text-center">tap to jump</span>
                     </div>
-                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-[#F6465D] min-w-0 justify-center shadow-[2px_2px_0_#F6465D] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none">
-                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#F6465D]/10 flex items-center justify-center flex-shrink-0 border border-[#F6465D]/30">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white border-2 border-slate-900 min-w-0 justify-center shadow-[3px_3px_0_#0F172A]">
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#F6465D]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#F6465D]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       </div>
                       <span className="text-[9px] sm:text-[10px] font-mono font-black text-slate-900 uppercase tracking-widest truncate text-center">dodge <span className="text-[#F6465D]">red</span></span>
                     </div>
-                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-[#0ECB81] min-w-0 justify-center shadow-[2px_2px_0_#0ECB81] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none">
-                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0ECB81]/10 flex items-center justify-center flex-shrink-0 border border-[#0ECB81]/30">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white border-2 border-slate-900 min-w-0 justify-center shadow-[3px_3px_0_#0F172A]">
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0ECB81]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0ECB81]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                       </div>
                       <span className="text-[9px] sm:text-[10px] font-mono font-black text-slate-900 uppercase tracking-widest truncate text-center">collect <span className="text-[#0ECB81]">green</span></span>
@@ -347,15 +347,11 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Game Canvas — Proportional flex, capped at 55% viewport */}
+                {/* Game Canvas */}
                 <div className="w-full flex-shrink-0 relative z-20 flex flex-col items-center justify-center fade-in mt-1 mb-1" style={{ height: '42vh' }}>
                   <div
-                    className="relative w-full h-full max-w-[600px] overflow-hidden border-[3px] border-slate-900 bg-white mx-auto shadow-[4px_4px_0_rgba(15,23,42,1)] touch-none"
+                    className="relative w-full h-full max-w-[600px] overflow-hidden border-2 border-slate-900 bg-white mx-auto shadow-[3px_3px_0_#0F172A] touch-none"
                   >
-                    {/* Game Area Accent Lines */}
-                    <div className="absolute top-0 left-0 w-8 h-8 border-r-2 border-b-2 border-slate-900/10 pointer-events-none z-50"></div>
-                    <div className="absolute bottom-0 right-0 w-8 h-8 border-l-2 border-t-2 border-slate-900/10 pointer-events-none z-50"></div>
-
                     <GameEngine
                       storageKey="basedash_highscore_v2"
                       onScoreSubmit={handleScoreSubmit}
