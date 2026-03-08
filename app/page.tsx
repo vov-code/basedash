@@ -266,10 +266,10 @@ export default function Home() {
 
         {/* MAIN CONTENT - z-[20], under header but above background */}
         <main className="flex-1 flex flex-col overflow-hidden min-h-0 w-full relative z-[20]">
-          <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col relative min-h-0 gap-2">
+          <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col relative min-h-0 gap-1">
 
             {/* TAB NAVIGATION - Always visible */}
-            <div className="w-full px-2 sm:px-3 pt-1 relative z-20 flex-shrink-0">
+            <div className="w-full px-2 sm:px-3 pt-0.5 relative z-20 flex-shrink-0">
               <div className="flex justify-center items-center gap-1 p-0.5 bg-white/60 backdrop-blur-md rounded-xl border border-slate-200/50 shadow-inner">
                 <button onClick={() => setActiveTab('game')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-lg transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-[#F0F4FF] text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
                   <div className="flex items-center gap-0.5">
@@ -302,16 +302,16 @@ export default function Home() {
 
             {/* GAME TAB */}
             {activeTab === 'game' && (
-              <div className="flex flex-col flex-1 w-full min-h-0 gap-2">
+              <div className="flex flex-col flex-1 w-full min-h-0 gap-1">
                 {/* CONNECT WALLET BANNER - with spacing from header and canvas */}
                 {!isConnected && (
                   <div className="w-full flex-shrink-0">
-                    <div className="flex items-center justify-center gap-2 p-2.5 sm:p-3 relative overflow-hidden rounded-lg border border-[#0052FF]/20"
+                    <div className="flex items-center justify-center gap-2 px-2.5 py-1.5 sm:py-2 relative overflow-hidden rounded-lg border border-[#0052FF]/20"
                       style={{
                         background: 'linear-gradient(90deg, rgba(0,82,255,0.06) 0%, rgba(0,82,255,0.14) 50%, rgba(0,82,255,0.06) 100%)',
                         animation: 'breatheGlow 2s ease-in-out infinite',
                       }}>
-                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0052FF] flex items-center justify-center flex-shrink-0 rounded-lg relative z-10">
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0052FF] flex items-center justify-center flex-shrink-0 rounded-md relative z-10">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
@@ -486,7 +486,7 @@ export default function Home() {
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none cursor-pointer" onClick={() => window.open('https://x.com/vovweb3', '_blank')}>built by <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-[#0052FF] via-[#4d8aff] to-[#0052FF] bg-[length:200%_auto] animate-[shimmer_2.5s_linear_infinite]">vov</span></span>
           </div>
         </footer>
-      </div>
-    </div>
+      </div >
+    </div >
   )
 }

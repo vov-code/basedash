@@ -1018,7 +1018,7 @@ export const drawParticles = (
 // WORLD BANNER
 // ============================================================================
 
-/** Draw the world transition banner — minimalist single-line strip */
+/** Draw the world transition banner — ultra-minimalist accent pill */
 export const drawWorldBanner = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
@@ -1027,8 +1027,8 @@ export const drawWorldBanner = (
     if (e.worldBannerTimer <= 0) return
 
     const duration = 3.5
-    const enterT = clamp(1 - (e.worldBannerTimer - (duration - 0.3)) / 0.3, 0, 1)
-    const exitT = clamp(e.worldBannerTimer / 0.4, 0, 1)
+    const enterT = clamp(1 - (e.worldBannerTimer - (duration - 0.25)) / 0.25, 0, 1)
+    const exitT = clamp(e.worldBannerTimer / 0.3, 0, 1)
     const enter = 1 - (1 - enterT) * (1 - enterT)
     const alpha = Math.min(enter, exitT)
 
@@ -1038,55 +1038,57 @@ export const drawWorldBanner = (
     ctx.globalAlpha = alpha
 
     const centerX = CFG.WIDTH / 2
-    const bannerY = 55 + (-10 + enter * 10)
+    const bannerY = 50 + (-8 + enter * 8)
 
-    // Single combined text for measurement
-    const fontSize = Math.max(10, Math.min(13, CFG.WIDTH * 0.027))
+    // Compact single-line text
+    const fontSize = Math.max(9, Math.min(11, CFG.WIDTH * 0.022))
     ctx.font = `800 ${fontSize}px monospace`
-    const worldText = `WORLD: ${w.name.toUpperCase()}`
-    const textW = ctx.measureText(worldText).width
+    const worldName = w.name.toUpperCase()
+    const textW = ctx.measureText(worldName).width
 
-    // Slim frosted pill
-    const pillPadX = 16
-    const pillPadY = 5
-    const pillW = textW + pillPadX * 2
+    // Ultra-slim frosted pill
+    const pillPadX = 12
+    const pillPadY = 4
+    const dotSize = 4
+    const totalW = dotSize + 6 + textW + pillPadX * 2
     const pillH = fontSize + pillPadY * 2
-    const pillX = centerX - pillW / 2
+    const pillX = centerX - totalW / 2
     const pillY = bannerY - pillPadY
-    const pillR = pillH / 2  // Full round ends
+    const pillR = pillH / 2
 
-    // Frosted glass background
-    ctx.fillStyle = 'rgba(0,0,0,0.35)'
+    // Frosted glass — darker, slimmer
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'
     ctx.beginPath()
     ctx.moveTo(pillX + pillR, pillY)
-    ctx.lineTo(pillX + pillW - pillR, pillY)
-    ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + pillR, pillR)
-    ctx.arcTo(pillX + pillW, pillY + pillH, pillX + pillW - pillR, pillY + pillH, pillR)
+    ctx.lineTo(pillX + totalW - pillR, pillY)
+    ctx.arcTo(pillX + totalW, pillY, pillX + totalW, pillY + pillR, pillR)
+    ctx.arcTo(pillX + totalW, pillY + pillH, pillX + totalW - pillR, pillY + pillH, pillR)
     ctx.lineTo(pillX + pillR, pillY + pillH)
     ctx.arcTo(pillX, pillY + pillH, pillX, pillY + pillH - pillR, pillR)
     ctx.arcTo(pillX, pillY, pillX + pillR, pillY, pillR)
     ctx.fill()
 
-    // Subtle accent border
-    ctx.strokeStyle = w.accent
-    ctx.lineWidth = 1
-    ctx.globalAlpha = alpha * 0.4
-    ctx.stroke()
-    ctx.globalAlpha = alpha
+    // Accent dot
+    const textY = bannerY + fontSize * 0.35
+    const dotX = pillX + pillPadX + dotSize / 2
+    ctx.fillStyle = w.accent
+    ctx.beginPath()
+    ctx.arc(dotX, textY, dotSize / 2, 0, TWO_PI)
+    ctx.fill()
 
-    // "WORLD:" in muted, name in white
-    ctx.textAlign = 'center'
+    // "WORLD:" label — muted
+    const labelStart = dotX + dotSize / 2 + 5
+    ctx.textAlign = 'left'
     ctx.textBaseline = 'middle'
-    const textY = bannerY + fontSize * 0.4
-
     ctx.font = `600 ${fontSize * 0.85}px monospace`
     ctx.fillStyle = 'rgba(255,255,255,0.45)'
+    ctx.fillText('WORLD:', labelStart, textY)
     const labelW = ctx.measureText('WORLD: ').width
-    ctx.fillText('WORLD:', centerX - (textW - labelW) / 2, textY)
 
-    ctx.font = `900 ${fontSize}px monospace`
+    // World name — clean white
+    ctx.font = `800 ${fontSize}px monospace`
     ctx.fillStyle = '#FFFFFF'
-    ctx.fillText(w.name.toUpperCase(), centerX + labelW / 2, textY)
+    ctx.fillText(worldName, labelStart + labelW, textY)
 
     ctx.restore()
 }

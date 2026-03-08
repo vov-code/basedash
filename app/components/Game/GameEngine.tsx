@@ -592,7 +592,7 @@ export default function GameEngine({
       const laxPy1 = p.y - GAMEPLAY.GREEN_GRAB_RADIUS
       const laxPx2 = CFG.PLAYER_X + CFG.PLAYER_SIZE + GAMEPLAY.GREEN_GRAB_RADIUS
       const laxPy2 = p.y + CFG.PLAYER_SIZE + GAMEPLAY.GREEN_GRAB_RADIUS
-      const hitGreen = laxPx1 < cx2 && laxPx2 > cx1 && laxPy1 < cy2 && laxPy2 > cx1
+      const hitGreen = laxPx1 < cx2 && laxPx2 > cx1 && laxPy1 < cy2 && laxPy2 > cy1
 
       if (hitRed && c.kind === 'red') {
         if (p.invincible <= 0) {
@@ -1887,12 +1887,11 @@ export default function GameEngine({
             </button>
           </div>
 
-          {/* Chill / whale mode — glowing status — just below world banner */}
+          {/* Chill / whale mode — minimalist glowing status */}
           {engineRef.current.slowdownTimer > 0 && (
-            <div className="absolute top-[72px] left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full z-10 pointer-events-none"
-              style={{ background: 'rgba(14,203,129,0.12)', border: '1px solid rgba(14,203,129,0.35)', boxShadow: '0 0 12px rgba(14,203,129,0.25)' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-[#0ECB81] animate-pulse" />
-              <p className="text-[#0ECB81] text-[8px] font-black text-center tracking-widest uppercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+            <div className="absolute top-[65px] left-1/2 -translate-x-1/2 flex items-center gap-1 px-2.5 py-0.5 rounded-full z-10 pointer-events-none backdrop-blur-sm"
+              style={{ background: 'linear-gradient(90deg, transparent, rgba(14,203,129,0.06), transparent)', borderBottom: '1px solid rgba(14,203,129,0.3)', boxShadow: '0 2px 8px rgba(14,203,129,0.1)' }}>
+              <p className="text-[#0ECB81] text-[7px] font-bold text-center tracking-[0.2em] uppercase" style={{ fontFamily: 'var(--font-mono, monospace)', textShadow: '0 0 4px rgba(14,203,129,0.4)' }}>
                 {engineRef.current.whaleTimer > 0 ? 'market freeze' : 'chill market'}
               </p>
             </div>
