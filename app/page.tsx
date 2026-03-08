@@ -40,7 +40,7 @@ function GameHistorySection() {
       <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] mb-2" style={mono}>recent games</h3>
       <div className="space-y-1.5">
         {gameHistory.slice(0, 5).map((g, i) => (
-          <div key={g.id || i} className="flex items-center justify-between px-3 py-2.5 rounded-none border border-slate-100 bg-gradient-to-r from-white to-slate-50/50 transition-all hover:border-slate-200">
+          <div key={g.id || i} className="flex items-center justify-between px-3 py-2.5 rounded-none border border-slate-100/50 bg-white/50 backdrop-blur-md transition-all hover:bg-white/70">
             <div className="flex flex-col gap-1">
               <span className="text-[12px] font-black text-slate-800 leading-none" style={mono}>{formatMarketCap(g.score)}</span>
               <div className="flex items-center gap-2">
@@ -49,7 +49,7 @@ function GameHistorySection() {
                 {g.combo > 0 && <span className="text-[7px] font-bold text-[#F0B90B] leading-none" style={mono}>{g.combo}× combo</span>}
               </div>
             </div>
-            <span className="text-[7px] font-bold text-slate-300" style={mono}>{new Date(g.date).toLocaleDateString()}</span>
+            <span className="text-[7px] font-bold text-slate-400" style={mono}>{new Date(g.date).toLocaleDateString()}</span>
           </div>
         ))}
       </div>
@@ -162,7 +162,7 @@ export default function Home() {
   // MAIN APP (always renders — entry popup is overlay on top)
   // ========================================================================
   return (
-    <div className="relative h-[100dvh] w-full bg-white text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] overflow-hidden flex flex-col">
+    <div className="relative h-[100dvh] w-full bg-[#f8fafc]/50 text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] overflow-hidden flex flex-col">
       {/* GLOBAL PARTICLE BACKGROUND - z-0, covers full length of site */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" style={{ maxHeight: 'calc(100dvh - 80px)' }}>
         <ParticleChaos />
@@ -255,7 +255,7 @@ export default function Home() {
         1. Remove touch-none from global to allow scrolling on Wallet/Leaderboard.
         2. Set min-h-[100dvh] so it takes up exactly the visible browser screen
       */}
-      <div className="flex-1 min-h-0 z-10 flex flex-col overflow-hidden lg:hidden select-none">
+      <div className="flex-1 min-h-0 z-10 flex flex-col overflow-hidden lg:hidden select-none bg-white/60 backdrop-blur-md">
 
         <Header
           isConnected={isConnected}
@@ -401,7 +401,7 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="p-3 border border-slate-200 bg-white flex flex-col items-start justify-center relative overlow-hidden">
+                      <div className="p-3 border border-slate-200/50 bg-white/60 backdrop-blur-md flex flex-col items-start justify-center relative overlow-hidden">
                         <div className="absolute top-0 right-0 w-8 h-8 border-l border-b border-slate-100 flex items-start justify-end p-1">
                           <div className="w-1.5 h-1.5 bg-[#0ECB81]" />
                         </div>
@@ -422,76 +422,119 @@ export default function Home() {
                     </div>
 
                     {/* Streak Multiplier Card */}
-                    <div className="border border-slate-200 bg-white/70 backdrop-blur-md p-4 relative overflow-hidden">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          {/* SVG flame icon */}
-                          <div className="w-7 h-7 flex items-center justify-center" style={{ color: streakTier.color }}>
-                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                              <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.037 2.211-5.561 3.667-7.333C10 7.167 11.333 5.333 11.667 3c.167.333 1.333 2.667 1.333 2.667C14.333 3 15.667 1 16 0c.333 1 1 3.333 1 3.333S20 6.333 20 10c0 1.5-.333 2.833-1 4-.667 1.167-1.5 2-2.5 2.833C15.167 18 14 19.5 14 21c0 1.083-.917 2-2 2z" />
-                            </svg>
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
-                              {streakTier.label}
-                            </p>
-                            <p className="text-[7px] font-bold text-slate-400 uppercase tracking-[0.1em] mt-0.5" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                              {checkInStatus.streak} day streak · {!checkInStatus.canCheckIn ? 'checked in' : 'check in today'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[24px] font-black leading-none block" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
-                            ×{streakMultiplier.toFixed(streakMultiplier % 1 === 0 ? 0 : streakMultiplier === 1.25 ? 2 : 1)}
-                          </span>
-                        </div>
-                      </div>
+                    <div className="mt-3 group relative rounded-none border transition-all duration-500 overflow-hidden"
+                      style={{
+                        borderColor: `${streakTier.color}40`,
+                        backgroundColor: `rgba(255,255,255,0.75)`,
+                        boxShadow: `0 8px 32px ${streakTier.color}15`,
+                        backdropFilter: 'blur(12px)'
+                      }}>
+                      {/* Dynamic Background Glow */}
+                      <div className="absolute top-0 right-0 w-48 h-full pointer-events-none transition-opacity duration-300 opacity-60 group-hover:opacity-100"
+                        style={{ background: `linear-gradient(to left, ${streakTier.color}15, transparent)` }} />
 
-                      {/* Progress toward next tier */}
-                      {nextTier ? (
-                        <div className="mb-2">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[7px] font-bold text-slate-400 uppercase tracking-wider" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                              next: ×{nextTier.multiplier} at {nextTier.days}d
-                            </span>
-                            <span className="text-[7px] font-black uppercase tracking-wider" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
-                              {checkInStatus.streak}/{nextTier.days}
-                            </span>
-                          </div>
-                          <div className="w-full h-1.5 bg-slate-100 overflow-hidden">
-                            <div
-                              className="h-full transition-all duration-700"
-                              style={{
-                                width: `${Math.min(100, (checkInStatus.streak / nextTier.days) * 100)}%`,
-                                backgroundColor: streakTier.color,
-                                opacity: 0.6,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <svg className="w-3 h-3 text-[#0ECB81]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                          <span className="text-[7px] font-black text-[#0ECB81] uppercase tracking-wider" style={{ fontFamily: 'var(--font-mono, monospace)' }}>max tier unlocked</span>
-                        </div>
-                      )}
+                      {/* Accent corner */}
+                      <div className="absolute top-0 left-0 w-2 h-2" style={{ backgroundColor: streakTier.color }} />
+                      <div className="absolute top-0 right-0 w-2 h-2" style={{ backgroundColor: streakTier.color }} />
 
-                      {/* Tier markers */}
-                      <div className="flex items-center gap-0.5">
-                        {STREAK_TIERS.slice(1).map((tier) => {
-                          const isReached = checkInStatus.streak >= tier.days;
-                          return (
-                            <div key={tier.days} className="flex-1 flex flex-col items-center gap-0.5">
-                              <div
-                                className="w-full h-1 transition-all duration-500"
-                                style={{ backgroundColor: isReached ? tier.color : '#f1f5f9', opacity: isReached ? 0.5 : 1 }}
-                              />
-                              <span className="text-[6px] font-bold leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: isReached ? tier.color : '#cbd5e1' }}>
-                                {tier.days}d
-                              </span>
+                      <div className="p-4 sm:p-5 relative z-10 w-full flex flex-col gap-5">
+                        {/* Header: Flame + Title + Multiplier */}
+                        <div className="flex items-start justify-between w-full">
+                          <div className="flex items-center gap-3 w-full">
+                            <div className="relative flex-shrink-0">
+                              <div className="w-10 h-10 flex items-center justify-center transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-3"
+                                style={{ backgroundColor: `${streakTier.color}15`, color: streakTier.color }}>
+                                <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                                  <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.037 2.211-5.561 3.667-7.333C10 7.167 11.333 5.333 11.667 3c.167.333 1.333 2.667 1.333 2.667C14.333 3 15.667 1 16 0c.333 1 1 3.333 1 3.333S20 6.333 20 10c0 1.5-.333 2.833-1 4-.667 1.167-1.5 2-2.5 2.833C15.167 18 14 19.5 14 21c0 1.083-.917 2-2 2z" />
+                                </svg>
+                              </div>
+                              {/* Pulse ring */}
+                              <div className="absolute -inset-1 rounded-none animate-[ping_3s_ease-out_infinite] opacity-20 pointer-events-none" style={{ border: `1px solid ${streakTier.color}` }} />
                             </div>
-                          );
-                        })}
+
+                            <div className="flex flex-col flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[12px] sm:text-[14px] font-black uppercase tracking-widest leading-none text-slate-800" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                                  {streakTier.label}
+                                </span>
+                                {checkInStatus.streak > 0 && (
+                                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-none leading-none tracking-widest uppercase" style={{ fontFamily: 'var(--font-mono, monospace)', background: `${streakTier.color}15`, color: streakTier.color }}>
+                                    {checkInStatus.streak} DAY{checkInStatus.streak !== 1 ? 'S' : ''}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 flex items-center gap-1.5" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${!checkInStatus.canCheckIn ? 'bg-[#0ECB81]' : 'bg-[#F0B90B] animate-pulse'}`} />
+                                {!checkInStatus.canCheckIn ? 'checked in today' : 'claim your check-in'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Massive Multiplier text */}
+                          <div className="flex flex-col items-end flex-shrink-0 justify-center">
+                            <span className="text-[28px] sm:text-[34px] font-black leading-none tracking-tighter drop-shadow-sm transition-all duration-300 group-hover:scale-105 origin-right" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
+                              ×{streakMultiplier.toFixed(streakMultiplier % 1 === 0 ? 0 : streakMultiplier === 1.25 ? 2 : 1)}
+                            </span>
+                            <span className="text-[8px] font-bold uppercase tracking-[0.2em] leading-none mt-1 text-slate-400" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                              bonus
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Progress Bar Area */}
+                        <div className="w-full flex flex-col gap-2 relative">
+                          {nextTier ? (
+                            <>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                                  next: ×{nextTier.multiplier}
+                                </span>
+                                <span className="text-[8px] font-black uppercase tracking-widest" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
+                                  {checkInStatus.streak} / {nextTier.days}
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 sm:h-2 bg-slate-100/80 overflow-hidden relative border border-slate-200/50">
+                                <div
+                                  className="h-full transition-all duration-1000 ease-out relative"
+                                  style={{
+                                    width: `${Math.min(100, (checkInStatus.streak / nextTier.days) * 100)}%`,
+                                    background: `linear-gradient(90deg, ${streakTier.color}, ${nextTier.color})`,
+                                  }}
+                                >
+                                  {/* Shimmer sweep */}
+                                  <div className="absolute inset-0 bg-white/30 animate-[shimmerSweep_2s_infinite]" />
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex items-center justify-between py-1 border-t border-slate-100">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-black uppercase tracking-widest" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
+                                  max level achieved
+                                </span>
+                                <svg className="w-3.5 h-3.5" style={{ color: streakTier.color }} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Minimalistic Tier Tracker */}
+                          <div className="flex items-center gap-0.5 mt-0.5">
+                            {STREAK_TIERS.slice(1).map((tier) => {
+                              const isReached = checkInStatus.streak >= tier.days;
+                              return (
+                                <div key={tier.days} className="flex-1 flex flex-col items-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
+                                  <div
+                                    className="w-full h-0.5 transition-all duration-500"
+                                    style={{ backgroundColor: isReached ? tier.color : '#e2e8f0' }}
+                                  />
+                                  <span className="text-[6px] font-black uppercase tracking-wider" style={{ fontFamily: 'var(--font-mono, monospace)', color: isReached ? tier.color : '#94a3b8' }}>
+                                    {tier.days}d
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
                     </div>
                     <div className="pt-1"><DailyCheckinButton /></div>

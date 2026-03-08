@@ -1124,8 +1124,8 @@ export const drawChillMarketBanner = (
     const totalW = padX + textW + padX
     const barH = fontSize + padY * 2
     const barX = centerX - totalW / 2
-    // Position directly below world banner area — tight gap
-    const barY = e.worldBannerTimer > 0 ? 102 : 78
+    // Position directly below world banner area — larger gap
+    const barY = e.worldBannerTimer > 0 ? 115 : 82
 
     // Light backdrop
     ctx.fillStyle = 'rgba(255,255,255,0.92)'
