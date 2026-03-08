@@ -40,15 +40,15 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             audioCtxRef.current = new AudioContext()
 
             const compressor = audioCtxRef.current.createDynamicsCompressor()
-            compressor.threshold.value = -18
-            compressor.knee.value = 15
-            compressor.ratio.value = 6
-            compressor.attack.value = 0.003
-            compressor.release.value = 0.12
+            compressor.threshold.value = -20
+            compressor.knee.value = 20
+            compressor.ratio.value = 4
+            compressor.attack.value = 0.005
+            compressor.release.value = 0.15
             compressor.connect(audioCtxRef.current.destination)
 
             masterGainRef.current = audioCtxRef.current.createGain()
-            masterGainRef.current.gain.value = 0.28
+            masterGainRef.current.gain.value = 0.25
             masterGainRef.current.connect(compressor)
         }
         if (audioCtxRef.current.state === 'suspended') {
@@ -241,16 +241,16 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         oscChime.type = 'sine'
         oscPad1.type = 'triangle'
         oscPad2.type = 'triangle'
-        oscPad2.detune.value = 6  // subtle chorus width
+        oscPad2.detune.value = 10  // wider chorus for warmth
         oscBass.type = 'sine'
 
         bgmFilter.type = 'lowpass'
-        bgmFilter.frequency.value = 1800
-        bgmFilter.Q.value = 0.3  // zero resonance — pure warmth
+        bgmFilter.frequency.value = 1400  // warm and soft — no harshness
+        bgmFilter.Q.value = 0.2  // minimal resonance
 
         // Slow fade in over 4 seconds
         bgmGain.gain.setValueAtTime(0, ctx.currentTime)
-        bgmGain.gain.linearRampToValueAtTime(0.032, ctx.currentTime + 4)
+        bgmGain.gain.linearRampToValueAtTime(0.030, ctx.currentTime + 4)
 
         // Wire everything through filter → gain → master
         oscMelody.connect(bgmFilter)
@@ -414,8 +414,8 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
                 // World 8+: maximal richness
                 if (world >= 8) { melVol = 0.033; chmVol = 0.015; basVol = 0.016; padVol = 0.020 }
 
-                // === MELODY — only plays if note > 0 (rests = silence) ===
-                const glide = interval * 0.15
+                // === MELODY — smooth long glides between notes ===
+                const glide = interval * 0.35  // very long portamento = silky smooth
                 if (melNote > 0) {
                     oscMelody.frequency.setTargetAtTime(melNote, nextTime, glide)
                 }
@@ -432,10 +432,10 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
                 // === BASS — deep, slow ===
                 oscBass.frequency.setTargetAtTime(basNote, nextTime, glide * 2)
 
-                // === DYNAMICS — gentle breathing ===
+                // === DYNAMICS — very smooth breathing ===
                 const hasMelody = melNote > 0
                 const hasChime = chmNote > 0
-                const accentMult = bar ? 1.12 : (beat8 ? 1.05 : (beat4 ? 1.0 : 0.92))
+                const accentMult = bar ? 1.08 : (beat8 ? 1.04 : (beat4 ? 1.0 : 0.94))
 
                 const totalVol = (
                     (hasMelody ? melVol : melVol * 0.15) +
@@ -444,21 +444,21 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
                     basVol
                 ) * accentMult
 
-                // Smooth envelope — long attack for lo-fi feel
-                bgmGain.gain.setTargetAtTime(totalVol, nextTime, 0.05)
+                // Very smooth envelope — long attack/release to avoid clicks
+                bgmGain.gain.setTargetAtTime(totalVol, nextTime, 0.08)
                 bgmGain.gain.setTargetAtTime(
-                    totalVol * 0.65,
+                    totalVol * 0.70,
                     nextTime + interval * 0.65,
-                    0.07
+                    0.10
                 )
 
-                // Filter — opens with worlds, breathes on beats
-                const baseCut = 1400 + world * 100
-                const beatCut = beat4 ? 200 : (beat8 ? 300 : 0)
-                const barCut = bar ? 400 : 0
+                // Filter — warm, opens gently with worlds
+                const baseCut = 1200 + world * 60
+                const beatCut = beat4 ? 100 : (beat8 ? 150 : 0)
+                const barCut = bar ? 200 : 0
                 bgmFilter.frequency.setTargetAtTime(
-                    Math.min(baseCut + beatCut + barCut, 3000),
-                    nextTime, 0.05
+                    Math.min(baseCut + beatCut + barCut, 2200),
+                    nextTime, 0.08
                 )
 
                 step++
