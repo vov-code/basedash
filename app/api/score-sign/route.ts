@@ -29,9 +29,9 @@ const publicClient = createPublicClient({
 
 const CHALLENGE_SECRET = process.env.CHALLENGE_SECRET || ''
 if (!CHALLENGE_SECRET && process.env.NODE_ENV === 'production') {
-  throw new Error(
-    '[FATAL] CHALLENGE_SECRET is not set. Anti-cheat is disabled. ' +
-    'Set CHALLENGE_SECRET in your environment variables before deploying.'
+  console.warn(
+    '[WARN] CHALLENGE_SECRET is not set. Anti-cheat will reject requests at runtime. ' +
+    'Set CHALLENGE_SECRET in your Vercel environment variables.'
   )
 }
 
