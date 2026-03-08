@@ -79,13 +79,25 @@ export async function GET(req: NextRequest) {
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
   <meta property="og:title" content="base dash — ${formattedScore}"/>
-  <meta property="og:description" content="${deathMsg} — ${formattedScore} PNL"/>
+  <meta property="og:description" content="${deathMsg} — ${formattedScore} PNL | Can you beat this score?"/>
+  <meta property="og:image" content="${appUrl}/api/frames/image?score=${score}&combo=${combo}&time=${time}&dodged=${dodged}&buys=${buys}&jumps=${jumps}&address=${address}"/>
+  <meta property="og:type" content="website"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="base dash — ${formattedScore}"/>
+  <meta name="twitter:description" content="${deathMsg} — Can you beat ${formattedScore}?"/>
+  <meta name="twitter:image" content="${appUrl}/api/frames/image?score=${score}&combo=${combo}&time=${time}&dodged=${dodged}&buys=${buys}&jumps=${jumps}&address=${address}"/>
   <meta property="fc:frame" content="vNext"/>
   <meta property="fc:frame:image:aspect_ratio" content="1:1"/>
   <meta property="fc:frame:image" content="${appUrl}/api/frames/image?score=${score}&combo=${combo}&time=${time}&dodged=${dodged}&buys=${buys}&jumps=${jumps}&address=${address}"/>
   <meta property="fc:frame:button:1" content="🎮 play"/>
   <meta property="fc:frame:button:1:action" content="link"/>
   <meta property="fc:frame:button:1:target" content="${appUrl}"/>
+  <meta property="fc:frame:button:2" content="⚔️ challenge — beat ${formattedScore}"/>
+  <meta property="fc:frame:button:2:action" content="link"/>
+  <meta property="fc:frame:button:2:target" content="${appUrl}?challenge=${score}"/>
+  <meta property="fc:frame:button:3" content="🏆 leaderboard"/>
+  <meta property="fc:frame:button:3:action" content="link"/>
+  <meta property="fc:frame:button:3:target" content="${appUrl}?tab=leaderboard"/>
   <title>base dash — ${formattedScore}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">

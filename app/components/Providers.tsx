@@ -2,36 +2,29 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { WagmiProvider } from 'wagmi'
-import { OnchainKitProvider } from '@coinbase/onchainkit'
-import { base, baseSepolia } from 'wagmi/chains'
+import { type ReactNode } from 'react'
 import { config } from '@/app/lib/wagmi'
+
+/**
+ * App Providers — follows official Base documentation pattern:
+ * https://docs.base.org/get-started/build-app
+ *
+ * Base docs use:
+ *   WagmiProvider → QueryClientProvider → {children}
+ *
+ * OnchainKitProvider removed — the Base docs don't require it.
+ * All wallet UI and connection is handled via wagmi hooks directly.
+ * The `baseAccount` connector (configured in wagmi.ts) provides
+ * the Coinbase Smart Wallet experience natively.
+ */
 
 const queryClient = new QueryClient()
 
-export function Providers({ children }: { children: React.ReactNode }) {
-  const chain = process.env.NEXT_PUBLIC_USE_TESTNET === 'true' ? baseSepolia : base
-
+export function Providers({ children }: { children: ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <OnchainKitProvider
-          apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
-          chain={chain}
-          projectId={process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID}
-          config={{
-            wallet: {
-              display: 'modal',
-              termsUrl: 'https://www.coinbase.com/legal/cookie',
-              privacyUrl: 'https://www.coinbase.com/legal/privacy',
-            },
-            appearance: {
-              name: 'Base Dash',
-              mode: 'light',
-            }
-          }}
-        >
-          {children}
-        </OnchainKitProvider>
+        {children}
       </QueryClientProvider>
     </WagmiProvider>
   )

@@ -8,6 +8,10 @@ import { createHmac } from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
 const redisUrl = process.env.REDIS_URL || process.env.KV_URL
 const redis = redisUrl ? new Redis(redisUrl) : null
 
@@ -19,17 +23,43 @@ const publicClient = createPublicClient({
   transport: http(),
 })
 
-// Wallet client for gasless transactions
+// ============================================================================
+// SECURITY: Mandatory secret in production
+// ============================================================================
+
+const CHALLENGE_SECRET = process.env.CHALLENGE_SECRET || ''
+if (!CHALLENGE_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    '[FATAL] CHALLENGE_SECRET is not set. Anti-cheat is disabled. ' +
+    'Set CHALLENGE_SECRET in your environment variables before deploying.'
+  )
+}
+
+// ============================================================================
+// WALLET CLIENT — lazy-initialized for gasless transactions
+// ============================================================================
+
 let walletClient: ReturnType<typeof createWalletClient> | null = null
+
+function getSignerAccount() {
+  const pk = process.env.SCORE_SIGNER_PRIVATE_KEY
+  if (!pk) {
+    throw new Error('SCORE_SIGNER_PRIVATE_KEY not configured')
+  }
+  return privateKeyToAccount(pk as `0x${string}`)
+}
 
 function getWalletClient() {
   if (!walletClient) {
-    const pk = process.env.SCORE_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY
+    const pk = process.env.RELAYER_PRIVATE_KEY || process.env.SCORE_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY
     if (!pk) {
-      throw new Error('PRIVATE_KEY or SCORE_SIGNER_PRIVATE_KEY not configured')
+      throw new Error('RELAYER_PRIVATE_KEY or SCORE_SIGNER_PRIVATE_KEY not configured')
     }
-    if (!process.env.SCORE_SIGNER_PRIVATE_KEY && process.env.NODE_ENV === 'production') {
-      console.warn('[SECURITY] SCORE_SIGNER_PRIVATE_KEY not set, falling back to PRIVATE_KEY. Use a dedicated signer key in production.')
+    if (!process.env.RELAYER_PRIVATE_KEY && process.env.NODE_ENV === 'production') {
+      console.warn(
+        '[SECURITY] RELAYER_PRIVATE_KEY not set — falling back to SCORE_SIGNER_PRIVATE_KEY. ' +
+        'In production, use a SEPARATE dedicated relayer key with only RELAYER_ROLE on the contract.'
+      )
     }
     const account = privateKeyToAccount(pk as `0x${string}`)
     walletClient = createWalletClient({
@@ -42,15 +72,8 @@ function getWalletClient() {
 }
 
 // ============================================================================
-// ANTI-CHEAT: Redis-backed rate limiting & HMAC-SHA256 challenges
-// Survives serverless deploys, scales across instances, no memory leaks
+// ANTI-CHEAT: HMAC-SHA256 challenge system
 // ============================================================================
-
-// HMAC secret — MUST be set via CHALLENGE_SECRET env var in production
-const CHALLENGE_SECRET = process.env.CHALLENGE_SECRET || ''
-if (!CHALLENGE_SECRET && process.env.NODE_ENV === 'production') {
-  console.warn('[SECURITY] CHALLENGE_SECRET not set! Anti-cheat challenge verification is disabled.')
-}
 
 function generateChallenge(ip: string): string {
   if (!CHALLENGE_SECRET) return ''
@@ -73,7 +96,7 @@ function verifyChallenge(ip: string, challenge: string): boolean {
     const expectedHmac = createHmac('sha256', CHALLENGE_SECRET)
       .update(`${ip}:${timestamp}`)
       .digest('hex')
-    // Constant-time comparison
+    // Constant-time comparison to prevent timing attacks
     if (expectedHmac.length !== receivedHmac.length) return false
     let mismatch = 0
     for (let i = 0; i < expectedHmac.length; i++) {
@@ -85,7 +108,10 @@ function verifyChallenge(ip: string, challenge: string): boolean {
   }
 }
 
-// Redis-backed rate limiting (no in-memory Maps, no setInterval)
+// ============================================================================
+// RATE LIMITING — Redis-backed (survives serverless cold starts)
+// ============================================================================
+
 async function checkRateLimit(ip: string): Promise<{ allowed: boolean; challenge?: string; retryAfter?: number }> {
   if (!redis) return { allowed: true }
   try {
@@ -110,7 +136,7 @@ async function checkRateLimit(ip: string): Promise<{ allowed: boolean; challenge
     return { allowed: true }
   } catch (err) {
     console.error('[RateLimit] Redis error:', err)
-    return { allowed: true } // Fail open
+    return { allowed: true } // Fail open to not block legitimate users
   }
 }
 
@@ -130,99 +156,45 @@ async function checkAddressCooldown(address: string): Promise<{ allowed: boolean
   }
 }
 
+// ============================================================================
+// NONCE MANAGER — Redis-backed lock to prevent concurrent nonce collisions
+// ============================================================================
+
+async function acquireNonceLock(address: string, ttlMs = 15000): Promise<boolean> {
+  if (!redis) return true
+  const key = `nonce:lock:${address.toLowerCase()}`
+  const result = await redis.set(key, '1', 'PX', ttlMs, 'NX')
+  return result === 'OK'
+}
+
+async function releaseNonceLock(address: string): Promise<void> {
+  if (!redis) return
+  const key = `nonce:lock:${address.toLowerCase()}`
+  await redis.del(key)
+}
+
+// ============================================================================
+// GET — Nonce retrieval ONLY (no signing)
+// ============================================================================
+
 export async function GET(request: NextRequest) {
   try {
-    const pk = process.env.SCORE_SIGNER_PRIVATE_KEY
-    if (!pk) {
-      return NextResponse.json({ error: 'SCORE_SIGNER_PRIVATE_KEY not configured' }, { status: 503 })
-    }
-
-    // Get client identifiers
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
-    const userAgent = request.headers.get('user-agent') || ''
     const searchParams = request.nextUrl.searchParams
     const address = searchParams.get('address')
-    const scoreStr = searchParams.get('score')
-    const challenge = searchParams.get('challenge')
 
-    // Validate address first
-    if (!address || !scoreStr) {
-      return NextResponse.json({ error: 'address and score are required' }, { status: 400 })
+    if (!address) {
+      return NextResponse.json({ error: 'address is required' }, { status: 400 })
     }
 
     if (!isAddress(address)) {
       return NextResponse.json({ error: 'invalid address format' }, { status: 400 })
     }
 
-    // Check rate limit (Redis-backed, async)
-    const rateLimitResult = await checkRateLimit(ip)
-
-    if (!rateLimitResult.allowed) {
-      if (rateLimitResult.retryAfter) {
-        return NextResponse.json(
-          {
-            error: 'Rate limit exceeded',
-            retryAfter: rateLimitResult.retryAfter,
-            message: rateLimitResult.retryAfter > 60
-              ? 'Too many requests. Please wait before trying again.'
-              : 'Please wait a moment before submitting another score.'
-          },
-          {
-            status: 429,
-            headers: { 'Retry-After': rateLimitResult.retryAfter.toString() }
-          }
-        )
-      }
-      if (rateLimitResult.challenge) {
-        return NextResponse.json({
-          requiresChallenge: true,
-          challenge: rateLimitResult.challenge,
-          message: 'Additional verification required'
-        })
-      }
-    }
-
-    // Verify challenge if provided
-    if (challenge && !verifyChallenge(ip, challenge)) {
-      return NextResponse.json({ error: 'Invalid or expired challenge' }, { status: 403 })
-    }
-
-    const score = Number(scoreStr)
-    if (!Number.isFinite(score) || score <= 0) {
-      return NextResponse.json({ error: 'invalid score' }, { status: 400 })
-    }
-
-    // ========================================================================
-    // ANTI-CHEAT: Score validation heuristics
-    // ========================================================================
-
-    // Check for impossible scores
-    if (score > 50_000) {
-      console.warn(`Suspicious score detected: ${score} from ${address}`)
-      return NextResponse.json({ error: 'score exceeds maximum allowed value' }, { status: 400 })
-    }
-
-    // Check for suspicious patterns (scores that are too round)
-    if (score > 10000 && score % 1000 === 0) {
-      console.warn(`Potentially manipulated score: ${score} from ${address}`)
-      // Log but allow - could be legitimate
-    }
-
-    // Anti-cheat: per-address cooldown (Redis-backed)
-    const cooldownResult = await checkAddressCooldown(address)
-    if (!cooldownResult.allowed) {
-      return NextResponse.json(
-        { error: 'please wait between submissions', retryAfter: cooldownResult.retryAfter },
-        { status: 429 }
-      )
-    }
-
-    // Verify contract is deployed
     if (CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
       return NextResponse.json({ error: 'Contract not deployed' }, { status: 503 })
     }
 
-    // Get current nonce
+    // Return nonce and signer address (no sensitive data)
     const nonce = await publicClient.readContract({
       address: CONTRACT_ADDRESS,
       abi: GAME_LEADERBOARD_ABI,
@@ -230,46 +202,32 @@ export async function GET(request: NextRequest) {
       args: [address as `0x${string}`],
     })
 
-    // Generate signature
-    const msgHash = keccak256(
-      encodePacked(
-        ['address', 'uint256', 'address', 'uint256', 'uint256'],
-        [CONTRACT_ADDRESS, BigInt(chain.id), address as `0x${string}`, BigInt(score), nonce as bigint]
-      )
-    )
-
-    const account = privateKeyToAccount(pk as `0x${string}`)
-    const signature = await account.signMessage({ message: { raw: msgHash } })
+    const signerAccount = getSignerAccount()
 
     return NextResponse.json({
       nonce: (nonce as bigint).toString(),
-      signature,
-      signer: account.address,
-      timestamp: Date.now(),
-      gasless: false, // Default: return signature for user to submit
+      signer: signerAccount.address,
     })
   } catch (error) {
-    console.error('Score signing error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error('Nonce retrieval error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 // ============================================================================
-// POST endpoint for GASLESS score submission (Relayer)
+// POST — Score signing + optional gasless submission (all signing via POST)
 // ============================================================================
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { address, score, sessionId } = body
+    const { address, score, sessionId, gasless, challenge } = body
 
-    // Get client identifiers
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
 
-    // Validate
+    // ====================================================================
+    // INPUT VALIDATION
+    // ====================================================================
     if (!address || !score) {
       return NextResponse.json({ error: 'address and score are required' }, { status: 400 })
     }
@@ -283,48 +241,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'invalid score' }, { status: 400 })
     }
 
-    // ========================================================================
-    // ANTI-CHEAT: Session ID Validation against Redis store
-    // ========================================================================
-    if (redis && sessionId) {
-      try {
-        const sessionStr = await redis.get(`session:${sessionId}`)
-        if (!sessionStr) {
-          console.warn(`[Anti-Cheat] Invalid or expired session ID: ${sessionId} for address: ${address}`)
-          return NextResponse.json({ error: 'invalid or expired game session' }, { status: 403 })
-        }
-
-        const session = JSON.parse(sessionStr)
-        if (session.score !== scoreNum) {
-          console.warn(`[Anti-Cheat] Score mismatch! Submitted: ${scoreNum}, Session: ${session.score} for ${address}`)
-          return NextResponse.json({ error: 'score mismatch with game session' }, { status: 403 })
-        }
-        if (session.address?.toLowerCase() !== address.toLowerCase()) {
-          console.warn(`[Anti-Cheat] Address mismatch! Submitted: ${address}, Session: ${session.address}`)
-          return NextResponse.json({ error: 'address mismatch with game session' }, { status: 403 })
-        }
-
-        // Optionally mark session as used so it cannot be reused
-        await redis.del(`session:${sessionId}`)
-      } catch (err) {
-        console.error('Redis session validation failed:', err)
-      }
-    } else if (redis && !sessionId && scoreNum > 0) {
-      // Disallow positive scores lacking a verifiable session when Redis is available
-      console.warn(`[Anti-Cheat] Missing session ID for score ${scoreNum} from ${address}`)
-      return NextResponse.json({ error: 'missing game session verifier' }, { status: 403 })
+    // ====================================================================
+    // ANTI-CHEAT: Challenge verification
+    // ====================================================================
+    if (challenge && !verifyChallenge(ip, challenge)) {
+      return NextResponse.json({ error: 'Invalid or expired challenge' }, { status: 403 })
     }
 
-    // Check rate limit (Redis-backed, async)
+    // ====================================================================
+    // ANTI-CHEAT: Rate limiting
+    // ====================================================================
     const rateLimitResult = await checkRateLimit(ip)
-    if (!rateLimitResult.allowed && rateLimitResult.retryAfter) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded', retryAfter: rateLimitResult.retryAfter },
-        { status: 429 }
-      )
+    if (!rateLimitResult.allowed) {
+      if (rateLimitResult.retryAfter) {
+        return NextResponse.json(
+          {
+            error: 'Rate limit exceeded',
+            retryAfter: rateLimitResult.retryAfter,
+            message: rateLimitResult.retryAfter > 60
+              ? 'Too many requests. Please wait before trying again.'
+              : 'Please wait a moment before submitting another score.'
+          },
+          { status: 429, headers: { 'Retry-After': rateLimitResult.retryAfter.toString() } }
+        )
+      }
+      if (rateLimitResult.challenge) {
+        return NextResponse.json({
+          requiresChallenge: true,
+          challenge: rateLimitResult.challenge,
+          message: 'Additional verification required'
+        })
+      }
     }
 
-    // Anti-cheat cooldown (Redis-backed)
+    // ====================================================================
+    // ANTI-CHEAT: Per-address cooldown
+    // ====================================================================
     const cooldownResult = await checkAddressCooldown(address)
     if (!cooldownResult.allowed) {
       return NextResponse.json(
@@ -333,15 +285,64 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify contract is deployed
+    // ====================================================================
+    // ANTI-CHEAT: Session validation (Redis-backed)
+    // ====================================================================
+    if (redis && sessionId) {
+      try {
+        const sessionStr = await redis.get(`session:${sessionId}`)
+        if (!sessionStr) {
+          console.warn(`[Anti-Cheat] Invalid/expired session: ${sessionId} for ${address}`)
+          return NextResponse.json({ error: 'invalid or expired game session' }, { status: 403 })
+        }
+        const session = JSON.parse(sessionStr)
+
+        // Validate score matches session
+        if (session.score !== scoreNum) {
+          console.warn(`[Anti-Cheat] Score mismatch! Submitted: ${scoreNum}, Session: ${session.score} for ${address}`)
+          return NextResponse.json({ error: 'score mismatch with game session' }, { status: 403 })
+        }
+
+        // Validate address matches session
+        if (session.address?.toLowerCase() !== address.toLowerCase()) {
+          console.warn(`[Anti-Cheat] Address mismatch! Submitted: ${address}, Session: ${session.address}`)
+          return NextResponse.json({ error: 'address mismatch with game session' }, { status: 403 })
+        }
+
+        // Heuristic: check score vs game time ratio
+        // A score of >1000 in less than 5 seconds is physically impossible
+        if (session.time && session.time < 5 && scoreNum > 1000) {
+          console.warn(`[Anti-Cheat] Impossible score/time ratio: ${scoreNum} pts in ${session.time}s from ${address}`)
+          return NextResponse.json({ error: 'suspicious game session' }, { status: 403 })
+        }
+
+        // Heuristic: score should correlate with game duration
+        // Normal gameplay ~1-5 pts/second at early game, up to ~15 pts/sec with power-ups
+        if (session.time && scoreNum > session.time * 25) {
+          console.warn(`[Anti-Cheat] Unusual score/time: ${scoreNum} in ${session.time}s (${(scoreNum / session.time).toFixed(1)} pts/s) from ${address}`)
+          // Log but allow — edge cases with power-ups can spike ratio
+        }
+
+        // Mark session as used to prevent replay
+        await redis.del(`session:${sessionId}`)
+      } catch (err) {
+        console.error('Redis session validation failed:', err)
+      }
+    } else if (redis && !sessionId && scoreNum > 0) {
+      console.warn(`[Anti-Cheat] Missing session ID for score ${scoreNum} from ${address}`)
+      return NextResponse.json({ error: 'missing game session verifier' }, { status: 403 })
+    }
+
+    // ====================================================================
+    // CONTRACT READINESS
+    // ====================================================================
     if (CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
       return NextResponse.json({ error: 'Contract not deployed' }, { status: 503 })
     }
 
-    // Get wallet client (owner account for gasless)
-    const walletClient = getWalletClient()
-
-    // Get current nonce
+    // ====================================================================
+    // NONCE RETRIEVAL
+    // ====================================================================
     const nonce = await publicClient.readContract({
       address: CONTRACT_ADDRESS,
       abi: GAME_LEADERBOARD_ABI,
@@ -349,45 +350,104 @@ export async function POST(request: NextRequest) {
       args: [address as `0x${string}`],
     })
 
-    // Generate signature
-    const pk = process.env.SCORE_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY
-    const account = privateKeyToAccount(pk as `0x${string}`)
-
+    // ====================================================================
+    // SIGNATURE GENERATION
+    // ====================================================================
+    const signerAccount = getSignerAccount()
     const msgHash = keccak256(
       encodePacked(
         ['address', 'uint256', 'address', 'uint256', 'uint256'],
         [CONTRACT_ADDRESS, BigInt(chain.id), address as `0x${string}`, BigInt(scoreNum), nonce as bigint]
       )
     )
+    const signature = await signerAccount.signMessage({ message: { raw: msgHash } })
 
-    const signature = await account.signMessage({ message: { raw: msgHash } })
+    // ====================================================================
+    // GASLESS SUBMISSION (Relayer pays gas)
+    // ====================================================================
+    if (gasless) {
+      // Acquire nonce lock to prevent concurrent submission collisions
+      const lockAcquired = await acquireNonceLock(address)
+      if (!lockAcquired) {
+        return NextResponse.json(
+          { error: 'Score submission in progress, please wait' },
+          { status: 429 }
+        )
+      }
 
-    // Submit transaction via relayer (owner pays gas)
-    const hash = await walletClient.writeContract({
-      chain,
-      address: CONTRACT_ADDRESS,
-      abi: GAME_LEADERBOARD_ABI,
-      functionName: 'submitScoreFor',
-      args: [address as `0x${string}`, BigInt(scoreNum), nonce as bigint, signature as `0x${string}`],
-      account,
-    })
+      try {
+        const wc = getWalletClient()
+        const relayerAccount = privateKeyToAccount(
+          (process.env.RELAYER_PRIVATE_KEY || process.env.SCORE_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY) as `0x${string}`
+        )
 
-    console.log(`Gasless score submitted: ${address} - ${scoreNum}, tx: ${hash}`)
+        // Retry with exponential backoff (max 3 attempts)
+        let hash: `0x${string}` | undefined
+        let lastError: Error | undefined
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            hash = await wc.writeContract({
+              chain,
+              address: CONTRACT_ADDRESS,
+              abi: GAME_LEADERBOARD_ABI,
+              functionName: 'submitScoreFor',
+              args: [address as `0x${string}`, BigInt(scoreNum), nonce as bigint, signature as `0x${string}`],
+              account: relayerAccount,
+            })
+            break // Success
+          } catch (err) {
+            lastError = err instanceof Error ? err : new Error(String(err))
+            if (attempt < 2) {
+              // Exponential backoff: 500ms, 1500ms
+              await new Promise(r => setTimeout(r, 500 * Math.pow(3, attempt)))
+            }
+          }
+        }
 
+        if (!hash) {
+          console.error('Gasless submission failed after 3 attempts:', lastError)
+          // Fall back to returning signature for client-side submission
+          return NextResponse.json({
+            nonce: (nonce as bigint).toString(),
+            signature,
+            signer: signerAccount.address,
+            timestamp: Date.now(),
+            gasless: false,
+            fallback: true,
+            error: 'Gasless submission failed, use signature to submit directly',
+          })
+        }
+
+        console.log(`Gasless score submitted: ${address} — ${scoreNum}, tx: ${hash}`)
+
+        return NextResponse.json({
+          success: true,
+          hash,
+          score: scoreNum,
+          address,
+          gasless: true,
+          timestamp: Date.now(),
+        })
+      } finally {
+        await releaseNonceLock(address)
+      }
+    }
+
+    // ====================================================================
+    // NON-GASLESS: Return signature for client-side submission
+    // ====================================================================
     return NextResponse.json({
-      success: true,
-      hash,
-      score: scoreNum,
-      address,
-      gasless: true,
+      nonce: (nonce as bigint).toString(),
+      signature,
+      signer: signerAccount.address,
       timestamp: Date.now(),
+      gasless: false,
     })
   } catch (error) {
-    console.error('Gasless score submission error:', error)
+    console.error('Score signing error:', error)
     return NextResponse.json(
-      { error: 'Failed to submit score' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
 }
-

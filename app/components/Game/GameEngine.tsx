@@ -29,8 +29,10 @@ import {
   IS_MOBILE,
   POWERUP_CONFIG,
   MARKET_CONFIG,
+  GAMEPLAY,
   clamp, lerp, rand,
   getWorld, getWorldIndex, getSpeed, getJumps,
+  getComboMilestone,
   createEngine, spawnPattern, formatMarketCap,
   updateGameConfig, createCandle,
 } from './gameConfig'
@@ -170,6 +172,7 @@ interface GameEngineProps {
   connectWallet?: () => void
   isScoreConfirmed?: boolean
   submitTxHash?: `0x${string}`
+  streakMultiplier?: number
 }
 
 // ============================================================================
@@ -225,6 +228,7 @@ export default function GameEngine({
   connectWallet,
   isScoreConfirmed = false,
   submitTxHash,
+  streakMultiplier = 1,
 }: GameEngineProps) {
   // --- React state ---
   const { score, setScore, mode, setMode, soundEnabled, setSoundEnabled, addGameToHistory } = useGameStore()
@@ -439,12 +443,12 @@ export default function GameEngine({
     if (p.onGround && e.alive && Math.abs(p.squash) < 0.01) {
       p.squash = Math.sin(e.gameTime * CFG.BREATHE_SPEED) * CFG.BREATHE_AMP
     }
-    p.squash = lerp(p.squash, 0, dt * 8)  // Плавнее затухание
-    p.scale = 1 + p.squash * (p.velocityY < 0 ? -0.25 : 0.35)  // Мягче эффект
+    p.squash = lerp(p.squash, 0, dt * 8)  // Smooth decay
+    p.scale = 1 + p.squash * (p.velocityY < 0 ? -0.25 : 0.35)  // Softer effect
 
-    // Tilt based on velocity — SMOOTHER
-    const targetTilt = clamp(p.velocityY / 900, -0.9, 0.9)  // Меньше наклон
-    p.tilt = lerp(p.tilt, targetTilt, dt * 6)  // Плавнее
+    // Tilt based on velocity — smooth interpolation
+    const targetTilt = clamp(p.velocityY / 900, -0.9, 0.9)  // Reduced tilt range
+    p.tilt = lerp(p.tilt, targetTilt, dt * 6)  // Smooth transition
 
     // Flash decay
     p.flash = Math.max(0, p.flash - dt * 4)
@@ -535,7 +539,7 @@ export default function GameEngine({
           if (!c.collected) {
             // Balanced scoring: diminishing combo bonus (log scale)
             const comboBonus = Math.max(1, 1 + Math.log2(Math.max(1, e.combo)))
-            const pts = CFG.RED_SCORE * comboBonus * e.scoreMultiplier
+            const pts = CFG.RED_SCORE * comboBonus * e.scoreMultiplier * streakMultiplier
             e.score += Math.round(pts)
             e.scorePulse = 1
           }
@@ -565,16 +569,15 @@ export default function GameEngine({
     }
 
     // --- Collision detection — STRICT hitboxes ---
-    const HITBOX_PAD = 1 // Extremely tight padding = visually perfect collisions
-    const px1 = CFG.PLAYER_X + HITBOX_PAD
-    const py1 = p.y + HITBOX_PAD
-    const px2 = CFG.PLAYER_X + CFG.PLAYER_SIZE - HITBOX_PAD
-    const py2 = p.y + CFG.PLAYER_SIZE - HITBOX_PAD
+    const px1 = CFG.PLAYER_X + GAMEPLAY.HITBOX_PAD
+    const py1 = p.y + GAMEPLAY.HITBOX_PAD
+    const px2 = CFG.PLAYER_X + CFG.PLAYER_SIZE - GAMEPLAY.HITBOX_PAD
+    const py2 = p.y + CFG.PLAYER_SIZE - GAMEPLAY.HITBOX_PAD
 
     for (const c of e.candles) {
-      // Early exit — must be wider than green grab radius (25px) to avoid skipping collectible greens
-      if (c.collected || c.x + c.width < CFG.PLAYER_X - 30) continue
-      if (c.x > CFG.PLAYER_X + CFG.PLAYER_SIZE + 30) continue
+      // Early exit — must be wider than green grab radius to avoid skipping collectible greens
+      if (c.collected || c.x + c.width < CFG.PLAYER_X - GAMEPLAY.GREEN_GRAB_RADIUS - 5) continue
+      if (c.x > CFG.PLAYER_X + CFG.PLAYER_SIZE + GAMEPLAY.GREEN_GRAB_RADIUS + 5) continue
 
       // Stricter candle hitbox (no margin) for Red
       const cx1 = c.x + 1
@@ -584,12 +587,12 @@ export default function GameEngine({
 
       const hitRed = px1 < cx2 && px2 > cx1 && py1 < cy2 && py2 > cy1
 
-      // Generous grab radius for Green candles (+20px padding)
-      const laxPx1 = CFG.PLAYER_X - 25
-      const laxPy1 = p.y - 25
-      const laxPx2 = CFG.PLAYER_X + CFG.PLAYER_SIZE + 25
-      const laxPy2 = p.y + CFG.PLAYER_SIZE + 25
-      const hitGreen = laxPx1 < cx2 && laxPx2 > cx1 && laxPy1 < cy2 && laxPy2 > cy1
+      // Generous grab radius for Green candles
+      const laxPx1 = CFG.PLAYER_X - GAMEPLAY.GREEN_GRAB_RADIUS
+      const laxPy1 = p.y - GAMEPLAY.GREEN_GRAB_RADIUS
+      const laxPx2 = CFG.PLAYER_X + CFG.PLAYER_SIZE + GAMEPLAY.GREEN_GRAB_RADIUS
+      const laxPy2 = p.y + CFG.PLAYER_SIZE + GAMEPLAY.GREEN_GRAB_RADIUS
+      const hitGreen = laxPx1 < cx2 && laxPx2 > cx1 && laxPy1 < cy2 && laxPy2 > cx1
 
       if (hitRed && c.kind === 'red') {
         if (p.invincible <= 0) {
@@ -615,7 +618,7 @@ export default function GameEngine({
           // DEATH
           e.alive = false
           e.shakeTimer = 0.4
-          e.combo = 0  // Сброс комбо при смерти
+          e.combo = 0  // Reset combo on death
           setDeathScore(e.score)
           // Compute game stats — in-place count, no array allocation
           let dodged = 0
@@ -684,7 +687,7 @@ export default function GameEngine({
       } else if (hitGreen && c.kind === 'green' && !c.collected) {
         // COLLECT green candle
         c.collected = true
-        const greenPts = CFG.GREEN_SCORE * e.scoreMultiplier
+        const greenPts = CFG.GREEN_SCORE * e.scoreMultiplier * streakMultiplier
         e.score += Math.round(greenPts)
         e.combo += 1
         e.maxCombo = Math.max(e.maxCombo, e.combo)
@@ -699,12 +702,21 @@ export default function GameEngine({
           e.comboPulseTimer = 0.5
           sfxCombo(e.combo)
         }
+        // Check for named combo milestones
+        const milestone = getComboMilestone(e.combo)
+        if (milestone) {
+          e.comboMilestoneTimer = milestone.duration
+          e.comboMilestoneName = milestone.name
+          e.comboMilestoneEmoji = milestone.emoji
+          e.comboMilestoneColor = milestone.color
+          sfxMarketChange()
+        }
         // Sound + haptic
         sfxCollect()
         hapticCollect()
         // Collection particles — reduced for mobile perf
         spawnCollectSparkle(e, c.x + c.width / 2, c.bodyY + c.bodyHeight / 2, IS_MOBILE ? 4 : 8)
-      } else if (c.kind === 'red' && !c.passed && c.x + c.width < CFG.PLAYER_X + 5 && c.x + c.width > CFG.PLAYER_X - 10 && e.nearMissTimer <= 0 && (e.gameTime - ((e as any)._lastNearMissTime || 0) > MARKET_CONFIG.NEAR_MISS_COOLDOWN)) {
+      } else if (c.kind === 'red' && !c.passed && c.x + c.width < CFG.PLAYER_X + 5 && c.x + c.width > CFG.PLAYER_X - GAMEPLAY.NEAR_MISS_THRESHOLD && e.nearMissTimer <= 0 && (e.gameTime - e.lastNearMissTime > MARKET_CONFIG.NEAR_MISS_COOLDOWN)) {
         // Near-miss detection: only genuine close calls with cooldown
         const vertDistTop = Math.abs((p.y + CFG.PLAYER_SIZE - CFG.HITBOX) - c.bodyY)
         const vertDistBot = Math.abs((p.y + CFG.HITBOX) - (c.bodyY + c.bodyHeight))
@@ -712,12 +724,12 @@ export default function GameEngine({
         const passedUnder = p.y + CFG.HITBOX > c.bodyY + c.bodyHeight && vertDistBot < MARKET_CONFIG.NEAR_MISS_DIST
 
         if (passedOver || passedUnder) {
-          e.nearMissTimer = MARKET_CONFIG.NEAR_MISS_DURATION;
-          (e as any)._lastNearMissTime = e.gameTime
+          e.nearMissTimer = MARKET_CONFIG.NEAR_MISS_DURATION
+          e.lastNearMissTime = e.gameTime
           e.nearMissText = 'close'
           e.nearMissX = c.x + c.width / 2
           e.nearMissY = c.bodyY - 20
-          e.score += 10 // Near-miss bonus — balanced
+          e.score += Math.round(10 * streakMultiplier) // Near-miss bonus — with streak
           sfxNearMiss()
         }
       }

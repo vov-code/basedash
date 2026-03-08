@@ -3,6 +3,16 @@ import { NextRequest } from 'next/server'
 
 export const runtime = 'edge'
 
+/**
+ * Farcaster Frame v2 — Premium OG Image Generator
+ *
+ * Generates a 600×600 (1:1) PNG image for social sharing.
+ * Dark theme with neon glow effects, gradient score display,
+ * and "BUILT ON BASE" branding watermark.
+ *
+ * Used by: /api/frames/result -> fc:frame:image meta tag
+ */
+
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url)
@@ -17,29 +27,29 @@ export async function GET(req: NextRequest) {
         const s = Number(scoreStr)
         const shortAddr = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'anon'
 
-        // Format score
+        // Format score as market-cap style
         let formattedScore: string
         if (s >= 1_000_000_000) formattedScore = `$${(s / 1_000_000_000).toFixed(2)}B`
         else if (s >= 1_000_000) formattedScore = `$${(s / 1_000_000).toFixed(2)}M`
         else if (s >= 1_000) formattedScore = `$${(s / 1_000).toFixed(2)}K`
         else formattedScore = `$${s.toLocaleString()}`
 
-        // Determine speed tier
+        // Determine speed tier with colors
         let speedName = 'paper hands'
         let speedColor = '#94A3B8'
-        if (s >= 5000) { speedName = 'whale'; speedColor = '#8B5CF6' }
-        else if (s >= 3000) { speedName = 'diamond hands'; speedColor = '#0052FF' }
-        else if (s >= 1500) { speedName = 'bull run'; speedColor = '#0ECB81' }
-        else if (s >= 700) { speedName = 'fomo'; speedColor = '#F0B90B' }
-        else if (s >= 300) { speedName = 'degen'; speedColor = '#F6465D' }
+        let accentGlow = 'rgba(148,163,184,0.3)'
+        if (s >= 5000) { speedName = 'whale'; speedColor = '#8B5CF6'; accentGlow = 'rgba(139,92,246,0.4)' }
+        else if (s >= 3000) { speedName = 'diamond hands'; speedColor = '#0052FF'; accentGlow = 'rgba(0,82,255,0.4)' }
+        else if (s >= 1500) { speedName = 'bull run'; speedColor = '#0ECB81'; accentGlow = 'rgba(14,203,129,0.4)' }
+        else if (s >= 700) { speedName = 'fomo'; speedColor = '#F0B90B'; accentGlow = 'rgba(240,185,11,0.4)' }
+        else if (s >= 300) { speedName = 'degen'; speedColor = '#F6465D'; accentGlow = 'rgba(246,70,93,0.4)' }
 
-        // Determine death message
+        // Death message — deterministic based on score + address
         const deathMessages = ['rekt!', 'liquidated!', 'rugged!', 'ngmi', 'dumped!', 'paper handed!']
         const msgIdx = Math.abs(s * 7 + (address ? address.charCodeAt(2) || 0 : 0)) % deathMessages.length
         const deathMsg = deathMessages[msgIdx]
 
-        // Load custom font (optional, using default sans for speed, or we can use generic system fonts)
-        // Satori doesn't support "system-ui" out of the box without a font file, but we can rely on default if needed.
+        const hasCombo = combo && Number(combo) > 0
 
         return new ImageResponse(
             (
@@ -50,84 +60,181 @@ export async function GET(req: NextRequest) {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: '#f8fafc',
-                        backgroundImage: 'radial-gradient(circle at 25px 25px, #e2e8f0 2%, transparent 0%), radial-gradient(circle at 75px 75px, #e2e8f0 2%, transparent 0%)',
-                        backgroundSize: '100px 100px',
+                        backgroundColor: '#0A0B14',
                         fontFamily: 'monospace',
+                        position: 'relative',
+                        overflow: 'hidden',
                     }}
                 >
-                    {/* Card mimicking Game Over */}
+                    {/* Background radial glow */}
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: '-30%',
+                            left: '-30%',
+                            width: '160%',
+                            height: '160%',
+                            background: `radial-gradient(circle at 50% 40%, ${accentGlow}, transparent 60%)`,
+                            display: 'flex',
+                        }}
+                    />
+
+                    {/* Grid pattern overlay */}
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
+                            backgroundSize: '40px 40px',
+                            display: 'flex',
+                        }}
+                    />
+
+                    {/* Main card */}
                     <div
                         style={{
                             display: 'flex',
                             flexDirection: 'column',
                             width: '85%',
-                            backgroundColor: 'white',
-                            borderRadius: '24px',
-                            border: '2px solid rgba(10, 11, 20, 0.1)',
-                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                            padding: '32px',
+                            backgroundColor: 'rgba(15,17,26,0.95)',
+                            borderRadius: '28px',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            boxShadow: `0 32px 64px rgba(0,0,0,0.6), 0 0 80px ${accentGlow}, inset 0 1px 0 rgba(255,255,255,0.08)`,
+                            padding: '36px 32px',
+                            position: 'relative',
                         }}
                     >
-                        {/* Header */}
-                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-                            <h2 style={{ fontSize: '36px', fontWeight: 900, color: '#F6465D', letterSpacing: '4px', textTransform: 'lowercase', margin: 0 }}>
+                        {/* Brand header */}
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '14px', fontWeight: 800, color: 'rgba(255,255,255,0.25)', letterSpacing: '6px', textTransform: 'uppercase' as const }}>
+                                base dash
+                            </span>
+                        </div>
+
+                        {/* Death message */}
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                            <span style={{ fontSize: '32px', fontWeight: 900, color: '#F6465D', letterSpacing: '4px', textTransform: 'lowercase' as const, textShadow: '0 0 30px rgba(246,70,93,0.5)' }}>
                                 {deathMsg}
-                            </h2>
+                            </span>
                         </div>
 
-                        {/* 2-col Stats */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', marginBottom: '24px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, backgroundColor: '#F8FAFC', border: '2px solid #E2E8F0', borderRadius: '16px', padding: '16px', alignItems: 'center' }}>
-                                <span style={{ fontSize: '18px', fontWeight: 900, color: '#94A3B8', letterSpacing: '4px', textTransform: 'lowercase', marginBottom: '8px' }}>pnl</span>
-                                <span style={{ fontSize: '48px', fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>{formattedScore}</span>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, backgroundColor: '#EEF4FF', border: '2px solid rgba(0, 82, 255, 0.2)', borderRadius: '16px', padding: '16px', alignItems: 'center' }}>
-                                <span style={{ fontSize: '18px', fontWeight: 900, color: '#6CACFF', letterSpacing: '4px', textTransform: 'lowercase', marginBottom: '8px' }}>mode</span>
-                                <span style={{ fontSize: '32px', fontWeight: 900, color: speedColor, letterSpacing: '2px', textTransform: 'lowercase', lineHeight: 1.2, textAlign: 'center' }}>{speedName}</span>
+                        {/* Score + Speed tier */}
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            marginBottom: '24px',
+                            padding: '20px 16px',
+                            backgroundColor: 'rgba(255,255,255,0.04)',
+                            borderRadius: '20px',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                        }}>
+                            <span style={{ fontSize: '14px', fontWeight: 800, color: 'rgba(255,255,255,0.3)', letterSpacing: '5px', textTransform: 'uppercase' as const, marginBottom: '8px' }}>
+                                final pnl
+                            </span>
+                            <span style={{ fontSize: '52px', fontWeight: 900, color: '#ffffff', letterSpacing: '-2px', textShadow: `0 4px 20px rgba(255,255,255,0.15), 0 0 40px ${accentGlow}` }}>
+                                {formattedScore}
+                            </span>
+                            <div style={{
+                                display: 'flex',
+                                marginTop: '12px',
+                                padding: '6px 20px',
+                                borderRadius: '24px',
+                                backgroundColor: `${speedColor}22`,
+                                border: `1px solid ${speedColor}44`,
+                            }}>
+                                <span style={{ fontSize: '14px', fontWeight: 800, color: speedColor, letterSpacing: '3px', textTransform: 'lowercase' as const }}>
+                                    {speedName}
+                                </span>
                             </div>
                         </div>
 
-                        {/* Combo Row */}
-                        {combo && (
-                            <div style={{ display: 'flex', backgroundColor: '#FFFBEB', border: '2px solid rgba(240, 185, 11, 0.3)', borderRadius: '16px', padding: '16px', justifyContent: 'center', alignItems: 'center', marginBottom: '24px', gap: '12px' }}>
-                                <span style={{ fontSize: '24px' }}>🔥</span>
-                                <span style={{ fontSize: '24px', fontWeight: 900, color: '#B78905', letterSpacing: '2px', textTransform: 'lowercase' }}>{combo}× max combo</span>
+                        {/* Combo row */}
+                        {hasCombo && (
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                gap: '10px',
+                                marginBottom: '20px',
+                                padding: '10px 16px',
+                                borderRadius: '14px',
+                                backgroundColor: 'rgba(240,185,11,0.08)',
+                                border: '1px solid rgba(240,185,11,0.2)',
+                            }}>
+                                <span style={{ fontSize: '22px' }}>🔥</span>
+                                <span style={{ fontSize: '18px', fontWeight: 900, color: '#F0B90B', letterSpacing: '2px' }}>
+                                    {combo}× max combo
+                                </span>
                             </div>
                         )}
 
-                        {/* 4-col Mini Stats */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '24px' }}>
+                        {/* Stats grid */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '20px' }}>
                             {[
-                                { label: 'time', value: `${time || '0'}s`, green: false },
-                                { label: 'dodged', value: dodged || '0', green: false },
-                                { label: 'buys', value: buys || '0', green: true },
-                                { label: 'jumps', value: jumps || '0', green: false },
+                                { label: 'time', value: `${time || '0'}s`, accent: false },
+                                { label: 'dodged', value: dodged || '0', accent: false },
+                                { label: 'buys', value: buys || '0', accent: true },
+                                { label: 'jumps', value: jumps || '0', accent: false },
                             ].map((stat) => (
-                                <div key={stat.label} style={{ display: 'flex', flexDirection: 'column', flex: 1, backgroundColor: stat.green ? '#E8F8F0' : '#F8FAFC', border: `2px solid ${stat.green ? 'rgba(14, 203, 129, 0.4)' : '#E2E8F0'}`, borderRadius: '12px', padding: '12px', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '16px', fontWeight: 900, color: stat.green ? '#0ECB81' : '#94A3B8', letterSpacing: '2px', textTransform: 'lowercase', marginBottom: '4px' }}>{stat.label}</span>
-                                    <span style={{ fontSize: '28px', fontWeight: 900, color: stat.green ? '#0ECB81' : '#334155' }}>{stat.value}</span>
+                                <div key={stat.label} style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    flex: 1,
+                                    alignItems: 'center',
+                                    padding: '10px 6px',
+                                    borderRadius: '14px',
+                                    backgroundColor: stat.accent ? 'rgba(14,203,129,0.08)' : 'rgba(255,255,255,0.04)',
+                                    border: `1px solid ${stat.accent ? 'rgba(14,203,129,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                                }}>
+                                    <span style={{ fontSize: '12px', fontWeight: 800, color: stat.accent ? 'rgba(14,203,129,0.6)' : 'rgba(255,255,255,0.3)', letterSpacing: '2px', textTransform: 'lowercase' as const, marginBottom: '4px' }}>
+                                        {stat.label}
+                                    </span>
+                                    <span style={{ fontSize: '22px', fontWeight: 900, color: stat.accent ? '#0ECB81' : 'rgba(255,255,255,0.85)' }}>
+                                        {stat.value}
+                                    </span>
                                 </div>
                             ))}
                         </div>
 
-                        {/* Player Address */}
-                        <div style={{ display: 'flex', justifyContent: 'center' }}>
-                            <div style={{ backgroundColor: '#F1F5F9', border: '2px solid #E2E8F0', borderRadius: '12px', padding: '8px 24px', display: 'flex' }}>
-                                <span style={{ fontSize: '24px', fontWeight: 700, color: '#64748B', letterSpacing: '2px' }}>{shortAddr}</span>
+                        {/* Player address + branding */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '6px 14px',
+                                borderRadius: '20px',
+                                backgroundColor: 'rgba(255,255,255,0.04)',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                            }}>
+                                {address && (
+                                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#0ECB81', boxShadow: '0 0 8px rgba(14,203,129,0.5)', display: 'flex' }} />
+                                )}
+                                <span style={{ fontSize: '14px', fontWeight: 700, color: 'rgba(255,255,255,0.4)' }}>
+                                    {shortAddr}
+                                </span>
                             </div>
+
+                            <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.15)', letterSpacing: '3px', textTransform: 'uppercase' as const }}>
+                                built on base
+                            </span>
                         </div>
                     </div>
-                </div >
+                </div>
             ),
             {
                 width: 600,
-                height: 600, // Square image for 1:1 aspect ratio
+                height: 600,
             }
         )
-    } catch (e: any) {
-        console.log(`${e.message}`)
-        return new Response(`Failed to generate the image`, {
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Unknown error'
+        console.error('Frame image error:', message)
+        return new Response('Failed to generate the image', {
             status: 500,
         })
     }

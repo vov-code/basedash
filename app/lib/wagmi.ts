@@ -1,31 +1,42 @@
-'use client'
-
-import { createConfig, http } from 'wagmi'
+import { http, createConfig, createStorage, cookieStorage } from 'wagmi'
 import { base, baseSepolia } from 'wagmi/chains'
-import { coinbaseWallet, injected } from 'wagmi/connectors'
-
-const isTestnet = process.env.NEXT_PUBLIC_USE_TESTNET === 'true'
+import { baseAccount, injected } from 'wagmi/connectors'
 
 /**
- * Base App standard: Coinbase Smart Wallet is the primary connector.
- * Injected (browser wallet) kept as fallback.
- * MetaMask & WalletConnect removed — Base App = Coinbase ecosystem.
+ * Wagmi configuration — follows official Base documentation pattern:
+ * https://docs.base.org/get-started/build-app
+ *
+ * Key patterns from the docs:
+ * 1. `baseAccount` connector from @base-org/account — replaces coinbaseWallet
+ * 2. `injected` as fallback for browser extension wallets
+ * 3. `cookieStorage` for SSR hydration (prevents flash)
+ * 4. `ssr: true` for Next.js SSR compatibility
+ * 5. Explicit RPC URLs in transports
+ * 6. Typed config via `declare module 'wagmi'`
  */
-const connectors = [
-  coinbaseWallet({
-    appName: 'base dash',
-    appLogoUrl: 'https://basedash-five.vercel.app/base-logo.png',
-    preference: 'smartWalletOnly',
-  }),
-  injected({ shimDisconnect: true }),
-]
+
+const isTestnet = process.env.NEXT_PUBLIC_USE_TESTNET === 'true'
+const activeChain = isTestnet ? baseSepolia : base
 
 export const config = createConfig({
-  chains: [isTestnet ? baseSepolia : base],
-  connectors,
+  chains: [activeChain],
+  connectors: [
+    baseAccount({
+      appName: 'Base Dash',
+    }),
+    injected(),
+  ],
+  storage: createStorage({ storage: cookieStorage }),
+  ssr: true,
   transports: {
-    [base.id]: http(),
-    [baseSepolia.id]: http(),
+    [base.id]: http('https://mainnet.base.org'),
+    [baseSepolia.id]: http('https://sepolia.base.org'),
   },
 })
 
+// Typed config registration for type safety across the app
+declare module 'wagmi' {
+  interface Register {
+    config: typeof config
+  }
+}

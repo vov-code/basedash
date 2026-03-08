@@ -278,6 +278,128 @@ export const MARKET_CONFIG = {
     RUG_PULL_DURATION: 3.5,
 } as const
 
+// ============================================================================
+// GAMEPLAY CONSTANTS — replaces inline magic numbers
+// ============================================================================
+
+export const GAMEPLAY = {
+    /** Grab radius for collecting green candles (px) */
+    GREEN_GRAB_RADIUS: 25,
+    /** Near-miss detection distance from red candle edge (px) */
+    NEAR_MISS_THRESHOLD: 10,
+    /** Hitbox padding for collision detection (px) */
+    HITBOX_PAD: 1,
+
+    // Demo mode AI thresholds
+    DEMO_JUMP_DIST: 120,
+    DEMO_DOUBLE_JUMP_DIST: 80,
+    DEMO_TALL_JUMP_DIST: 160,
+    DEMO_COLLECT_DIST: 40,
+    DEMO_POWERUP_DIST: 120,
+} as const
+
+// ============================================================================
+// COMBO MILESTONES — Named tiers with visual + audio rewards
+// ============================================================================
+
+export interface ComboMilestone {
+    threshold: number
+    name: string
+    emoji: string
+    color: string
+    glowColor: string
+    duration: number  // seconds to display the milestone banner
+}
+
+export const COMBO_MILESTONES: ComboMilestone[] = [
+    { threshold: 5, name: 'STREAK!', emoji: '🔥', color: '#F0B90B', glowColor: 'rgba(240,185,11,0.4)', duration: 1.2 },
+    { threshold: 10, name: 'ON FIRE!', emoji: '⚡', color: '#FF6B00', glowColor: 'rgba(255,107,0,0.4)', duration: 1.5 },
+    { threshold: 20, name: 'UNSTOPPABLE!', emoji: '💎', color: '#0052FF', glowColor: 'rgba(0,82,255,0.4)', duration: 1.8 },
+    { threshold: 50, name: 'LEGENDARY!', emoji: '👑', color: '#8B5CF6', glowColor: 'rgba(139,92,246,0.4)', duration: 2.0 },
+    { threshold: 100, name: 'ASCENDED!', emoji: '🌟', color: '#FFD700', glowColor: 'rgba(255,215,0,0.5)', duration: 2.5 },
+]
+
+export const getComboMilestone = (combo: number): ComboMilestone | null => {
+    for (let i = COMBO_MILESTONES.length - 1; i >= 0; i--) {
+        if (combo === COMBO_MILESTONES[i].threshold) return COMBO_MILESTONES[i]
+    }
+    return null
+}
+
+export const getCurrentComboTier = (combo: number): ComboMilestone | null => {
+    for (let i = COMBO_MILESTONES.length - 1; i >= 0; i--) {
+        if (combo >= COMBO_MILESTONES[i].threshold) return COMBO_MILESTONES[i]
+    }
+    return null
+}
+
+// ============================================================================
+// PARTICLE POOL — Pre-allocated for zero GC pressure
+// ============================================================================
+
+export class ParticlePool {
+    private pool: Particle[] = []
+    private active = 0
+
+    constructor(capacity: number) {
+        for (let i = 0; i < capacity; i++) {
+            this.pool.push(this.createEmpty())
+        }
+    }
+
+    private createEmpty(): Particle {
+        return {
+            x: 0, y: 0, vx: 0, vy: 0,
+            life: 0, maxLife: 1, size: 0, targetSize: 0,
+            color: '#fff', gravity: 0, type: 'spark',
+            angle: 0, rotation: 0, rotationSpeed: 0,
+            friction: 1, alpha: 1, pulse: 0,
+        }
+    }
+
+    acquire(init: Partial<Particle>): Particle | null {
+        // Find a dead particle to reuse
+        for (let i = 0; i < this.pool.length; i++) {
+            if (this.pool[i].life <= 0) {
+                const p = this.pool[i]
+                Object.assign(p, {
+                    x: 0, y: 0, vx: 0, vy: 0,
+                    life: 1, maxLife: 1, size: 2, targetSize: 2,
+                    color: '#fff', color2: undefined, gravity: 0, type: 'spark',
+                    angle: 0, rotation: 0, rotationSpeed: 0,
+                    friction: 1, alpha: 1, pulse: 0,
+                    ...init,
+                })
+                this.active++
+                return p
+            }
+        }
+        return null // Pool exhausted
+    }
+
+    getActive(): Particle[] {
+        return this.pool.filter(p => p.life > 0)
+    }
+
+    get activeCount(): number {
+        return this.pool.filter(p => p.life > 0).length
+    }
+
+    update(dt: number): void {
+        for (const p of this.pool) {
+            if (p.life <= 0) continue
+            p.life -= dt / p.maxLife
+            if (p.life <= 0) { this.active--; continue }
+            p.x += p.vx * dt
+            p.y += p.vy * dt
+            p.vy += p.gravity * dt
+            p.vx *= p.friction
+            p.vy *= p.friction
+            p.rotation += p.rotationSpeed * dt
+        }
+    }
+}
+
 export interface EngineState {
     player: Player
     candles: Candle[]
@@ -352,10 +474,22 @@ export interface EngineState {
     nearMissY: number
     /** Candles spawned so far this run (for early-game guard) */
     spawnCount: number
-    /** Shield flash overlay timer (item 4) */
+    /** Shield flash overlay timer */
     shieldFlashTimer: number
-    /** Moon boost golden HUD pulse active (item 4) */
+    /** Moon boost golden HUD pulse active */
     moonBoostPulseActive: boolean
+    /** Timestamp of last near-miss trigger for cooldown */
+    lastNearMissTime: number
+    /** Timer for combo milestone banner display */
+    comboMilestoneTimer: number
+    /** Name of current combo milestone to display */
+    comboMilestoneName: string
+    /** Emoji for current combo milestone */
+    comboMilestoneEmoji: string
+    /** Color for current combo milestone */
+    comboMilestoneColor: string
+    /** World progress percentage (0-1) to next world */
+    worldProgressPct: number
 }
 
 // ============================================================================
@@ -861,6 +995,12 @@ export const createEngine = (): EngineState => ({
     spawnCount: 0,
     shieldFlashTimer: 0,
     moonBoostPulseActive: false,
+    lastNearMissTime: 0,
+    comboMilestoneTimer: 0,
+    comboMilestoneName: '',
+    comboMilestoneEmoji: '',
+    comboMilestoneColor: '',
+    worldProgressPct: 0,
 })
 
 // ============================================================================

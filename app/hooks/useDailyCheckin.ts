@@ -7,6 +7,37 @@ import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS } from '@/app/contracts'
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 const SECONDS_IN_DAY = BigInt(86400)
 
+// ============================================================================
+// STREAK MULTIPLIER TIERS
+// ============================================================================
+export const STREAK_TIERS = [
+  { days: 0, multiplier: 1.0, label: 'No Streak', emoji: '💤', color: '#94a3b8', bg: 'rgba(148,163,184,0.08)' },
+  { days: 1, multiplier: 1.1, label: 'Warming Up', emoji: '🔥', color: '#F0B90B', bg: 'rgba(240,185,11,0.08)' },
+  { days: 3, multiplier: 1.25, label: 'On Fire', emoji: '⚡', color: '#F6465D', bg: 'rgba(246,70,93,0.08)' },
+  { days: 7, multiplier: 1.5, label: 'Diamond Hands', emoji: '💎', color: '#0052FF', bg: 'rgba(0,82,255,0.08)' },
+  { days: 14, multiplier: 2.0, label: 'Legendary', emoji: '👑', color: '#8B5CF6', bg: 'rgba(139,92,246,0.08)' },
+] as const
+
+export type StreakTier = typeof STREAK_TIERS[number]
+
+export function getStreakTier(streak: number): StreakTier {
+  for (let i = STREAK_TIERS.length - 1; i >= 0; i--) {
+    if (streak >= STREAK_TIERS[i].days) return STREAK_TIERS[i]
+  }
+  return STREAK_TIERS[0]
+}
+
+export function getNextStreakTier(streak: number): StreakTier | null {
+  for (const tier of STREAK_TIERS) {
+    if (tier.days > streak) return tier
+  }
+  return null // Already at max
+}
+
+export function getStreakMultiplier(streak: number): number {
+  return getStreakTier(streak).multiplier
+}
+
 export function useDailyCheckin(address: `0x${string}` | undefined, enabled = true) {
   const [streak, setStreak] = useState(0)
   const [lastCheckIn, setLastCheckIn] = useState<bigint>(BigInt(0))
@@ -70,9 +101,13 @@ export function useDailyCheckin(address: `0x${string}` | undefined, enabled = tr
   const canSubmitScore = useMemo(() => {
     if (!address) return false
     if (!isContractReady) return false
-    // Can submit if contract is ready (check-in is optional for testing)
     return true
   }, [address, isContractReady])
+
+  // Streak multiplier calculations
+  const streakMultiplier = useMemo(() => getStreakMultiplier(streak), [streak])
+  const streakTier = useMemo(() => getStreakTier(streak), [streak])
+  const nextTier = useMemo(() => getNextStreakTier(streak), [streak])
 
   const linkWallet = useCallback(
     async (fid: bigint) => {
@@ -132,5 +167,10 @@ export function useDailyCheckin(address: `0x${string}` | undefined, enabled = tr
     isCheckInConfirmed,
     canCheckIn,
     canSubmitScore,
+    // Streak multiplier data
+    streakMultiplier,
+    streakTier,
+    nextTier,
   }
 }
+

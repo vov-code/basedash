@@ -9,9 +9,8 @@ const nextConfig = {
   compress: true,
   productionBrowserSourceMaps: false,
 
-  // TODO: Re-enable ESLint in builds once all lint errors are fixed
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
 
   images: {

@@ -12,10 +12,9 @@ import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import GameEngine from './components/Game/GameEngine'
 import DailyCheckinButton from './components/DailyCheckin/CheckinButton'
 import { useWallet } from './hooks/useWallet'
-import { useDailyCheckin } from './hooks/useDailyCheckin'
+import { useDailyCheckin, STREAK_TIERS } from './hooks/useDailyCheckin'
 import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS } from './contracts'
-import { ConnectWallet, Wallet } from '@coinbase/onchainkit/wallet'
-import { Avatar, Name } from '@coinbase/onchainkit/identity'
+import { safeStorage } from './lib/safeStorage'
 import Leaderboard from './components/Leaderboard/Leaderboard'
 
 import ParticleChaos from './components/Background/ParticleChaos'
@@ -67,7 +66,7 @@ export default function Home() {
   const [isClientLoaded, setIsClientLoaded] = useState(false)
 
   const { address, isConnected, connectWallet, disconnectWallet } = useWallet()
-  const { checkInStatus, canSubmitScore } = useDailyCheckin(address, activeTab === 'profile')
+  const { checkInStatus, canSubmitScore, streakMultiplier, streakTier, nextTier } = useDailyCheckin(address, activeTab === 'profile' || activeTab === 'game')
   const networkLabel = process.env.NEXT_PUBLIC_USE_TESTNET === 'true' ? 'base sepolia' : 'base mainnet'
 
   // Run only on client side after hydration
@@ -75,8 +74,8 @@ export default function Home() {
     setIsClientLoaded(true)
 
     // Check if new user
-    const hasVisited = localStorage.getItem('bd_visited') === '1'
-    const chimePlayed = localStorage.getItem('bd_played_chime') === '1'
+    const hasVisited = safeStorage.get('bd_visited') === '1'
+    const chimePlayed = safeStorage.get('bd_played_chime') === '1'
     setHasPlayedChime(chimePlayed)
 
     // Touch bypass logic
@@ -104,9 +103,9 @@ export default function Home() {
   handleEnterRef.current = () => {
     if (hasEntered || isEntering) return
     setIsEntering(true)
-    localStorage.setItem('bd_visited', '1')
+    safeStorage.set('bd_visited', '1')
     if (!hasPlayedChime) {
-      localStorage.setItem('bd_played_chime', '1')
+      safeStorage.set('bd_played_chime', '1')
       setHasPlayedChime(true)
     }
     setTimeout(() => setHasEntered(true), 400)
@@ -361,13 +360,14 @@ export default function Home() {
                       connectWallet={handleConnect}
                       isScoreConfirmed={isScoreConfirmed}
                       submitTxHash={submitTxHash}
+                      streakMultiplier={streakMultiplier}
                     />
                   </div>
                 </div>
 
                 <div className="w-full px-2 sm:px-4 flex-1 min-h-0 relative z-20 flex flex-col">
                   {/* Note: In a future PR we will pull score/combo state UP to page.tsx via Zustand, for now passing 0/0 to initial mount layout */}
-                  <DashboardGrid score={0} combo={0} />
+                  <DashboardGrid score={0} combo={0} streak={checkInStatus.streak} streakTier={streakTier} streakMultiplier={streakMultiplier} nextTier={nextTier} />
                 </div>
               </div>
             )}
@@ -407,10 +407,47 @@ export default function Home() {
                           {typeof window !== 'undefined' ? (parseInt(localStorage.getItem('base_dash_time') || '0') / 60).toFixed(1) : 0}m
                         </p>
                       </div>
-                      <div className="p-3 rounded-xl border border-[#0052FF]/15 bg-[#0052FF]/[0.04] flex flex-col items-center justify-center text-center">
+                      <div className="p-3 rounded-xl border bg-gradient-to-br flex flex-col items-center justify-center text-center" style={{ borderColor: `${streakTier.color}20`, background: `linear-gradient(135deg, white, ${streakTier.bg})` }}>
                         <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>streak</p>
-                        <p className="mt-1 text-lg font-black text-[#0052FF] leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>{checkInStatus.streak}</p>
+                        <p className="mt-1 text-lg font-black leading-none flex items-center gap-1" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
+                          {streakTier.emoji} {checkInStatus.streak}
+                        </p>
                       </div>
+                    </div>
+
+                    {/* Streak Multiplier Card */}
+                    <div className="rounded-2xl border p-3 sm:p-4 relative overflow-hidden" style={{ borderColor: `${streakTier.color}15`, background: `linear-gradient(135deg, white 60%, ${streakTier.bg} 100%)` }}>
+                      <div className="absolute right-0 top-0 w-24 h-24 pointer-events-none" style={{ background: `radial-gradient(circle, ${streakTier.color}10, transparent 70%)` }} />
+                      <div className="flex items-center justify-between mb-2.5 relative z-10">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{streakTier.emoji}</span>
+                          <div>
+                            <p className="text-[10px] sm:text-[11px] font-black leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
+                              {streakTier.label}
+                            </p>
+                            <p className="text-[7px] font-bold text-slate-400 mt-0.5" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Score Multiplier</p>
+                          </div>
+                        </div>
+                        <span className="text-[20px] sm:text-[22px] font-black leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
+                          ×{streakMultiplier.toFixed(streakMultiplier % 1 === 0 ? 0 : streakMultiplier === 1.25 ? 2 : 1)}
+                        </span>
+                      </div>
+                      {/* Tiers roadmap */}
+                      <div className="flex items-center gap-1 relative z-10">
+                        {STREAK_TIERS.slice(1).map((tier, i) => (
+                          <div key={tier.days} className="flex-1 flex flex-col items-center gap-1">
+                            <div className="w-full h-[3px] rounded-full transition-all" style={{ background: checkInStatus.streak >= tier.days ? tier.color : '#e2e8f0' }} />
+                            <span className="text-[7px] font-bold leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: checkInStatus.streak >= tier.days ? tier.color : '#cbd5e1' }}>
+                              {tier.emoji}{tier.days}d
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      {nextTier && (
+                        <p className="text-[7px] font-bold text-slate-400 mt-2 text-center relative z-10" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                          {nextTier.days - checkInStatus.streak} days until {nextTier.emoji} ×{nextTier.multiplier} boost
+                        </p>
+                      )}
                     </div>
                     <div className="pt-1"><DailyCheckinButton /></div>
 
