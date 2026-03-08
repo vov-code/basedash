@@ -1684,3 +1684,10 @@ body.game-active {
 .animate-particle-float {
   animation: particleFloat 4s ease-in-out infinite;
 }
+
+/* ========================================================================
+   GLOBAL DEGEN STYLES (Enforce Square UI)
+   ======================================================================== */
+* {
+  border-radius: 0 !important;
+}
