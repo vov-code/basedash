@@ -330,19 +330,19 @@ export default function Home() {
                       <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0052FF]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0052FF]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
                       </div>
-                      <span className="text-[9px] sm:text-[10px] font-mono font-black text-slate-900 uppercase tracking-widest truncate text-center">tap to jump</span>
+                      <span className="text-[7px] sm:text-[8px] font-mono font-black text-slate-900 uppercase tracking-widest truncate text-center">tap to jump</span>
                     </div>
                     <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/70 backdrop-blur-md border border-[#F6465D]/15 min-w-0 justify-center">
                       <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#F6465D]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#F6465D]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       </div>
-                      <span className="text-[9px] sm:text-[10px] font-mono font-black text-slate-900 uppercase tracking-widest truncate text-center">dodge <span className="text-[#F6465D]">red</span></span>
+                      <span className="text-[7px] sm:text-[8px] font-mono font-black text-slate-900 uppercase tracking-widest truncate text-center">dodge <span className="text-[#F6465D]">red</span></span>
                     </div>
                     <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/70 backdrop-blur-md border border-[#0ECB81]/15 min-w-0 justify-center">
                       <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0ECB81]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0ECB81]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                       </div>
-                      <span className="text-[9px] sm:text-[10px] font-mono font-black text-slate-900 uppercase tracking-widest truncate text-center">collect <span className="text-[#0ECB81]">green</span></span>
+                      <span className="text-[7px] sm:text-[8px] font-mono font-black text-slate-900 uppercase tracking-widest truncate text-center">collect <span className="text-[#0ECB81]">green</span></span>
                     </div>
                   </div>
                 </div>
@@ -421,78 +421,77 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Premium Streak Multiplier Card */}
-                    <div className="border-2 border-slate-900 bg-white p-4 relative overflow-hidden shadow-[3px_3px_0_#0F172A] group">
-                      {/* Geometric corner accent */}
-                      <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none">
-                        <div className="absolute top-0 right-0 w-6 h-6 border-l-2 border-b-2 border-slate-200" />
-                        <div className="absolute top-1 right-1 w-2 h-2" style={{ backgroundColor: streakTier.color }} />
-                      </div>
-
-                      <div className="flex items-start justify-between mb-4 relative z-10">
-                        <div>
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <div className="w-2.5 h-2.5 border border-slate-900" style={{ backgroundColor: streakTier.color }} />
-                            <p className="text-[11px] font-black uppercase tracking-widest leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
+                    {/* Streak Multiplier Card */}
+                    <div className="border border-slate-200 bg-white/70 backdrop-blur-md p-4 relative overflow-hidden">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          {/* SVG flame icon */}
+                          <div className="w-7 h-7 flex items-center justify-center" style={{ color: streakTier.color }}>
+                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                              <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.037 2.211-5.561 3.667-7.333C10 7.167 11.333 5.333 11.667 3c.167.333 1.333 2.667 1.333 2.667C14.333 3 15.667 1 16 0c.333 1 1 3.333 1 3.333S20 6.333 20 10c0 1.5-.333 2.833-1 4-.667 1.167-1.5 2-2.5 2.833C15.167 18 14 19.5 14 21c0 1.083-.917 2-2 2z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
                               {streakTier.label}
                             </p>
+                            <p className="text-[7px] font-bold text-slate-400 uppercase tracking-[0.1em] mt-0.5" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                              {checkInStatus.streak} day streak · {!checkInStatus.canCheckIn ? 'checked in' : 'check in today'}
+                            </p>
                           </div>
-                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.1em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Score Multiplier Active</p>
                         </div>
-                        <div className="text-right flex flex-col items-end">
-                          <span className="text-[28px] font-black leading-none block" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
+                        <div className="text-right">
+                          <span className="text-[24px] font-black leading-none block" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
                             ×{streakMultiplier.toFixed(streakMultiplier % 1 === 0 ? 0 : streakMultiplier === 1.25 ? 2 : 1)}
                           </span>
-                          <span className="text-[7px] font-bold text-slate-400 uppercase tracking-wider mt-0.5" style={{ fontFamily: 'var(--font-mono, monospace)' }}>boost</span>
                         </div>
                       </div>
 
-                      {/* Tier progress bars */}
-                      <div className="flex items-end gap-1 relative z-10 h-10 border-b-2 border-slate-100 pb-1 mb-3">
-                        {STREAK_TIERS.slice(1).map((tier, i) => {
+                      {/* Progress toward next tier */}
+                      {nextTier ? (
+                        <div className="mb-2">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[7px] font-bold text-slate-400 uppercase tracking-wider" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                              next: ×{nextTier.multiplier} at {nextTier.days}d
+                            </span>
+                            <span className="text-[7px] font-black uppercase tracking-wider" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
+                              {checkInStatus.streak}/{nextTier.days}
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-100 overflow-hidden">
+                            <div
+                              className="h-full transition-all duration-700"
+                              style={{
+                                width: `${Math.min(100, (checkInStatus.streak / nextTier.days) * 100)}%`,
+                                backgroundColor: streakTier.color,
+                                opacity: 0.6,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <svg className="w-3 h-3 text-[#0ECB81]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                          <span className="text-[7px] font-black text-[#0ECB81] uppercase tracking-wider" style={{ fontFamily: 'var(--font-mono, monospace)' }}>max tier unlocked</span>
+                        </div>
+                      )}
+
+                      {/* Tier markers */}
+                      <div className="flex items-center gap-0.5">
+                        {STREAK_TIERS.slice(1).map((tier) => {
                           const isReached = checkInStatus.streak >= tier.days;
-                          const heightPct = 30 + (i * 20);
                           return (
-                            <div key={tier.days} className="flex-1 flex flex-col items-center justify-end h-full gap-1">
-                              <span className="text-[7px] font-black leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: isReached ? tier.color : '#cbd5e1' }}>
-                                {tier.days}D
-                              </span>
+                            <div key={tier.days} className="flex-1 flex flex-col items-center gap-0.5">
                               <div
-                                className="w-full transition-all duration-500"
-                                style={{
-                                  height: `${heightPct}%`,
-                                  backgroundColor: isReached ? `${tier.color}` : '#f1f5f9',
-                                  opacity: isReached ? 0.3 : 1,
-                                  borderLeft: isReached ? `2px solid ${tier.color}` : '2px solid transparent',
-                                }}
+                                className="w-full h-1 transition-all duration-500"
+                                style={{ backgroundColor: isReached ? tier.color : '#f1f5f9', opacity: isReached ? 0.5 : 1 }}
                               />
+                              <span className="text-[6px] font-bold leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: isReached ? tier.color : '#cbd5e1' }}>
+                                {tier.days}d
+                              </span>
                             </div>
                           );
                         })}
-                      </div>
-
-                      {/* Info footer */}
-                      <div className="flex items-center justify-between relative z-10">
-                        {nextTier ? (
-                          <>
-                            <div className="text-[7px] font-bold text-slate-400 uppercase tracking-[0.1em] flex items-center gap-1" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                              <div className="w-1 h-1 bg-slate-300" />
-                              <span>{nextTier.days - checkInStatus.streak}D to ×{nextTier.multiplier}</span>
-                            </div>
-                            <div className="text-[7px] font-black uppercase tracking-wider px-1.5 py-0.5 border border-slate-200" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
-                              {checkInStatus.streak}/{nextTier.days} DAYS
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="text-[7px] font-bold text-slate-400 uppercase tracking-[0.1em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                              All tiers unlocked
-                            </div>
-                            <div className="text-[7px] font-black uppercase tracking-wider px-1.5 py-0.5 border-2 border-slate-900 shadow-[1px_1px_0_#0F172A]" style={{ fontFamily: 'var(--font-mono, monospace)', color: '#0ECB81' }}>
-                              MAX
-                            </div>
-                          </>
-                        )}
                       </div>
                     </div>
                     <div className="pt-1"><DailyCheckinButton /></div>
