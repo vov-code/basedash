@@ -23,63 +23,64 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ score, combo, stre
     return (
         <div className="w-full h-full grid grid-cols-2 grid-rows-[auto_1fr_1fr] gap-1.5 sm:gap-2 max-w-lg mx-auto">
             {/* STREAK MULTIPLIER — full width hero block */}
-            <div className="col-span-2 flex-1 backdrop-blur-md rounded-none px-3 py-2 sm:px-4 sm:py-2.5 border flex items-center justify-between group transition-all duration-300 relative overflow-hidden"
+            <div className="col-span-2 flex-1 bg-white/70 backdrop-blur-md rounded-none px-3 py-2 sm:px-4 sm:py-2.5 border flex items-center justify-between group hover:bg-white/90 transition-all duration-300 relative overflow-hidden"
                 style={{
-                    background: `linear-gradient(135deg, white 0%, ${streakTier.bg} 100%)`,
                     borderColor: `${streakTier.color}20`,
+                    boxShadow: `0 8px 30px ${streakTier.color}08`
                 }}>
-                <div className="absolute right-0 top-0 w-32 h-full pointer-events-none" style={{ background: `linear-gradient(to left, ${streakTier.color}08, transparent)` }} />
+                {/* Subtle side glow */}
+                <div className="absolute right-0 top-0 w-32 h-full pointer-events-none transition-opacity duration-300 opacity-50 group-hover:opacity-100" style={{ background: `linear-gradient(to left, ${streakTier.color}15, transparent)` }} />
 
                 {/* Left: streak info */}
-                <div className="flex items-center gap-2.5 min-w-0 z-10">
-                    {/* SVG flame icon */}
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 z-10">
+                    {/* SVG flame icon container */}
                     <div className="relative flex-shrink-0">
-                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-none flex items-center justify-center"
-                            style={{ background: streakTier.bg, color: streakTier.color }}>
-                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 sm:w-6 sm:h-6">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-none flex items-center justify-center transition-transform duration-300 group-hover:scale-105"
+                            style={{ background: `${streakTier.color}12`, color: streakTier.color }}>
+                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
                                 <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.037 2.211-5.561 3.667-7.333C10 7.167 11.333 5.333 11.667 3c.167.333 1.333 2.667 1.333 2.667C14.333 3 15.667 1 16 0c.333 1 1 3.333 1 3.333S20 6.333 20 10c0 1.5-.333 2.833-1 4-.667 1.167-1.5 2-2.5 2.833C15.167 18 14 19.5 14 21c0 1.083-.917 2-2 2z" />
                             </svg>
                         </div>
-                        {streak > 0 && <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-none animate-pulse" style={{ background: streakTier.color, boxShadow: `0 0 6px ${streakTier.color}80` }} />}
+                        {streak > 0 && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-none animate-pulse" style={{ background: streakTier.color, boxShadow: `0 0 8px ${streakTier.color}` }} />}
                     </div>
 
-                    <div className="flex flex-col min-w-0 gap-0.5">
-                        <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] sm:text-[11px] font-black tracking-wide leading-none" style={{ ...mono, color: streakTier.color }}>
+                    <div className="flex flex-col min-w-0 gap-0.5 justify-center">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[11px] sm:text-[12px] font-black tracking-wide leading-none text-slate-800" style={mono}>
                                 {streakTier.label}
                             </span>
                             {streak > 0 && (
-                                <span className="text-[7px] sm:text-[8px] font-bold px-1.5 py-0.5 rounded-none leading-none" style={{ ...mono, background: streakTier.bg, color: streakTier.color }}>
-                                    {streak}d
+                                <span className="text-[7.5px] sm:text-[8px] font-bold px-1.5 py-0.5 rounded-none leading-none tracking-widest uppercase" style={{ ...mono, background: `${streakTier.color}15`, color: streakTier.color }}>
+                                    {streak} DAY{streak !== 1 ? 'S' : ''}
                                 </span>
                             )}
                         </div>
                         {nextTier ? (
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-16 sm:w-20 h-[3px] bg-slate-100 rounded-none overflow-hidden">
+                            <div className="flex items-center gap-2 mt-1">
+                                <div className="w-16 sm:w-24 h-[4px] bg-slate-100 rounded-none overflow-hidden border border-slate-200/50">
                                     <div className="h-full rounded-none transition-all duration-700 ease-out relative"
                                         style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${streakTier.color}, ${nextTier.color})` }}>
-                                        <div className="absolute inset-0 bg-white/40 animate-[shimmer_2s_infinite]" />
+                                        <div className="absolute inset-0 bg-white/30 animate-[shimmer_2s_infinite]" />
                                     </div>
                                 </div>
-                                <span className="text-[7px] font-bold text-slate-400 leading-none whitespace-nowrap" style={mono}>
-                                    {nextTier.days - streak}d → ×{nextTier.multiplier}
+                                <span className="text-[7.5px] font-bold text-slate-400 leading-none whitespace-nowrap uppercase tracking-wider" style={mono}>
+                                    {nextTier.days - streak}d TO ×{nextTier.multiplier}
                                 </span>
                             </div>
                         ) : (
-                            <span className="text-[7px] font-bold leading-none" style={{ ...mono, color: `${streakTier.color}99` }}>
-                                Max tier reached!
+                            <span className="text-[8px] font-bold leading-none uppercase tracking-widest mt-1" style={{ ...mono, color: `${streakTier.color}99` }}>
+                                Max level reached
                             </span>
                         )}
                     </div>
                 </div>
 
                 {/* Right: multiplier badge */}
-                <div className="flex flex-col items-end z-10 flex-shrink-0 gap-0.5">
-                    <span className="text-[16px] sm:text-[18px] font-black leading-none tracking-tight" style={{ ...mono, color: streakTier.color }}>
+                <div className="flex flex-col items-end z-10 flex-shrink-0 justify-center">
+                    <span className="text-[18px] sm:text-[22px] font-black leading-none tracking-tighter" style={{ ...mono, color: streakTier.color }}>
                         ×{streakMultiplier.toFixed(streakMultiplier % 1 === 0 ? 0 : streakMultiplier === 1.25 ? 2 : 1)}
                     </span>
-                    <span className="text-[7px] sm:text-[8px] font-bold uppercase tracking-wider leading-none px-1.5 py-0.5 rounded-none" style={{ ...mono, background: `${streakTier.color}12`, color: streakTier.color }}>
+                    <span className="text-[7px] sm:text-[8px] font-bold uppercase tracking-widest leading-none mt-1 text-slate-400" style={mono}>
                         Score Boost
                     </span>
                 </div>
