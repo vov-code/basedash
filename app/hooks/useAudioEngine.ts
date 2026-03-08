@@ -274,11 +274,11 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         bgmFilter.connect(bgmGain)
         bgmGain.connect(master)
 
-        // Initial volumes — melody quiet, pad warm, chime barely audible
-        gainMel.gain.value = 0.014
-        gainChm.gain.value = 0.004
-        gainPad.gain.value = 0.010
-        gainBas.gain.value = 0.005
+        // Initial volumes — audible through master gain (0.20)
+        gainMel.gain.value = 0.10
+        gainChm.gain.value = 0.03
+        gainPad.gain.value = 0.08
+        gainBas.gain.value = 0.04
 
         // Slow fade in — ramps master bus to 1.0 (per-osc gains handle volume)
         bgmGain.gain.setValueAtTime(0, ctx.currentTime)
@@ -461,15 +461,15 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
                 oscBass.frequency.setTargetAtTime(basNote, nextTime, glide * 3)
 
                 // === PER-OSC VOLUME — world + speed reactive ===
-                let mV = 0.012   // melody — quiet
-                let cV = 0.003   // chime — barely there
-                let pV = 0.010   // pad — warm bed
-                let bV = 0.004   // bass — felt not heard
+                let mV = 0.10    // melody
+                let cV = 0.03    // chime
+                let pV = 0.08    // pad
+                let bV = 0.04    // bass
 
-                if (world >= 2) { mV = 0.014; cV = 0.005; pV = 0.013; bV = 0.006 }
-                if (world >= 4) { mV = 0.016; cV = 0.007; pV = 0.015; bV = 0.008 }
-                if (world >= 6) { mV = 0.018; cV = 0.009; pV = 0.017; bV = 0.010 }
-                if (world >= 8) { mV = 0.020; cV = 0.011; pV = 0.019; bV = 0.012 }
+                if (world >= 2) { mV = 0.12; cV = 0.04; pV = 0.10; bV = 0.06 }
+                if (world >= 4) { mV = 0.14; cV = 0.06; pV = 0.12; bV = 0.07 }
+                if (world >= 6) { mV = 0.16; cV = 0.07; pV = 0.13; bV = 0.09 }
+                if (world >= 8) { mV = 0.18; cV = 0.08; pV = 0.14; bV = 0.10 }
 
                 // Speed adds subtle brightness — chime gets louder at high speed
                 cV *= (0.7 + speed * 0.3)

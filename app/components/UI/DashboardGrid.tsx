@@ -23,21 +23,22 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ score, combo, stre
     return (
         <div className="w-full h-full grid grid-cols-2 grid-rows-[auto_1fr_1fr] gap-1.5 sm:gap-2 max-w-lg mx-auto">
             {/* STREAK MULTIPLIER — full width hero block */}
-            <div className="col-span-2 flex-1 backdrop-blur-md rounded-none px-3 py-2 sm:px-4 sm:py-2.5 border flex items-center justify-between group hover:shadow-lg transition-all duration-300 relative overflow-hidden"
+            <div className="col-span-2 flex-1 backdrop-blur-md rounded-none px-3 py-2 sm:px-4 sm:py-2.5 border flex items-center justify-between group transition-all duration-300 relative overflow-hidden"
                 style={{
                     background: `linear-gradient(135deg, white 0%, ${streakTier.bg} 100%)`,
                     borderColor: `${streakTier.color}20`,
                 }}>
-                {/* Glow accent */}
                 <div className="absolute right-0 top-0 w-32 h-full pointer-events-none" style={{ background: `linear-gradient(to left, ${streakTier.color}08, transparent)` }} />
 
                 {/* Left: streak info */}
                 <div className="flex items-center gap-2.5 min-w-0 z-10">
-                    {/* Emoji badge with pulse */}
+                    {/* SVG flame icon */}
                     <div className="relative flex-shrink-0">
-                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-none flex items-center justify-center text-base sm:text-lg"
-                            style={{ background: streakTier.bg, boxShadow: `0 4px 12px ${streakTier.color}15` }}>
-                            {streakTier.emoji}
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-none flex items-center justify-center"
+                            style={{ background: streakTier.bg, color: streakTier.color }}>
+                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 sm:w-6 sm:h-6">
+                                <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.037 2.211-5.561 3.667-7.333C10 7.167 11.333 5.333 11.667 3c.167.333 1.333 2.667 1.333 2.667C14.333 3 15.667 1 16 0c.333 1 1 3.333 1 3.333S20 6.333 20 10c0 1.5-.333 2.833-1 4-.667 1.167-1.5 2-2.5 2.833C15.167 18 14 19.5 14 21c0 1.083-.917 2-2 2z" />
+                            </svg>
                         </div>
                         {streak > 0 && <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-none animate-pulse" style={{ background: streakTier.color, boxShadow: `0 0 6px ${streakTier.color}80` }} />}
                     </div>
@@ -53,7 +54,6 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ score, combo, stre
                                 </span>
                             )}
                         </div>
-                        {/* Progress bar to next tier */}
                         {nextTier ? (
                             <div className="flex items-center gap-1.5">
                                 <div className="w-16 sm:w-20 h-[3px] bg-slate-100 rounded-none overflow-hidden">
@@ -63,7 +63,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ score, combo, stre
                                     </div>
                                 </div>
                                 <span className="text-[7px] font-bold text-slate-400 leading-none whitespace-nowrap" style={mono}>
-                                    {nextTier.days - streak}d → {nextTier.emoji}×{nextTier.multiplier}
+                                    {nextTier.days - streak}d → ×{nextTier.multiplier}
                                 </span>
                             </div>
                         ) : (
