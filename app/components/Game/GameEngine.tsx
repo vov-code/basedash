@@ -1877,15 +1877,8 @@ export default function GameEngine({
             </button>
           </div>
 
-          {/* Chill / whale mode — minimalist glowing status */}
-          {engineRef.current.slowdownTimer > 0 && (
-            <div className="absolute top-[65px] left-1/2 -translate-x-1/2 flex items-center gap-1 px-2.5 py-0.5 rounded-none z-10 pointer-events-none backdrop-blur-sm"
-              style={{ background: 'linear-gradient(90deg, transparent, rgba(14,203,129,0.06), transparent)', borderBottom: '1px solid rgba(14,203,129,0.3)', boxShadow: '0 2px 8px rgba(14,203,129,0.1)' }}>
-              <p className="text-[#0ECB81] text-[7px] font-bold text-center tracking-[0.2em] uppercase" style={{ fontFamily: 'var(--font-mono, monospace)', textShadow: '0 0 4px rgba(14,203,129,0.4)' }}>
-                {engineRef.current.whaleTimer > 0 ? 'market freeze' : 'chill market'}
-              </p>
-            </div>
-          )}
+
+          {/* Chill / whale mode — now rendered on canvas via drawChillMarketBanner */}
 
           {/* Sound toggle moved to top right - previous location removed */}
 

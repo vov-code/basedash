@@ -425,45 +425,49 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Brutalist Streak Multiplier Card */}
-                    <div className="border border-slate-200 bg-white p-4 relative overflow-hidden group hover:border-slate-300 transition-colors">
-                      {/* Geometric backdrop */}
-                      <div className="absolute top-0 right-0 w-32 h-32 border-l border-b border-slate-100 -translate-y-8 translate-x-8 rotate-12" />
-                      <div className="absolute bottom-0 right-8 w-px h-16 bg-gradient-to-t from-slate-200 to-transparent" />
+                    {/* Premium Streak Multiplier Card */}
+                    <div className="border-2 border-slate-900 bg-white p-4 relative overflow-hidden shadow-[3px_3px_0_#0F172A] group">
+                      {/* Geometric corner accent */}
+                      <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none">
+                        <div className="absolute top-0 right-0 w-6 h-6 border-l-2 border-b-2 border-slate-200" />
+                        <div className="absolute top-1 right-1 w-2 h-2" style={{ backgroundColor: streakTier.color }} />
+                      </div>
 
-                      <div className="flex items-start justify-between mb-6 relative z-10">
+                      <div className="flex items-start justify-between mb-4 relative z-10">
                         <div>
                           <div className="flex items-center gap-1.5 mb-1">
-                            <div className="w-2 h-2" style={{ backgroundColor: streakTier.color }} />
+                            <div className="w-2.5 h-2.5 border border-slate-900" style={{ backgroundColor: streakTier.color }} />
                             <p className="text-[11px] font-black uppercase tracking-widest leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
                               {streakTier.label}
                             </p>
                           </div>
                           <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.1em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Score Multiplier Active</p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right flex flex-col items-end">
                           <span className="text-[28px] font-black leading-none block" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
                             ×{streakMultiplier.toFixed(streakMultiplier % 1 === 0 ? 0 : streakMultiplier === 1.25 ? 2 : 1)}
                           </span>
+                          <span className="text-[7px] font-bold text-slate-400 uppercase tracking-wider mt-0.5" style={{ fontFamily: 'var(--font-mono, monospace)' }}>boost</span>
                         </div>
                       </div>
 
-                      {/* Brutalist Tiers roadmap */}
-                      <div className="flex items-end gap-1 relative z-10 h-10 border-b border-slate-100 pb-1">
+                      {/* Tier progress bars */}
+                      <div className="flex items-end gap-1 relative z-10 h-10 border-b-2 border-slate-100 pb-1 mb-3">
                         {STREAK_TIERS.slice(1).map((tier, i) => {
                           const isReached = checkInStatus.streak >= tier.days;
-                          const heightPct = 30 + (i * 20); // 30%, 50%, 70%, 90%
+                          const heightPct = 30 + (i * 20);
                           return (
-                            <div key={tier.days} className="flex-1 flex flex-col items-center justify-end h-full gap-1.5 group-hover:bg-slate-50/50 transition-colors">
-                              <span className="text-[8px] font-black leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: isReached ? tier.color : '#cbd5e1' }}>
+                            <div key={tier.days} className="flex-1 flex flex-col items-center justify-end h-full gap-1">
+                              <span className="text-[7px] font-black leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: isReached ? tier.color : '#cbd5e1' }}>
                                 {tier.days}D
                               </span>
                               <div
-                                className="w-full transition-all duration-500 border-t-2"
+                                className="w-full transition-all duration-500"
                                 style={{
                                   height: `${heightPct}%`,
-                                  borderColor: isReached ? tier.color : 'transparent',
-                                  backgroundColor: isReached ? `${tier.color}20` : '#f1f5f9'
+                                  backgroundColor: isReached ? `${tier.color}` : '#f1f5f9',
+                                  opacity: isReached ? 0.3 : 1,
+                                  borderLeft: isReached ? `2px solid ${tier.color}` : '2px solid transparent',
                                 }}
                               />
                             </div>
@@ -471,16 +475,29 @@ export default function Home() {
                         })}
                       </div>
 
-                      {nextTier ? (
-                        <div className="mt-3 flex items-center justify-between text-[8px] font-bold text-slate-400 uppercase tracking-[0.1em] relative z-10 p-1.5 border border-slate-100 bg-slate-50" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                          <span>Target: {nextTier.days} Days</span>
-                          <span style={{ color: nextTier.color }}>→ ×{nextTier.multiplier} Boost</span>
-                        </div>
-                      ) : (
-                        <div className="mt-3 flex items-center justify-center text-[8px] font-bold text-slate-400 uppercase tracking-[0.1em] relative z-10 p-1.5 border border-slate-100 bg-slate-50" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                          <span className="text-[#0ECB81]">Max Multiplier Reached</span>
-                        </div>
-                      )}
+                      {/* Info footer */}
+                      <div className="flex items-center justify-between relative z-10">
+                        {nextTier ? (
+                          <>
+                            <div className="text-[7px] font-bold text-slate-400 uppercase tracking-[0.1em] flex items-center gap-1" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                              <div className="w-1 h-1 bg-slate-300" />
+                              <span>{nextTier.days - checkInStatus.streak}D to ×{nextTier.multiplier}</span>
+                            </div>
+                            <div className="text-[7px] font-black uppercase tracking-wider px-1.5 py-0.5 border border-slate-200" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
+                              {checkInStatus.streak}/{nextTier.days} DAYS
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-[7px] font-bold text-slate-400 uppercase tracking-[0.1em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                              All tiers unlocked
+                            </div>
+                            <div className="text-[7px] font-black uppercase tracking-wider px-1.5 py-0.5 border-2 border-slate-900 shadow-[1px_1px_0_#0F172A]" style={{ fontFamily: 'var(--font-mono, monospace)', color: '#0ECB81' }}>
+                              MAX
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className="pt-1"><DailyCheckinButton /></div>
 

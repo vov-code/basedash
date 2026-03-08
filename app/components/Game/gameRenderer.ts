@@ -1041,54 +1041,104 @@ export const drawWorldBanner = (
     const bannerY = 50 + (-8 + enter * 8)
 
     // Compact single-line text
-    const fontSize = Math.max(9, Math.min(11, CFG.WIDTH * 0.022))
-    ctx.font = `800 ${fontSize}px monospace`
+    const fontSize = Math.max(8, Math.min(10, CFG.WIDTH * 0.02))
+    ctx.font = `600 ${fontSize * 0.8}px monospace`
+    const labelW = ctx.measureText('WORLD: ').width
+    ctx.font = `700 ${fontSize}px monospace`
     const worldName = w.name.toUpperCase()
     const textW = ctx.measureText(worldName).width
 
-    // Ultra-slim frosted pill
-    const pillPadX = 12
-    const pillPadY = 4
-    const dotSize = 4
-    const totalW = dotSize + 6 + textW + pillPadX * 2
-    const pillH = fontSize + pillPadY * 2
-    const pillX = centerX - totalW / 2
-    const pillY = bannerY - pillPadY
-    const pillR = pillH / 2
+    // Ultra-slim minimalist bar
+    const padX = 8
+    const padY = 3
+    const dotSize = 3
+    const gap = 4
+    const totalW = padX + dotSize + gap + labelW + textW + padX
+    const barH = fontSize + padY * 2
+    const barX = centerX - totalW / 2
+    const barY = bannerY - padY
 
-    // Frosted glass — darker, slimmer
-    ctx.fillStyle = 'rgba(0,0,0,0.4)'
-    ctx.beginPath()
-    ctx.moveTo(pillX + pillR, pillY)
-    ctx.lineTo(pillX + totalW - pillR, pillY)
-    ctx.arcTo(pillX + totalW, pillY, pillX + totalW, pillY + pillR, pillR)
-    ctx.arcTo(pillX + totalW, pillY + pillH, pillX + totalW - pillR, pillY + pillH, pillR)
-    ctx.lineTo(pillX + pillR, pillY + pillH)
-    ctx.arcTo(pillX, pillY + pillH, pillX, pillY + pillH - pillR, pillR)
-    ctx.arcTo(pillX, pillY, pillX + pillR, pillY, pillR)
-    ctx.fill()
+    // Dark backdrop — thin and sharp
+    ctx.fillStyle = 'rgba(15,23,42,0.75)'
+    ctx.fillRect(barX, barY, totalW, barH)
 
-    // Accent dot
-    const textY = bannerY + fontSize * 0.35
-    const dotX = pillX + pillPadX + dotSize / 2
+    // Accent underline — 1px colored bar at bottom
     ctx.fillStyle = w.accent
-    ctx.beginPath()
-    ctx.arc(dotX, textY, dotSize / 2, 0, TWO_PI)
-    ctx.fill()
+    ctx.fillRect(barX, barY + barH - 1, totalW, 1)
+
+    // Square accent dot
+    const textY = barY + barH / 2
+    const dotX = barX + padX
+    ctx.fillStyle = w.accent
+    ctx.fillRect(dotX, textY - dotSize / 2, dotSize, dotSize)
 
     // "WORLD:" label — muted
-    const labelStart = dotX + dotSize / 2 + 5
+    const labelStartX = dotX + dotSize + gap
     ctx.textAlign = 'left'
     ctx.textBaseline = 'middle'
-    ctx.font = `600 ${fontSize * 0.85}px monospace`
-    ctx.fillStyle = 'rgba(255,255,255,0.45)'
-    ctx.fillText('WORLD:', labelStart, textY)
-    const labelW = ctx.measureText('WORLD: ').width
+    ctx.font = `600 ${fontSize * 0.8}px monospace`
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'
+    ctx.fillText('WORLD:', labelStartX, textY)
 
     // World name — clean white
-    ctx.font = `800 ${fontSize}px monospace`
+    ctx.font = `700 ${fontSize}px monospace`
     ctx.fillStyle = '#FFFFFF'
-    ctx.fillText(worldName, labelStart + labelW, textY)
+    ctx.fillText(worldName, labelStartX + labelW, textY)
+
+    ctx.restore()
+}
+
+// ============================================================================
+// CHILL MARKET BANNER (canvas-rendered for frame-accurate display)
+// ============================================================================
+
+/** Draw the chill market / market freeze indicator — sits below world banner */
+export const drawChillMarketBanner = (
+    ctx: CanvasRenderingContext2D,
+    e: EngineState,
+    w: WorldTheme
+): void => {
+    if (e.slowdownTimer <= 0) return
+
+    const alpha = Math.min(1, e.slowdownTimer / 0.3) // fade out in last 0.3s
+    if (alpha <= 0.01) return
+
+    ctx.save()
+    ctx.globalAlpha = alpha
+
+    const centerX = CFG.WIDTH / 2
+    const fontSize = Math.max(7, Math.min(9, CFG.WIDTH * 0.018))
+
+    // Determine label text
+    const label = e.whaleTimer > 0 ? 'MARKET FREEZE' : 'CHILL MARKET'
+    const isFreeze = e.whaleTimer > 0
+    const accentColor = isFreeze ? '#60A5FA' : '#0ECB81'
+
+    ctx.font = `700 ${fontSize}px monospace`
+    const textW = ctx.measureText(label).width
+
+    const padX = 6
+    const padY = 2
+    const totalW = padX + textW + padX
+    const barH = fontSize + padY * 2
+    const barX = centerX - totalW / 2
+    // Position directly below world banner area — tight gap
+    const barY = e.worldBannerTimer > 0 ? 62 : 44
+
+    // Light backdrop
+    ctx.fillStyle = 'rgba(255,255,255,0.92)'
+    ctx.fillRect(barX, barY, totalW, barH)
+
+    // Left accent bar
+    ctx.fillStyle = accentColor
+    ctx.fillRect(barX, barY, 2, barH)
+
+    // Text
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.font = `700 ${fontSize}px monospace`
+    ctx.fillStyle = accentColor
+    ctx.fillText(label, centerX, barY + barH / 2)
 
     ctx.restore()
 }
@@ -1347,6 +1397,7 @@ export const drawFrame = (
 
     // UI (canvas-rendered)
     drawWorldBanner(ctx, e, wTheme)
+    drawChillMarketBanner(ctx, e, wTheme)
     drawPowerUpIndicators(ctx, e)
 
     // End shake + zoom transform

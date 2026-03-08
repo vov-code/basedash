@@ -226,27 +226,27 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             ctx.resume().catch(() => { })
         }
 
-        // 4 oscillators for richer, more melodious sound
-        const oscLead = ctx.createOscillator()     // Main melody — bright and catchy
-        const oscArp = ctx.createOscillator()       // Arpeggio — sparkly movement
-        const oscPad = ctx.createOscillator()        // Warm pad — harmonic bed
-        const oscBass = ctx.createOscillator()       // Sub-bass — driving pulse
+        // 4 oscillators for smooth, dreamy sound
+        const oscLead = ctx.createOscillator()     // Main melody — warm and lyrical
+        const oscArp = ctx.createOscillator()       // Arpeggio — crystalline shimmer
+        const oscPad = ctx.createOscillator()        // Warm pad — lush harmonic bed
+        const oscBass = ctx.createOscillator()       // Sub-bass — gentle pulse
         const gain = ctx.createGain()
         const filter = ctx.createBiquadFilter()
 
         oscLead.type = 'sine'
         oscArp.type = 'sine'
         oscPad.type = 'triangle'
-        oscPad.detune.value = 12       // Wider chorus for dreamy feel
+        oscPad.detune.value = 8        // Gentle chorus for dreamy warmth
         oscBass.type = 'sine'
 
         filter.type = 'lowpass'
-        filter.frequency.value = 1800   // Warmer, more open filter
-        filter.Q.value = 0.7
+        filter.frequency.value = 2200   // Warm, open filter — no harshness
+        filter.Q.value = 0.5
 
         // Smooth fade-in
         gain.gain.setValueAtTime(0, ctx.currentTime)
-        gain.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 2.5)
+        gain.gain.linearRampToValueAtTime(0.035, ctx.currentTime + 3.5)
 
         oscLead.connect(filter)
         oscArp.connect(filter)
@@ -263,74 +263,75 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         bgmNodesRef.current = { oscs: [oscLead, oscArp, oscPad, oscBass], gain }
 
         // ===============================================================
-        // MELODIES — Uplifting major-key hooks, Geometry Dash energy
+        // MELODIES — Dreamy, relaxing, major-key lullabies
         // ===============================================================
-        // Each world uses a different key for emotional progression:
-        //   World 0-1: C major — bright, welcoming, catchy
-        //   World 2-3: G major — uplifting, soaring
-        //   World 4-5: D major — energetic, driving
-        //   World 6-7: A major — euphoric, intense
-        //   World 8+:  E major — transcendent, triumphant
+        // Smooth flowing melodies using stepwise motion and gentle intervals.
+        // Each world uses ascending keys for emotional lift:
+        //   World 0-1: C major — peaceful, welcoming
+        //   World 2-3: D major — warm, uplifting
+        //   World 4-5: E major — bright, euphoric
+        //   World 6-7: F major — lush, nostalgic
+        //   World 8+:  G major — soaring, transcendent
 
         const melodyPatterns: number[][] = [
-            // C major — happy bouncy hook (C-E-G-A-G-E-C-D-E-G-A-C6-A-G-E-D)
-            [523, 659, 784, 880, 784, 659, 523, 587,
-                659, 784, 880, 1046, 880, 784, 659, 587],
-            // G major — soaring anthem (G-B-D-E-D-B-G-A-B-D-E-G5-E-D-B-A)
-            [784, 988, 1175, 1318, 1175, 988, 784, 880,
-                988, 1175, 1318, 1568, 1318, 1175, 988, 880],
-            // D major — driving energy (D-F#-A-B-A-F#-D-E-F#-A-B-D6-B-A-F#-E)
-            [587, 740, 880, 988, 880, 740, 587, 659,
-                740, 880, 988, 1175, 988, 880, 740, 659],
-            // A major — euphoric rush (A-C#-E-F#-E-C#-A-B-C#-E-F#-A6-F#-E-C#-B)
-            [880, 1108, 1318, 1480, 1318, 1108, 880, 988,
-                1108, 1318, 1480, 1760, 1480, 1318, 1108, 988],
-            // E major — triumphant finale (E-G#-B-C#-B-G#-E-F#-G#-B-C#-E6-C#-B-G#-F#)
-            [659, 830, 988, 1108, 988, 830, 659, 740,
-                830, 988, 1108, 1318, 1108, 988, 830, 740],
+            // C major — peaceful flowing (C-E-G-C6-B-G-E-D-C-D-E-G-A-G-E-C)
+            [523, 659, 784, 1046, 988, 784, 659, 587,
+                523, 587, 659, 784, 880, 784, 659, 523],
+            // D major — warm ascending (D-F#-A-D6-C#6-A-F#-E-D-E-F#-A-B-A-F#-D)
+            [587, 740, 880, 1175, 1108, 880, 740, 659,
+                587, 659, 740, 880, 988, 880, 740, 587],
+            // E major — bright shimmer (E-G#-B-E6-D#6-B-G#-F#-E-F#-G#-B-C#6-B-G#-E)
+            [659, 830, 988, 1318, 1244, 988, 830, 740,
+                659, 740, 830, 988, 1108, 988, 830, 659],
+            // F major — lush nostalgic (F-A-C6-F6-E6-C6-A-G-F-G-A-C6-D6-C6-A-F)
+            [349, 440, 523, 698, 659, 523, 440, 392,
+                349, 392, 440, 523, 587, 523, 440, 349],
+            // G major — soaring (G-B-D6-G6-F#6-D6-B-A-G-A-B-D6-E6-D6-B-G)
+            [392, 494, 587, 784, 740, 587, 494, 440,
+                392, 440, 494, 587, 659, 587, 494, 392],
         ]
 
-        // Arpeggio patterns — sparkling 16th-note movement
+        // Arpeggio patterns — gentle high-register tinkling
         const arpPatterns: number[][] = [
-            // C major arps — twinkling high register
+            // C major — crystalline (C6-E6-G6-E6 | D6-F6-A6-F6)
             [1046, 1318, 1568, 1318, 1046, 1568, 1318, 1046,
-                1175, 1480, 1760, 1480, 1175, 1760, 1480, 1175],
-            // G major arps
-            [1568, 1975, 2349, 1975, 1568, 2349, 1975, 1568,
-                1760, 2217, 2637, 2217, 1760, 2637, 2217, 1760],
+                1175, 1397, 1760, 1397, 1175, 1760, 1397, 1175],
             // D major arps
             [1175, 1480, 1760, 1480, 1175, 1760, 1480, 1175,
-                1318, 1661, 1975, 1661, 1318, 1975, 1661, 1318],
-            // A major arps
-            [1760, 2217, 2637, 2217, 1760, 2637, 2217, 1760,
-                1975, 2489, 2960, 2489, 1975, 2960, 2489, 1975],
+                1318, 1568, 1975, 1568, 1318, 1975, 1568, 1318],
             // E major arps
             [1318, 1661, 1975, 1661, 1318, 1975, 1661, 1318,
                 1480, 1864, 2217, 1864, 1480, 2217, 1864, 1480],
+            // F major arps
+            [1397, 1760, 2093, 1760, 1397, 2093, 1760, 1397,
+                1568, 1975, 2349, 1975, 1568, 2349, 1975, 1568],
+            // G major arps
+            [1568, 1975, 2349, 1975, 1568, 2349, 1975, 1568,
+                1760, 2217, 2637, 2217, 1760, 2637, 2217, 1760],
         ]
 
-        // Bass patterns — driving octave pulses
+        // Bass patterns — gentle root-third movement (not driving octaves)
         const bassPatterns: number[][] = [
-            // C major bass — root-five bounce
-            [131, 131, 196, 196, 165, 165, 147, 147,
-                131, 196, 131, 196, 165, 147, 131, 131],
-            // G major bass
-            [196, 196, 294, 294, 247, 247, 220, 220,
-                196, 294, 196, 294, 247, 220, 196, 196],
+            // C major bass — soft root-third
+            [131, 131, 165, 165, 147, 147, 131, 131,
+                131, 165, 147, 131, 165, 147, 131, 131],
             // D major bass
-            [147, 147, 220, 220, 175, 175, 165, 165,
-                147, 220, 147, 220, 175, 165, 147, 147],
-            // A major bass
-            [220, 220, 330, 330, 277, 277, 247, 247,
-                220, 330, 220, 330, 277, 247, 220, 220],
+            [147, 147, 185, 185, 165, 165, 147, 147,
+                147, 185, 165, 147, 185, 165, 147, 147],
             // E major bass
-            [165, 165, 247, 247, 208, 208, 185, 185,
-                165, 247, 165, 247, 208, 185, 165, 165],
+            [165, 165, 208, 208, 185, 185, 165, 165,
+                165, 208, 185, 165, 208, 185, 165, 165],
+            // F major bass
+            [175, 175, 220, 220, 196, 196, 175, 175,
+                175, 220, 196, 175, 220, 196, 175, 175],
+            // G major bass
+            [196, 196, 247, 247, 220, 220, 196, 196,
+                196, 247, 220, 196, 247, 220, 196, 196],
         ]
 
         let noteIdx = 0
         let nextNoteTime = ctx.currentTime + 0.5
-        const BASE_INTERVAL = 0.22  // Fast, energetic tempo like Geometry Dash
+        const BASE_INTERVAL = 0.32  // Relaxed tempo — smooth and dreamy
 
         const schedulePattern = () => {
             if (!bgmNodesRef.current || !audioCtxRef.current) return
@@ -343,8 +344,8 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             const arps = arpPatterns[patIdx]
             const bass = bassPatterns[patIdx]
 
-            // Tempo syncs with game speed — alive and responsive
-            const tempoMult = 0.9 + currentSpeed * 0.1
+            // Gentle tempo sync — less aggressive than before
+            const tempoMult = 0.95 + currentSpeed * 0.05
             const NOTE_INTERVAL = BASE_INTERVAL / tempoMult
 
             while (nextNoteTime < audioCtxRef.current.currentTime + 1.2) {
@@ -352,7 +353,7 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
                 if (nextNoteTime < audioCtxRef.current.currentTime - 0.5) {
                     nextNoteTime = audioCtxRef.current.currentTime + 0.05
                     gain.gain.setTargetAtTime(0, audioCtxRef.current.currentTime, 0.01)
-                    gain.gain.setTargetAtTime(0.035, audioCtxRef.current.currentTime + 0.05, 0.2)
+                    gain.gain.setTargetAtTime(0.03, audioCtxRef.current.currentTime + 0.05, 0.3)
                     continue
                 }
 
@@ -363,44 +364,44 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
                 const isHalfBeat = noteIdx % 2 === 0
                 const isBarStart = noteIdx % 16 === 0
 
-                // Progressive volume layers — music gets fuller with each world
-                let leadVol = 0.028
-                let arpVol = 0.006
-                let padVol = 0.008
-                let bassVol = 0.005
+                // Softer, more balanced volume layers
+                let leadVol = 0.022
+                let arpVol = 0.004
+                let padVol = 0.010
+                let bassVol = 0.004
 
-                // World 0-1: Light melody + soft pad — learning phase
-                if (currentTheme >= 2) { padVol = 0.016; leadVol = 0.032; arpVol = 0.012 }
-                // World 4-5: Full arpeggio + driving bass
-                if (currentTheme >= 4) { bassVol = 0.02; leadVol = 0.035; arpVol = 0.018 }
-                // World 6+: Everything cranked — euphoric full arrangement
-                if (currentTheme >= 6) { leadVol = 0.04; padVol = 0.022; bassVol = 0.025; arpVol = 0.022 }
+                // World 0-1: Gentle melody + warm pad — welcoming
+                if (currentTheme >= 2) { padVol = 0.014; leadVol = 0.025; arpVol = 0.008 }
+                // World 4-5: Arpeggios shimmer in
+                if (currentTheme >= 4) { bassVol = 0.012; leadVol = 0.028; arpVol = 0.012 }
+                // World 6+: Full lush arrangement
+                if (currentTheme >= 6) { leadVol = 0.032; padVol = 0.018; bassVol = 0.016; arpVol = 0.016 }
 
-                // Pad — major 3rd above bass for warm harmony
-                const padFreq = melodyNote * 0.75  // 4th below melody
+                // Pad — 4th below melody for warm consonance
+                const padFreq = melodyNote * 0.75
 
-                // Smooth portamento — short glides for punchy feel
-                const glide = NOTE_INTERVAL * 0.12
+                // Smooth portamento — longer glides for dreamy feel
+                const glide = NOTE_INTERVAL * 0.18
                 oscLead.frequency.setTargetAtTime(melodyNote, nextNoteTime, glide)
-                oscArp.frequency.setTargetAtTime(arpNote, nextNoteTime, glide * 0.5) // Faster arp transitions
-                oscPad.frequency.setTargetAtTime(padFreq, nextNoteTime, glide * 2)   // Slower pad = smoother
-                oscBass.frequency.setTargetAtTime(bassNote, nextNoteTime, glide * 0.3) // Punchy bass
+                oscArp.frequency.setTargetAtTime(arpNote, nextNoteTime, glide * 0.7)
+                oscPad.frequency.setTargetAtTime(padFreq, nextNoteTime, glide * 3)   // Very slow pad = lush
+                oscBass.frequency.setTargetAtTime(bassNote, nextNoteTime, glide * 0.4)
 
-                // Rhythmic sidechain-style pumping — classic EDM bounce
-                const accent = isBarStart ? 1.3 : (isDownbeat ? 1.15 : (isHalfBeat ? 1.0 : 0.8))
+                // Gentle breathing rhythm — much softer than EDM pump
+                const accent = isBarStart ? 1.15 : (isDownbeat ? 1.08 : (isHalfBeat ? 1.0 : 0.88))
                 const totalVol = (leadVol + arpVol + padVol + bassVol) * accent
 
-                // Punchy envelope — quick attack, rhythmic release
-                gain.gain.setTargetAtTime(totalVol, nextNoteTime, 0.025)
+                // Smooth envelope — slower attack, gentler release
+                gain.gain.setTargetAtTime(totalVol, nextNoteTime, 0.04)
                 gain.gain.setTargetAtTime(
-                    totalVol * 0.45,
-                    nextNoteTime + NOTE_INTERVAL * 0.55,
-                    0.04
+                    totalVol * 0.6,
+                    nextNoteTime + NOTE_INTERVAL * 0.6,
+                    0.06
                 )
 
-                // Filter opens progressively — brighter with each world
-                const cutoff = 1200 + currentTheme * 120 + (isDownbeat ? 300 : 0) + (isBarStart ? 400 : 0)
-                filter.frequency.setTargetAtTime(Math.min(cutoff, 3200), nextNoteTime, 0.04)
+                // Filter — warm and open, opens slightly more with worlds
+                const cutoff = 1600 + currentTheme * 80 + (isDownbeat ? 150 : 0) + (isBarStart ? 200 : 0)
+                filter.frequency.setTargetAtTime(Math.min(cutoff, 2800), nextNoteTime, 0.06)
 
                 noteIdx = (noteIdx + 1) % melody.length
                 nextNoteTime += NOTE_INTERVAL
