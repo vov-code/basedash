@@ -1042,50 +1042,53 @@ export const drawWorldBanner = (
 
     // Compact single-line text
     const fontSize = Math.max(9, Math.min(11, CFG.WIDTH * 0.022))
-    ctx.font = `600 ${fontSize * 0.85}px monospace`
-    const labelW = ctx.measureText('WORLD: ').width
     ctx.font = `800 ${fontSize}px monospace`
     const worldName = w.name.toUpperCase()
     const textW = ctx.measureText(worldName).width
 
-    // Sharp minimalist rectangle (Brutalist style)
-    const paddingX = 10
-    const paddingY = 4
+    // Ultra-slim frosted pill
+    const pillPadX = 12
+    const pillPadY = 4
     const dotSize = 4
-    const gap = 5
-    const totalW = paddingX + dotSize + gap + labelW + textW + paddingX
-    const rectH = fontSize + paddingY * 2
-    const rectX = centerX - totalW / 2
-    const bannerYActual = bannerY - paddingY
+    const totalW = dotSize + 6 + textW + pillPadX * 2
+    const pillH = fontSize + pillPadY * 2
+    const pillX = centerX - totalW / 2
+    const pillY = bannerY - pillPadY
+    const pillR = pillH / 2
 
-    // Backdrop — strict square, darker glass
-    ctx.fillStyle = 'rgba(0,0,0,0.65)'
-    ctx.fillRect(rectX, bannerYActual, totalW, rectH)
-
-    // Accent line bottom
-    ctx.fillStyle = w.accent
-    ctx.fillRect(rectX, bannerYActual + rectH - 1, totalW, 1)
+    // Frosted glass — darker, slimmer
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'
+    ctx.beginPath()
+    ctx.moveTo(pillX + pillR, pillY)
+    ctx.lineTo(pillX + totalW - pillR, pillY)
+    ctx.arcTo(pillX + totalW, pillY, pillX + totalW, pillY + pillR, pillR)
+    ctx.arcTo(pillX + totalW, pillY + pillH, pillX + totalW - pillR, pillY + pillH, pillR)
+    ctx.lineTo(pillX + pillR, pillY + pillH)
+    ctx.arcTo(pillX, pillY + pillH, pillX, pillY + pillH - pillR, pillR)
+    ctx.arcTo(pillX, pillY, pillX + pillR, pillY, pillR)
+    ctx.fill()
 
     // Accent dot
-    const textY = bannerYActual + rectH / 2
-    const dotX = rectX + paddingX + dotSize / 2
+    const textY = bannerY + fontSize * 0.35
+    const dotX = pillX + pillPadX + dotSize / 2
     ctx.fillStyle = w.accent
     ctx.beginPath()
-    ctx.rect(dotX - dotSize / 2, textY - dotSize / 2, dotSize, dotSize) // square dot
+    ctx.arc(dotX, textY, dotSize / 2, 0, TWO_PI)
     ctx.fill()
 
     // "WORLD:" label — muted
-    const labelStartX = dotX + dotSize / 2 + gap
+    const labelStart = dotX + dotSize / 2 + 5
     ctx.textAlign = 'left'
     ctx.textBaseline = 'middle'
     ctx.font = `600 ${fontSize * 0.85}px monospace`
     ctx.fillStyle = 'rgba(255,255,255,0.45)'
-    ctx.fillText('WORLD:', labelStartX, textY)
+    ctx.fillText('WORLD:', labelStart, textY)
+    const labelW = ctx.measureText('WORLD: ').width
 
     // World name — clean white
     ctx.font = `800 ${fontSize}px monospace`
     ctx.fillStyle = '#FFFFFF'
-    ctx.fillText(worldName, labelStartX + labelW, textY)
+    ctx.fillText(worldName, labelStart + labelW, textY)
 
     ctx.restore()
 }
