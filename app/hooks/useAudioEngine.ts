@@ -198,77 +198,75 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         delayNode.connect(sidechainNode)
 
         // ==========================================
-        // KEYBOARD SCALES & PROGRESSIONS (Lush, Emotional, Relaxing)
+        // KEYBOARD SCALES & PROGRESSIONS (Clean, Euphoric, Catchy)
         // ==========================================
-        // Using beautiful extended chords (Major 7ths, add9s) for a premium chill vibe
+        // Using the universally loved vi - IV - I - V emotional progression (e.g. F minor / Ab Major)
         const KEYS = [
-            { base: 32.70, name: 'C Major 7', notes: [0, 2, 4, 7, 9, 11, 14] },   // C major (warm, pure)
-            { base: 34.65, name: 'C# Minor 9', notes: [0, 2, 3, 7, 8, 10, 14] },  // C# minor (emotional, deep)
-            { base: 41.20, name: 'E Lydian', notes: [0, 2, 4, 6, 7, 9, 11] },     // E Lydian (dreamy, floating)
-            { base: 36.71, name: 'D Minor 7', notes: [0, 2, 3, 7, 9, 10, 14] },   // D minor (reflective)
-            { base: 38.89, name: 'Eb Major 9', notes: [0, 2, 4, 7, 10, 11, 14] }  // Eb major (triumphant but soft)
+            { base: 34.65, name: 'C# Minor', notes: [0, 3, 7, 8, 10, 15] },       // Level 1-2 (Moody)
+            { base: 38.89, name: 'D# Minor', notes: [0, 3, 7, 8, 10, 15] },       // Level 3-4 (Lifting)
+            { base: 43.65, name: 'F Minor', notes: [0, 3, 7, 8, 10, 15] },        // Level 5-6 (Emotional Drop)
+            { base: 41.20, name: 'E Minor', notes: [0, 3, 7, 8, 10, 15] },        // Level 7+ (Darker push)
         ]
 
         // ==========================================
-        // SYNTHESIS ENGINES (Soft, Ambient, High Quality)
+        // SYNTHESIS ENGINES (Clean EDM, Highly Polished)
         // ==========================================
 
         /** 
-         * Plays a deep, soft pulse kick (Lo-Fi / Chillwave style)
+         * Plays a punchy EDM kick
          */
         const playKick = (time: number, intensity: number) => {
             const osc = ctx.createOscillator()
             const gain = ctx.createGain()
             osc.type = 'sine'
 
-            // Soft pitch envelope, no harsh click
-            osc.frequency.setValueAtTime(80 * intensity, time)
-            osc.frequency.exponentialRampToValueAtTime(40, time + 0.1)
-            osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.4)
+            // Punchy pitch drop
+            osc.frequency.setValueAtTime(120 * intensity, time)
+            osc.frequency.exponentialRampToValueAtTime(45, time + 0.05)
+            osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.3)
 
             gain.gain.setValueAtTime(0, time)
-            gain.gain.linearRampToValueAtTime(0.9 * intensity, time + 0.05) // Slower attack
-            gain.gain.exponentialRampToValueAtTime(0.01, time + 0.4)
+            gain.gain.linearRampToValueAtTime(1.0 * intensity, time + 0.01) // Fast attack
+            gain.gain.exponentialRampToValueAtTime(0.01, time + 0.3)
 
-            // Very gentle sidechain pumping for groove, not aggressive sucking
-            sidechainNode.gain.setValueAtTime(0.3, time)
-            sidechainNode.gain.exponentialRampToValueAtTime(1.0, time + 0.4)
+            // Clean sidechain pumping (Ducking)
+            sidechainNode.gain.setValueAtTime(0.1, time)
+            sidechainNode.gain.linearRampToValueAtTime(1.0, time + 0.25)
 
             osc.connect(gain)
             gain.connect(drumGain)
             osc.start(time)
-            osc.stop(time + 0.5)
+            osc.stop(time + 0.4)
         }
 
         /**
-         * Plays a soft lo-fi clap / rimshot
+         * Plays a tight progressive house snare/clap
          */
         const playSnare = (time: number, intensity: number) => {
             if (!noiseBufferRef.current) return
 
-            // Body (Low pitched sine for weight)
+            // Body
             const osc = ctx.createOscillator()
             const oscGain = ctx.createGain()
-            osc.type = 'sine'
-            osc.frequency.setValueAtTime(300, time)
-            osc.frequency.exponentialRampToValueAtTime(100, time + 0.1)
+            osc.type = 'triangle'
+            osc.frequency.setValueAtTime(250, time)
+            osc.frequency.exponentialRampToValueAtTime(150, time + 0.1)
 
             oscGain.gain.setValueAtTime(0, time)
-            oscGain.gain.linearRampToValueAtTime(0.4 * intensity, time + 0.01)
+            oscGain.gain.linearRampToValueAtTime(0.6 * intensity, time + 0.01)
             oscGain.gain.exponentialRampToValueAtTime(0.01, time + 0.15)
 
             // Tail (Filtered Noise)
             const noise = ctx.createBufferSource()
             noise.buffer = noiseBufferRef.current
             const noiseFilter = ctx.createBiquadFilter()
-            noiseFilter.type = 'bandpass'
-            noiseFilter.frequency.value = 2500 // Soft midrange clap
-            noiseFilter.Q.value = 1.5
+            noiseFilter.type = 'highpass'
+            noiseFilter.frequency.value = 1500
 
             const noiseGain = ctx.createGain()
             noiseGain.gain.setValueAtTime(0, time)
-            noiseGain.gain.linearRampToValueAtTime(0.5 * intensity, time + 0.02)
-            noiseGain.gain.exponentialRampToValueAtTime(0.01, time + 0.3)
+            noiseGain.gain.linearRampToValueAtTime(0.8 * intensity, time + 0.01)
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, time + 0.2)
 
             osc.connect(oscGain)
             oscGain.connect(drumGain)
@@ -280,11 +278,11 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             osc.start(time)
             osc.stop(time + 0.2)
             noise.start(time)
-            noise.stop(time + 0.35)
+            noise.stop(time + 0.25)
         }
 
         /**
-         * Plays a delicate, airy hi-hat
+         * Plays a crisp hi-hat
          */
         const playHiHat = (time: number, type: 'closed' | 'open', intensity: number) => {
             if (!noiseBufferRef.current) return
@@ -293,13 +291,13 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
             const filter = ctx.createBiquadFilter()
             filter.type = 'highpass'
-            filter.frequency.value = 8000 // Very high, whispering air
+            filter.frequency.value = 7000
 
             const gain = ctx.createGain()
-            const dur = type === 'open' ? 0.4 : 0.08
+            const dur = type === 'open' ? 0.25 : 0.05
 
             gain.gain.setValueAtTime(0, time)
-            gain.gain.linearRampToValueAtTime(0.35 * intensity, time + 0.02)
+            gain.gain.linearRampToValueAtTime(0.4 * intensity, time + 0.01)
             gain.gain.exponentialRampToValueAtTime(0.01, time + dur)
 
             noise.connect(filter)
@@ -311,7 +309,7 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         }
 
         /**
-         * Lush Pad / Pluck Voice with Warm Filter Envelope
+         * Clean Synth Voice (no dissonance)
          */
         const playSynth = (
             midiOffset: number,
@@ -334,147 +332,140 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             osc.frequency.setValueAtTime(freq, time)
 
             filter.type = 'lowpass'
-            // Very smooth, warm filter sweeps
             filter.frequency.setValueAtTime(filterStartFreq, time)
-            filter.frequency.exponentialRampToValueAtTime(Math.max(200, filterStartFreq * 0.4), time + dur)
+            filter.frequency.exponentialRampToValueAtTime(Math.max(300, filterStartFreq * 0.3), time + dur)
 
             gain.gain.setValueAtTime(0, time)
-
-            // Slow, relaxing ADSR (Ambient style)
-            const attack = dur > 1.0 ? 0.3 : (dur > 0.4 ? 0.1 : 0.03)
+            const attack = dur > 0.5 ? 0.05 : 0.02
             gain.gain.linearRampToValueAtTime(vol, time + attack)
-            gain.gain.setTargetAtTime(vol * 0.7, time + attack, 0.2) // Sustain
-            gain.gain.exponentialRampToValueAtTime(0.001, time + dur) // Long beautiful release
+            gain.gain.setTargetAtTime(vol * 0.8, time + attack, 0.1)
+            gain.gain.exponentialRampToValueAtTime(0.001, time + dur)
 
             osc.connect(filter)
             filter.connect(gain)
             gain.connect(isSidechain ? sidechainNode : leadGain)
 
             osc.start(time)
-            // Add extra time to let the release tail ring out natively
-            osc.stop(time + dur + 0.5)
+            osc.stop(time + dur + 0.1)
         }
 
         // ==========================================
-        // SONG SECTIONS & PATTERNS (Ambient & Harmonic 256-Step Matrix)
-        // Highly melodic, non-repetitive, slowly evolving lush phrases.
+        // SONG SECTIONS & PATTERNS (128-Step Matrix)
+        // Clean, pleasant, continuous progression (no weird gaps)
         // ==========================================
 
-        /** DRUMS: Lo-Fi/Chillhop grooves. Very spacious. */
         const PATTERN_DRUMS = [
-            // 0: Deep Space Intro (Wind chimes & sparse hats, 64 steps loop)
+            // 0: Intro (Just house claps/hats, no kick yet)
             {
                 k: Array(64).fill(0),
-                s: Array(64).fill(0),
-                hc: Array(64).fill(0).map((_, i) => i % 8 === 0 ? 0.4 : (i % 4 === 2 ? 0.2 : 0)),
+                s: Array(64).fill(0).map((_, i) => i % 8 === 4 ? 0.6 : 0),
+                hc: Array(64).fill(0).map((_, i) => i % 2 === 0 ? 0.5 : 0),
                 ho: Array(64).fill(0),
-                cr: [0.6].concat(Array(63).fill(0))
+                cr: [0.8].concat(Array(63).fill(0))
             },
-            // 1: Awakening (Gentle heartbeat kick, soft sidestick, 64 steps)
+            // 1: Build (Adding the kick, rhythmic pulse)
             {
-                k: Array(64).fill(0).map((_, i) => (i % 16 === 0 || i % 16 === 10) ? 0.8 : 0),
-                s: Array(64).fill(0).map((_, i) => i % 8 === 4 ? 0.5 : 0),
-                hc: Array(64).fill(0).map((_, i) => i % 2 === 0 ? 0.4 : 0),
-                ho: Array(64).fill(0).map((_, i) => i % 16 === 14 ? 0.5 : 0),
-                cr: [0].concat(Array(63).fill(0))
-            },
-            // 2: The Glide (Flowing Geometry Dash Chill wave, 128 steps)
-            {
-                k: Array(128).fill(0).map((_, i) => (i % 16 === 0 || i % 16 === 7 || i % 16 === 10) ? 0.9 : 0),
-                s: Array(128).fill(0).map((_, i) => i % 8 === 4 ? 0.8 : 0),
-                hc: Array(128).fill(0).map((_, i) => i % 2 === 0 ? 0.6 : (i % 16 === 13 || i % 16 === 15 ? 0.4 : 0)), // Bouncy hats
-                ho: Array(128).fill(0).map((_, i) => i % 8 === 6 ? 0.6 : 0),
-                cr: [0.8].concat(Array(63).fill(0)).concat([0.5]).concat(Array(63).fill(0))
-            },
-            // 3: Uplifting Flight (Continuous driving but soft beat, 64 steps)
-            {
-                k: Array(64).fill(0).map((_, i) => i % 4 === 0 ? 0.8 : 0),
+                k: Array(64).fill(0).map((_, i) => i % 4 === 0 ? 1 : 0),
                 s: Array(64).fill(0).map((_, i) => i % 8 === 4 ? 0.8 : 0),
                 hc: Array(64).fill(0).map((_, i) => i % 2 === 1 ? 0.6 : 0), // Upbeats
-                ho: Array(64).fill(0).map((_, i) => i % 8 === 6 ? 0.7 : 0),
-                cr: [0.9].concat(Array(31).fill(0)).concat([0.7]).concat(Array(31).fill(0))
+                ho: Array(64).fill(0).map((_, i) => i % 4 === 2 ? 0.5 : 0),
+                cr: [0].concat(Array(63).fill(0))
+            },
+            // 2: Drop (Classic Progressive EDM, full beat)
+            {
+                k: Array(128).fill(0).map((_, i) => i % 4 === 0 ? 1 : 0),
+                s: Array(128).fill(0).map((_, i) => i % 8 === 4 ? 1 : 0),
+                hc: Array(128).fill(0).map((_, i) => i % 2 === 1 ? 0.7 : 0),
+                ho: Array(128).fill(0).map((_, i) => i % 4 === 2 ? 0.8 : 0),
+                cr: [1.0].concat(Array(63).fill(0)).concat([0.8]).concat(Array(63).fill(0))
+            },
+            // 3: Fast Trance (Driving 16ths in hats)
+            {
+                k: Array(64).fill(0).map((_, i) => i % 4 === 0 ? 1 : 0),
+                s: Array(64).fill(0).map((_, i) => i % 8 === 4 ? 1 : 0),
+                hc: Array(64).fill(0).map((_, i) => i % 2 === 0 ? 0.5 : 0.8), // Driving trance hats
+                ho: Array(64).fill(0).map((_, i) => i % 4 === 2 ? 0.8 : 0),
+                cr: [1.0].concat(Array(31).fill(0)).concat([1.0]).concat(Array(31).fill(0))
             }
         ]
 
-        /** BASSLINES: Smooth sine and gentle triangle subs. (128 step patterns) */
+        /** BASSLINES: Strictly follow the chord root notes to prevent dissonance. */
         const PATTERN_BASS = [
-            // 0: Deep Space Sub (Very long sustaining root notes)
-            Array(128).fill(0).map((_, i) => i % 32 === 0 ? 12 : 0),
-            // 1: Walking Sub (Slow groove)
+            // Roots for the 128-step progression: [12, 7, 3, 10]
+            Array(128).fill(0).map((_, i) => i % 32 === 0 ? (Math.floor(i / 32) === 0 ? 12 : Math.floor(i / 32) === 1 ? 7 : Math.floor(i / 32) === 2 ? 3 : 10) : 0),
+
+            Array(128).fill(0).map((_, i) => i % 8 === 0 ? (Math.floor(i / 32) === 0 ? 12 : Math.floor(i / 32) === 1 ? 7 : Math.floor(i / 32) === 2 ? 3 : 10) : 0),
+
+            // Drop bass (Pumping offbeats)
             Array(128).fill(0).map((_, i) => {
-                if (i % 32 === 0) return 12; if (i % 32 === 16) return 9; if (i % 32 === 24) return 7; return 0;
+                const root = (Math.floor(i / 32) === 0 ? 12 : Math.floor(i / 32) === 1 ? 7 : Math.floor(i / 32) === 2 ? 3 : 10)
+                return i % 4 === 0 ? root : (i % 4 === 2 ? root + 12 : 0) // Classic octave bounce
             }),
-            // 2: The Glide Bass (Syncopated melodic bass line, highly musical)
-            [12, 0, 0, 0, 0, 0, 12, 0, 0, 0, 16, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 9, 0, 0, 0, 4, 0, 0, 0, 0, 0].concat(
-                [5, 0, 0, 0, 0, 0, 5, 0, 0, 0, 9, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 7, 0, 0, 0, 14, 0, 0, 0, 0, 0]).concat(
-                    [12, 0, 0, 0, 0, 0, 12, 0, 0, 0, 16, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 9, 0, 0, 0, 19, 0, 0, 0, 0, 0]).concat(
-                        [5, 0, 0, 0, 0, 0, 5, 0, 0, 0, 2, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 7, 0, 0, 0, 11, 0, 0, 0, 0, 0]),
-            // 3: Driving Arp Bass (Continuous soft pulsing 8ths)
+
+            // Fast trance rolling bass
             Array(128).fill(0).map((_, i) => {
-                const phase = Math.floor(i / 32) % 4
-                const root = phase === 0 ? 12 : (phase === 1 ? 9 : (phase === 2 ? 5 : 7))
-                return i % 4 === 0 ? root : (i % 4 === 2 ? root + 12 : 0) // Octave bouncing
+                const root = (Math.floor(i / 32) === 0 ? 12 : Math.floor(i / 32) === 1 ? 7 : Math.floor(i / 32) === 2 ? 3 : 10)
+                return i % 4 !== 0 ? root : 0 // Bass on 16ths, ducking the kick on the downbeat
             })
         ]
 
-        /** CHORDS: Lush extended major/minor 7ths & 9ths. Long sustaining washes of sound. */
+        /** CHORDS: Extremely clean, consonant triads. Epic Geometry Dash Supersaws. */
         const PATTERN_CHORDS = [
-            // 0: Chill (Whole notes padding)
+            // Emotionally resonant vi - IV - I - V progression
+            // Array indices: 0-31 (vi), 32-63 (IV), 64-95 (I), 96-127 (V)
             Array(128).fill(null).map((_, i) => {
-                // Majestic slow 4-chord journey: Imaj7 - vim7 - IVmaj7 - V9
-                if (i === 0) return { n: [24, 28, 31, 35], d: 32 } // Extended warm pad length
-                if (i === 32) return { n: [21, 24, 28, 31], d: 32 }
-                if (i === 64) return { n: [17, 21, 24, 28], d: 32 }
-                if (i === 96) return { n: [19, 23, 26, 31], d: 32 }
+                if (i === 0) return { n: [12, 19, 24], d: 32 }    // vi (e.g., C#m)
+                if (i === 32) return { n: [7, 15, 19], d: 32 }     // IV (e.g., A)
+                if (i === 64) return { n: [3, 10, 15], d: 32 }     // I  (e.g., E)
+                if (i === 96) return { n: [10, 14, 22], d: 32 }    // V  (e.g., B)
                 return null
             }),
-            // 1: Awakening (Gentle pulsing half-note chords)
             Array(128).fill(null).map((_, i) => {
-                const phase = Math.floor(i / 32)
-                const noteGroup = phase === 0 ? [24, 28, 31, 35] : (phase === 1 ? [21, 24, 28, 31] : (phase === 2 ? [17, 21, 24, 28] : [19, 23, 26, 31]))
-                if (i % 8 === 0) return { n: noteGroup, d: 6 } // Breathing, pulsing pads
+                const rootGroup = Math.floor(i / 32)
+                const group = rootGroup === 0 ? [12, 19, 24] : rootGroup === 1 ? [7, 15, 19] : rootGroup === 2 ? [3, 10, 15] : [10, 14, 22]
+                if (i % 8 === 0) return { n: group, d: 4.5 } // Staccato stabs
                 return null
             }),
-            // 2: The Glide (Flowing Geometry Dash beautiful chords, syncopated but soft)
             Array(128).fill(null).map((_, i) => {
-                const phase = Math.floor(i / 32)
-                const ng = phase === 0 ? [24, 28, 31, 35, 38] : (phase === 1 ? [21, 24, 28, 31, 35] : (phase === 2 ? [17, 21, 24, 28, 33] : [19, 23, 26, 31, 35]))
-                // Very lush syncopated strums
-                if (i % 16 === 0 || i % 16 === 6 || i % 16 === 10) return { n: ng, d: 4.5 }
+                const rootGroup = Math.floor(i / 32)
+                const group = rootGroup === 0 ? [12, 19, 24, 28] : rootGroup === 1 ? [7, 15, 19, 24] : rootGroup === 2 ? [3, 10, 15, 19] : [10, 14, 19, 22]
+                // Epic syncopated rhythm
+                if (i % 16 === 0 || i % 16 === 6 || i % 16 === 10) return { n: group, d: 3.5 }
                 return null
             }),
-            // 3: Uplifting Flight (Full continuous wall of beautiful sound)
             Array(128).fill(null).map((_, i) => {
-                const chordNotes = i < 64 ? [24, 28, 31, 35] : [26, 29, 33, 36]
-                if (i % 4 === 0) return { n: chordNotes, d: 3.8 } // Plucky but long release
+                const rootGroup = Math.floor(i / 32)
+                const group = rootGroup === 0 ? [12, 19, 24] : rootGroup === 1 ? [7, 15, 19] : rootGroup === 2 ? [3, 10, 15] : [10, 14, 22]
+                if (i % 4 === 0) return { n: group, d: 3 } // Pumping 8ths
                 return null
             })
         ]
 
-        /** MELODIC LEADS & ARPS (Beautiful dripping echoes). Octave 4/5/6 */
+        /** MELODIC LEADS & ARPS: Simple, strictly pentatonic and catchy. */
         const PATTERN_LEADS = [
-            // 0: Deep Space (Piano-like sparse cascading notes)
+            // 0: Plucky clean echoes
             Array(128).fill(0).map((_, i) => {
-                if (i === 0) return 48; if (i === 6) return 52; if (i === 12) return 55; if (i === 24) return 60;
-                if (i === 32) return 45; if (i === 38) return 48; if (i === 44) return 52; if (i === 56) return 55;
-                if (i === 64) return 41; if (i === 70) return 45; if (i === 76) return 48; if (i === 88) return 55;
-                if (i === 96) return 43; if (i === 102) return 47; if (i === 108) return 50; if (i === 120) return 55;
+                if (i === 0) return 36; if (i === 12) return 43; if (i === 24) return 48;
+                if (i === 32) return 31; if (i === 44) return 38; if (i === 56) return 43;
+                if (i === 64) return 27; if (i === 76) return 34; if (i === 88) return 39;
+                if (i === 96) return 34; if (i === 108) return 41; if (i === 120) return 46;
                 return 0
             }),
-            // 1: Awakening (Cascading pentatonic waterfalls)
+            // 1: Building Arp
             Array(128).fill(0).map((_, i) => {
-                const phrase = [48, 52, 55, 60, 52, 55, 60, 64]
-                return i % 2 === 0 ? phrase[(i / 2) % phrase.length] : 0
+                const arp = [36, 43, 48, 55, 31, 38, 43, 50, 27, 34, 39, 46, 34, 41, 46, 53]
+                return i % 2 === 0 ? arp[Math.floor((i % 32) / 2)] : 0
             }),
-            // 2: The Glide (Main addictive sweet melody, 128 steps of pure ear candy)
-            [60, 0, 60, 55, 60, 0, 64, 0, 0, 0, 55, 0, 0, 0, 0, 0, 55, 0, 55, 52, 55, 0, 60, 0, 0, 0, 52, 0, 0, 0, 0, 0].concat(
-                [52, 0, 52, 48, 52, 0, 55, 0, 0, 0, 48, 0, 0, 0, 0, 0, 55, 0, 50, 0, 48, 0, 50, 0, 47, 0, 45, 0, 0, 0, 0, 0]).concat(
-                    [60, 0, 60, 55, 60, 0, 64, 0, 0, 0, 55, 0, 0, 0, 0, 0, 67, 0, 67, 64, 67, 0, 72, 0, 0, 0, 67, 0, 0, 0, 0, 0]).concat(
-                        [72, 0, 72, 72, 71, 0, 71, 71, 67, 0, 67, 67, 64, 0, 64, 64, 60, 0, 60, 60, 55, 0, 55, 55, 52, 0, 48, 0]),
-            // 3: Uplifting Flight (Hypnotic, euphoric fast arpeggio)
+            // 2: Very catchy, universally pleasant lead melody (Avicii / GD style)
+            [48, 0, 0, 48, 0, 0, 51, 0, 0, 0, 43, 0, 46, 0, 0, 0, 46, 0, 0, 46, 0, 0, 51, 0, 0, 0, 39, 0, 43, 0, 0, 0].concat(
+                [48, 0, 0, 48, 0, 0, 51, 0, 0, 0, 43, 0, 46, 0, 0, 0, 55, 0, 0, 55, 0, 0, 51, 0, 0, 0, 60, 0, 55, 0, 0, 0]).concat(
+                    [48, 0, 0, 48, 0, 0, 51, 0, 0, 0, 43, 0, 46, 0, 0, 0, 46, 0, 0, 46, 0, 0, 51, 0, 0, 0, 39, 0, 43, 0, 0, 0]).concat(
+                        [60, 0, 60, 0, 58, 0, 58, 0, 55, 0, 55, 0, 51, 0, 51, 0, 48, 0, 48, 0, 46, 0, 46, 0, 43, 0, 43, 0, 39, 0, 39, 0]),
+            // 3: Euphoric fast Arp
             Array(128).fill(0).map((_, i) => {
-                const arp = [48, 55, 60, 64, 67, 64, 60, 55]
-                return arp[i % arp.length] + (i > 64 ? 2 : 0) // Shift key up in second half
+                const arp1 = [48, 43, 51, 46]
+                const arp2 = [55, 51, 60, 55]
+                return i < 64 ? arp1[i % 4] : arp2[i % 4]
             })
         ]
 
@@ -514,71 +505,44 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             if (pDrum.ho[b64] > 0) playHiHat(time, 'open', pDrum.ho[b64])
             if (pDrum.cr && pDrum.cr[b64] > 0) playHiHat(time, 'open', pDrum.cr[b64] * 1.5) // Splash
 
-            // 2. BASS (Warm, floating sub)
+            // 2. BASS (Clean Sub, matches chord root)
             const pBass = PATTERN_BASS[intensity]
             const bassN = pBass[b128]
             if (bassN > 0) {
-                // Gentle pulsing filter tone
-                const filterFreq = 150 + Math.sin(time * 2) * 100
-                // Sine + Triangle combo for warm tape-like bass
-                playSynth(bassN - 12, 'sine', time, interval * 2, 0.45, filterFreq, true, 0, baseFreq)
-                playSynth(bassN - 12, 'triangle', time, interval * 1.5, 0.3, filterFreq * 2, true, 5, baseFreq)
+                const filterFreq = 300 + Math.sin(time * 2) * 50
+                // Double sine for very clean, heavy low end. No weird sawtooth dissonance.
+                playSynth(bassN - 12, 'sine', time, interval * 1.5, 0.45, filterFreq, true, 0, baseFreq)
+                playSynth(bassN, 'triangle', time, interval * 1.5, 0.3, filterFreq * 2, true, 0, baseFreq)
             }
 
-            // 3. CHORDS / PADS (Super wide and beautiful)
+            // 3. CHORDS / PADS (Clean, Big Room EDM Supersaws)
             const pChord = PATTERN_CHORDS[intensity]
             const chord = pChord[b128]
             if (chord) {
                 const dur = chord.d * interval
                 chord.n.forEach(cn => {
-                    // Soft triangles stacked to sound like a Rhodes Piano / Heaven Choir
-                    playSynth(cn, 'triangle', time, dur, 0.08, 1200, true, -6, baseFreq)
-                    playSynth(cn, 'sine', time, dur, 0.1, 800, true, 0, baseFreq)
-                    playSynth(cn, 'triangle', time, dur, 0.08, 1200, true, 6, baseFreq)
+                    // Proper supersaw: slightly detuned sawtooths, bright filter
+                    playSynth(cn, 'sawtooth', time, dur, 0.08, 3000, true, -10, baseFreq)
+                    playSynth(cn, 'sawtooth', time, dur, 0.08, 3000, true, 10, baseFreq)
+                    // Add warmth
+                    playSynth(cn, 'sine', time, dur, 0.08, 1000, true, 0, baseFreq)
                 })
             }
 
-            // 4. MELODIC LEAD / ARPS (Crystal Bells / Marimba sound)
+            // 4. MELODIC LEAD / ARPS (Classic 8-bit / Video game square wave lead)
             const pLead = PATTERN_LEADS[intensity]
             const leadN = pLead[b128]
             if (leadN > 0) {
-                const dur = interval * 0.8 // Plucky, dripping sound
-                // Sent to delay bus for beautiful echoing space
-                playSynth(leadN, 'sine', time, dur, 0.2, 5000, false, 0, baseFreq)
-                playSynth(leadN, 'triangle', time, dur, 0.15, 6000, false, 3, baseFreq)
+                const dur = interval * (intensity >= 2 ? 1.0 : 0.8) // Legato in drop
+                // Clean square wave and triangle, classic GD lead
+                playSynth(leadN, 'square', time, dur, 0.08, 4000, false, 0, baseFreq)
+                playSynth(leadN, 'triangle', time, dur, 0.08, 4000, false, 0, baseFreq)
             }
 
-            // 5. FX / ATMOSPHERE
-            // Wind sweeps every 64 beats instead of harsh crashes
-            if (beatNumber > 0 && beatNumber % 64 === 0) {
-                const fxOsc = ctx.createOscillator()
-                const fxGain = ctx.createGain()
-                fxOsc.type = 'sine'
-                fxOsc.frequency.setValueAtTime(200, time)
-                fxOsc.frequency.linearRampToValueAtTime(800, time + 2.0)
-                fxGain.gain.setValueAtTime(0, time)
-                fxGain.gain.linearRampToValueAtTime(0.15, time + 1.0)
-                fxGain.gain.linearRampToValueAtTime(0.01, time + 3.0)
-
-                // Add noise for texture
-                if (noiseBufferRef.current) {
-                    const noiseSrc = ctx.createBufferSource()
-                    noiseSrc.buffer = noiseBufferRef.current
-                    const windFilter = ctx.createBiquadFilter()
-                    windFilter.type = 'lowpass'
-                    windFilter.frequency.setValueAtTime(400, time)
-                    windFilter.frequency.exponentialRampToValueAtTime(1500, time + 1.5)
-                    windFilter.frequency.exponentialRampToValueAtTime(400, time + 3)
-                    noiseSrc.connect(windFilter)
-                    windFilter.connect(fxGain)
-                    noiseSrc.start(time)
-                    noiseSrc.stop(time + 3.5)
-                }
-
-                fxOsc.connect(fxGain)
-                fxGain.connect(leadGain)
-                fxOsc.start(time)
-                fxOsc.stop(time + 3.5)
+            // 5. FX (Clean sweep removed, only nice impacts on phrase changes)
+            if (intensity >= 2 && beatNumber % 128 === 0) {
+                // Happy, large crash symbol to signal new section
+                playHiHat(time, 'open', 1.5)
             }
         }
 
