@@ -168,84 +168,74 @@ export default function Home() {
         <ParticleChaos />
       </div>
 
-      {/* HEADER BACKGROUND BLUR AND GRID */}
-      <div className="fixed top-0 left-0 right-0 h-28 bg-white/60 backdrop-blur-xl z-[1] pointer-events-none mask-image-b" style={{ maskImage: 'linear-gradient(to bottom, black 60%, transparent)' }} />
+      {/* HEADER BACKGROUND GRID */}
+      <div className="fixed top-0 left-0 right-0 h-28 bg-white z-[1] pointer-events-none border-b-2 border-slate-900" style={{ backgroundImage: 'repeating-linear-gradient(0deg, #0f172a1a 0, #0f172a1a 1px, transparent 1px, transparent 20px), repeating-linear-gradient(90deg, #0f172a1a 0, #0f172a1a 1px, transparent 1px, transparent 20px)' }} />
 
 
       {/* ENTRY POPUP OVERLAY - Brutalist Degen Style */}
       {!hasEntered && (
-        <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden transition-all duration-500 lg:hidden backdrop-blur-xl ${isEntering ? 'opacity-0 scale-105' : 'opacity-100'}`}
-          style={{ background: 'linear-gradient(165deg, rgba(255,255,255,0.98) 0%, rgba(245,248,255,0.95) 35%, rgba(235,240,255,0.92) 65%, rgba(224,234,255,0.90) 100%)' }}>
-
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-[15%] left-[10%] w-48 h-48 bg-[#0052FF]/[0.08] rounded-none blur-3xl animate-[float_8s_ease-in-out_infinite]" />
-            <div className="absolute bottom-[20%] right-[15%] w-64 h-64 bg-[#0052FF]/[0.06] rounded-none blur-3xl animate-[float_12s_ease-in-out_infinite_reverse]" />
-            <div className="absolute top-[50%] left-[50%] w-40 h-40 bg-[#0ECB81]/[0.06] rounded-none blur-3xl animate-[float_10s_ease-in-out_infinite_2s]" />
-          </div>
-
-          <div className="absolute inset-0 pointer-events-none z-10 opacity-[0.05]" style={{
-            backgroundImage: 'repeating-linear-gradient(0deg, #0052FF 0, #0052FF 1px, transparent 1px, transparent 80px), repeating-linear-gradient(90deg, #0052FF 0, #0052FF 1px, transparent 1px, transparent 80px)'
+        <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden transition-all duration-300 transform origin-bottom lg:hidden bg-white ${isEntering ? 'translate-y-full opacity-0' : 'opacity-100'}`}>
+          <div className="absolute inset-0 pointer-events-none z-10 opacity-[0.08]" style={{
+            backgroundImage: 'repeating-linear-gradient(0deg, #0F172A 0, #0F172A 1px, transparent 1px, transparent 40px), repeating-linear-gradient(90deg, #0F172A 0, #0F172A 1px, transparent 1px, transparent 40px)'
           }} />
 
           <div className="relative z-20 text-center px-4 max-w-[300px] w-full"
-            style={{ opacity: 0, animation: 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both' }}>
-            <h2 className="mb-8 mt-2 flex flex-col items-center justify-center gap-1.5"
-              style={{ fontFamily: 'var(--font-mono)', opacity: 0, animation: 'fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both' }}>
-              <span className="text-[8.5px] font-bold text-slate-500 tracking-[0.3em] uppercase relative z-10" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+            style={{ opacity: 0, animation: 'fadeInUp 0.3s ease-out 0.1s both' }}>
+            <h2 className="mb-8 mt-2 flex flex-col items-center justify-center gap-2"
+              style={{ fontFamily: 'var(--font-mono)', opacity: 0, animation: 'fadeIn 0.3s ease-out 0.2s both' }}>
+              <span className="text-[10px] font-black text-slate-500 tracking-[0.3em] uppercase relative z-10 bg-white px-2 border-2 border-slate-900 shadow-[2px_2px_0_#0F172A]">
                 ready to trade like
               </span>
-              <span className="text-[12px] font-black uppercase tracking-widest leading-none text-transparent bg-clip-text bg-gradient-to-r from-[#0A0B14] via-[#3A405A] to-[#0A0B14] bg-[length:200%_auto] relative inline-block animate-[shimmer_2.5s_linear_infinite]" style={{ filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.25))' }}>
+              <span className="text-[13px] font-black uppercase tracking-widest leading-none text-white bg-slate-900 p-2 border-2 border-slate-900 shadow-[4px_4px_0_#0052FF]">
                 it&#39;s your first day again?
-                <div className="absolute -inset-5 bg-gradient-to-r from-[#0A0B14]/20 to-[#3A405A]/20 blur-2xl -z-10 rounded-[100%] animate-pulse pointer-events-none" />
               </span>
             </h2>
 
-            <div className="flex gap-2.5" style={{ opacity: 0, animation: 'fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both' }}>
+            <div className="flex gap-3" style={{ opacity: 0, animation: 'fadeIn 0.3s ease-out 0.3s both' }}>
               <button
                 onClick={handleEnter}
-                className="flex-1 py-2 text-white font-black tracking-widest text-[9.5px] transition-all duration-150 active:translate-y-[2px] active:scale-95 bg-[#0ECB81] relative group cursor-pointer border-b-[3px] border-[#0B9A62] uppercase rounded-none"
+                className="flex-1 py-3 text-white font-black tracking-widest text-[11px] transition-transform active:translate-y-1 active:translate-x-1 active:shadow-none bg-[#0ECB81] border-2 border-slate-900 shadow-[4px_4px_0_#0F172A] uppercase rounded-none"
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
-                <span className="relative z-10">Yes</span>
+                Yes
               </button>
               <button
                 onClick={handleEnter}
-                className="flex-1 py-2 text-white font-black tracking-widest text-[9.5px] transition-all duration-150 active:translate-y-[2px] active:scale-95 bg-[#F6465D] relative group cursor-pointer border-b-[3px] border-[#B93445] uppercase rounded-none"
+                className="flex-1 py-3 text-white font-black tracking-widest text-[11px] transition-transform active:translate-y-1 active:translate-x-1 active:shadow-none bg-[#F6465D] border-2 border-slate-900 shadow-[4px_4px_0_#0F172A] uppercase rounded-none"
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
-                <span className="relative z-10">Yes</span>
+                Yes
               </button>
             </div>
 
-            <p className="mt-8 text-[9px] text-[#0052FF] font-bold tracking-[0.2em] animate-pulse"
-              style={{ fontFamily: 'var(--font-mono)', opacity: 0, animation: 'fadeIn 0.8s ease 0.7s both' }}>
-              AUTO-ENTER SOON
-            </p>
+            <div className="mt-8 border-t-2 border-slate-900 pt-4">
+              <p className="text-[9px] text-slate-900 font-black tracking-[0.2em] uppercase bg-yellow-300 inline-block px-2 border-2 border-slate-900 shadow-[2px_2px_0_#0F172A]"
+                style={{ fontFamily: 'var(--font-mono)', opacity: 0, animation: 'fadeIn 0.3s ease 0.4s both' }}>
+                AUTO-ENTER SOON
+              </p>
+            </div>
           </div>
         </div>
       )}
 
       {/* Desktop block gate - z-50 */}
-      <div className={`${!desktopBypass ? 'hidden lg:flex' : 'hidden'} relative z-50 h-full w-full items-center justify-center bg-[#F5F8FF] overflow-hidden`} suppressHydrationWarning>
-        <div className="absolute inset-0 z-0">
-          <div className="absolute top-[20%] left-[20%] w-64 h-64 bg-[#0052FF]/8 rounded-none blur-3xl animate-[float_8s_ease-in-out_infinite]" />
-          <div className="absolute bottom-[20%] right-[20%] w-80 h-80 bg-[#0ecb81]/5 rounded-none blur-3xl animate-[float_10s_ease-in-out_infinite_reverse]" />
-          <div className="absolute top-[40%] right-[30%] w-48 h-48 bg-[#f0b90b]/8 rounded-none blur-3xl animate-[float_12s_ease-in-out_infinite_1s]" />
-          <div className="absolute inset-0 bg-white/20 backdrop-blur-[100px]" />
-        </div>
+      <div className={`${!desktopBypass ? 'hidden lg:flex' : 'hidden'} relative z-50 h-full w-full items-center justify-center bg-white border-8 border-slate-900 overflow-hidden`} suppressHydrationWarning>
+        <div className="absolute inset-0 pointer-events-none z-10 opacity-[0.08]" style={{
+          backgroundImage: 'repeating-linear-gradient(0deg, #0052FF 0, #0052FF 2px, transparent 2px, transparent 40px), repeating-linear-gradient(90deg, #0052FF 0, #0052FF 2px, transparent 2px, transparent 40px)'
+        }} />
 
-        <div className="relative z-10 text-center px-10 py-12 max-w-md">
-          <div className="relative w-40 h-40 mx-auto mb-8 flex items-center justify-center animate-[float_4s_ease-in-out_infinite]">
-            <svg className="w-32 h-32 text-[#0052FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={0.8}>
-              <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-              <line x1="12" y1="18" x2="12.01" y2="18" strokeWidth="2" strokeLinecap="round" />
+        <div className="relative z-20 text-center px-10 py-12 max-w-md bg-white border-4 border-slate-900 shadow-[12px_12px_0_#0052FF]">
+          <div className="relative w-32 h-32 mx-auto mb-8 flex items-center justify-center border-4 border-slate-900 bg-slate-100 shadow-[6px_6px_0_#0F172A]">
+            <svg className="w-16 h-16 text-[#0052FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <rect x="5" y="2" width="14" height="20" rx="0" ry="0" />
+              <line x1="12" y1="18" x2="12.01" y2="18" strokeWidth="3" strokeLinecap="round" />
             </svg>
           </div>
-          <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">mobile only.</h2>
-          <p className="text-[16px] text-slate-600 mb-10 leading-relaxed font-medium">base dash is a hyper-optimized mobile experience. open this app on your phone to trade.</p>
-          <div className="inline-flex items-center gap-3 bg-white border border-slate-200 px-5 py-3.5 rounded-none shadow-[0_8px_24px_rgba(0,82,255,0.12)] transition-transform hover:scale-105 cursor-default mt-6">
-            <svg className="w-5 h-5 text-[#0052FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-            <span className="text-[14px] font-bold text-slate-700">switch device to play</span>
+          <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tighter uppercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>mobile only.</h2>
+          <p className="text-[14px] text-slate-900 mb-10 leading-relaxed font-bold uppercase tracking-widest border-l-4 border-[#0052FF] pl-4 text-left" style={{ fontFamily: 'var(--font-mono, monospace)' }}>base dash is a hyper-optimized mobile experience. open this app on your phone to trade.</p>
+          <div className="inline-flex items-center justify-center gap-3 bg-[#0ECB81] border-2 border-slate-900 px-6 py-4 rounded-none shadow-[6px_6px_0_#0F172A] hover:bg-[#0B9A62] transition-colors cursor-default mt-2 w-full">
+            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+            <span className="text-[14px] font-black text-white uppercase tracking-widest" style={{ fontFamily: 'var(--font-mono, monospace)' }}>switch device</span>
           </div>
         </div>
       </div>
@@ -270,53 +260,49 @@ export default function Home() {
 
             {/* TAB NAVIGATION - Always visible */}
             <div className="w-full px-2 sm:px-3 pt-0.5 relative z-20 flex-shrink-0">
-              <div className="flex justify-center items-center gap-1 p-0.5 bg-white/60 backdrop-blur-md rounded-none border border-slate-200/50 shadow-inner">
-                <button onClick={() => setActiveTab('game')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-none transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-[#F0F4FF] text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
+              <div className="flex justify-center items-center p-0.5 bg-slate-100 border-2 border-slate-900 shadow-[2px_2px_0_#0F172A]">
+                <button onClick={() => setActiveTab('game')} className={`relative px-1.5 sm:px-2 h-[26px] sm:h-[30px] transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-[#0052FF] text-white z-10' : 'bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 z-0'}`}>
                   <div className="flex items-center gap-0.5">
                     <svg className="w-2.5 h-2.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                    <span className="text-[9px] sm:text-[10px] font-black tracking-wide leading-none">trade</span>
+                    <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest leading-none">trade</span>
                   </div>
-                  <span className="text-[6px] sm:text-[7px] font-semibold opacity-70 leading-none mt-[1px]">play demo</span>
                 </button>
 
-                <button onClick={() => setActiveTab('profile')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-none transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'profile' ? 'bg-[#F0F4FF] text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
+                <div className="w-0.5 h-4 bg-slate-300 mx-0.5" />
+
+                <button onClick={() => setActiveTab('profile')} className={`relative px-1.5 sm:px-2 h-[26px] sm:h-[30px] transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'profile' ? 'bg-[#0052FF] text-white z-10' : 'bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 z-0'}`}>
                   <div className="flex items-center gap-0.5">
                     <svg className="w-2.5 h-2.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
-                    <span className="text-[9px] sm:text-[10px] font-black tracking-wide leading-none">wallet</span>
+                    <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest leading-none">wallet</span>
                   </div>
-                  <span className="text-[6px] sm:text-[7px] font-semibold opacity-70 leading-none mt-[1px]">profile</span>
                 </button>
 
-                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-1.5 sm:px-2 h-[22px] sm:h-[24px] flex flex-col items-center justify-center rounded-none transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white scale-100 ring-1 ring-[#F0B90B] z-10' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)] z-0'}`}>
-                  {activeTab !== 'leaderboard' && <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-[#F0B90B] to-transparent opacity-20 -translate-x-full animate-[shimmerSweep_2.5s_ease-in-out_infinite]" />}
+                <div className="w-0.5 h-4 bg-slate-300 mx-0.5" />
+
+                <button onClick={() => setActiveTab('leaderboard')} className={`relative px-1.5 sm:px-2 h-[26px] sm:h-[30px] flex flex-col items-center justify-center transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-[#F0B90B] text-slate-900 z-10' : 'bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 z-0'}`}>
                   <div className="flex items-center gap-0.5 relative z-10">
-                    <svg className={`w-2.5 h-2.5 hidden sm:block transition-transform duration-300 ${(activeTab as string) !== 'leaderboard' ? 'group-hover:scale-110 text-[#F0B90B]' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-2.5 h-2.5 hidden sm:block transition-transform duration-300" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
                     </svg>
-                    <span className={`${(activeTab as string) !== 'leaderboard' ? 'text-slate-800 group-hover:text-amber-600' : 'text-white'} text-[9px] sm:text-[10px] font-black tracking-wide leading-none`}>top 33</span>
+                    <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest leading-none">top 33</span>
                   </div>
-                  <span className={`${(activeTab as string) !== 'leaderboard' ? 'opacity-70 text-slate-500' : 'opacity-90 text-white'} text-[6px] sm:text-[7px] font-semibold relative z-10 leading-none mt-[1px]`}>ranks</span>
                 </button>
               </div>
             </div>
 
             {/* GAME TAB */}
             {activeTab === 'game' && (
-              <div className="flex flex-col flex-1 w-full min-h-0 gap-1">
+              <div className="flex flex-col flex-1 w-full min-h-0 gap-1 mt-1">
                 {/* CONNECT WALLET BANNER - with spacing from header and canvas */}
                 {!isConnected && (
-                  <div className="w-full flex-shrink-0">
-                    <div className="flex items-center justify-center gap-2 px-2.5 py-1.5 sm:py-2 relative overflow-hidden rounded-none border border-[#0052FF]/20"
-                      style={{
-                        background: 'linear-gradient(90deg, rgba(0,82,255,0.06) 0%, rgba(0,82,255,0.14) 50%, rgba(0,82,255,0.06) 100%)',
-                        animation: 'breatheGlow 2s ease-in-out infinite',
-                      }}>
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0052FF] flex items-center justify-center flex-shrink-0 rounded-none relative z-10">
+                  <div className="w-full flex-shrink-0 px-2 sm:px-3">
+                    <div className="flex items-center justify-center gap-2 px-2.5 py-1.5 sm:py-2 relative overflow-hidden bg-[#F0F4FF] border-2 border-slate-900 shadow-[2px_2px_0_#0052FF]">
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0052FF] flex items-center justify-center flex-shrink-0 relative z-10 shadow-sm border border-slate-900">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
                       </div>
-                      <p className="text-[9px] sm:text-[10px] font-bold text-[#1a2030] text-center relative z-10" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                      <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-[#0052FF] text-center relative z-10" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
                         connect wallet to save scores on-chain
                       </p>
                     </div>
@@ -326,32 +312,36 @@ export default function Home() {
                 {/* GAME HINTS — tap to jump blocks */}
                 <div className="w-full px-2 sm:px-3 relative z-20 flex-shrink-0">
                   <div className="flex items-stretch gap-1 sm:gap-1.5 mx-auto">
-                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/60 backdrop-blur-sm rounded-none border border-slate-200/60 min-w-0 justify-center shadow-sm">
-                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0052FF]/10 rounded flex items-center justify-center flex-shrink-0">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-slate-900 min-w-0 justify-center shadow-[2px_2px_0_#0F172A] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0052FF]/10 flex items-center justify-center flex-shrink-0 border border-[#0052FF]/30">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0052FF]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
                       </div>
-                      <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-600 lowercase tracking-wider truncate text-center">tap to jump</span>
+                      <span className="text-[9px] sm:text-[10px] font-mono font-black text-slate-900 uppercase tracking-widest truncate text-center">tap to jump</span>
                     </div>
-                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/60 backdrop-blur-sm rounded-none border border-[#F6465D]/15 min-w-0 justify-center shadow-sm">
-                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#F6465D]/10 rounded flex items-center justify-center flex-shrink-0">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-[#F6465D] min-w-0 justify-center shadow-[2px_2px_0_#F6465D] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#F6465D]/10 flex items-center justify-center flex-shrink-0 border border-[#F6465D]/30">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#F6465D]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       </div>
-                      <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-600 lowercase tracking-wider truncate text-center">dodge <span className="text-[#F6465D]">red</span></span>
+                      <span className="text-[9px] sm:text-[10px] font-mono font-black text-slate-900 uppercase tracking-widest truncate text-center">dodge <span className="text-[#F6465D]">red</span></span>
                     </div>
-                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/60 backdrop-blur-sm rounded-none border border-[#0ECB81]/15 min-w-0 justify-center shadow-sm">
-                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0ECB81]/10 rounded flex items-center justify-center flex-shrink-0">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-[#0ECB81] min-w-0 justify-center shadow-[2px_2px_0_#0ECB81] transition-transform active:translate-y-0.5 active:translate-x-0.5 active:shadow-none">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-[#0ECB81]/10 flex items-center justify-center flex-shrink-0 border border-[#0ECB81]/30">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0ECB81]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                       </div>
-                      <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-600 lowercase tracking-wider truncate text-center">collect <span className="text-[#0ECB81]">green</span></span>
+                      <span className="text-[9px] sm:text-[10px] font-mono font-black text-slate-900 uppercase tracking-widest truncate text-center">collect <span className="text-[#0ECB81]">green</span></span>
                     </div>
                   </div>
                 </div>
 
                 {/* Game Canvas — Proportional flex, capped at 55% viewport */}
-                <div className="w-full flex-shrink-0 relative z-20 flex flex-col items-center justify-center fade-in" style={{ height: '42vh' }}>
+                <div className="w-full flex-shrink-0 relative z-20 flex flex-col items-center justify-center fade-in mt-1 mb-1" style={{ height: '42vh' }}>
                   <div
-                    className="relative w-full h-full max-w-[600px] sm:rounded-[20px] overflow-hidden border-y sm:border-x border-[#0052FF]/10 bg-white mx-auto shadow-[0_8px_30px_rgba(0,0,0,0.12)] touch-none"
+                    className="relative w-full h-full max-w-[600px] overflow-hidden border-[3px] border-slate-900 bg-white mx-auto shadow-[4px_4px_0_rgba(15,23,42,1)] touch-none"
                   >
+                    {/* Game Area Accent Lines */}
+                    <div className="absolute top-0 left-0 w-8 h-8 border-r-2 border-b-2 border-slate-900/10 pointer-events-none z-50"></div>
+                    <div className="absolute bottom-0 right-0 w-8 h-8 border-l-2 border-t-2 border-slate-900/10 pointer-events-none z-50"></div>
+
                     <GameEngine
                       storageKey="basedash_highscore_v2"
                       onScoreSubmit={handleScoreSubmit}
@@ -401,52 +391,81 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="p-3 rounded-none border border-[#0ECB81]/15 bg-[#0ECB81]/[0.04] flex flex-col items-center justify-center text-center">
+                      <div className="p-3 border border-slate-200 bg-white flex flex-col items-start justify-center relative overlow-hidden">
+                        <div className="absolute top-0 right-0 w-8 h-8 border-l border-b border-slate-100 flex items-start justify-end p-1">
+                          <div className="w-1.5 h-1.5 bg-[#0ECB81]" />
+                        </div>
                         <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>time in game</p>
-                        <p className="mt-1 text-lg font-black text-[#0ECB81] leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                          {typeof window !== 'undefined' ? (parseInt(localStorage.getItem('base_dash_time') || '0') / 60).toFixed(1) : 0}m
+                        <p className="mt-1 text-lg font-black text-slate-900 leading-none" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                          {typeof window !== 'undefined' ? (parseInt(localStorage.getItem('base_dash_time') || '0') / 60).toFixed(1) : 0}<span className="text-[#0052FF] text-sm ml-0.5">m</span>
                         </p>
                       </div>
-                      <div className="p-3 rounded-none border bg-gradient-to-br flex flex-col items-center justify-center text-center" style={{ borderColor: `${streakTier.color}20`, background: `linear-gradient(135deg, white, ${streakTier.bg})` }}>
-                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>streak</p>
-                        <p className="mt-1 text-lg font-black leading-none flex items-center gap-1" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
-                          {streakTier.emoji} {checkInStatus.streak}
+                      <div className="p-3 border flex flex-col items-start justify-center relative overflow-hidden" style={{ borderColor: `${streakTier.color}40`, backgroundColor: `${streakTier.color}05` }}>
+                        <div className="absolute top-0 right-0 w-8 h-8 border-l border-b flex items-start justify-end p-1" style={{ borderColor: `${streakTier.color}20` }}>
+                          <div className="w-1.5 h-1.5" style={{ backgroundColor: streakTier.color }} />
+                        </div>
+                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>active streak</p>
+                        <p className="mt-1 text-lg font-black leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
+                          {checkInStatus.streak} <span className="text-xs opacity-60">DAYS</span>
                         </p>
                       </div>
                     </div>
 
-                    {/* Streak Multiplier Card */}
-                    <div className="rounded-none border p-3 sm:p-4 relative overflow-hidden" style={{ borderColor: `${streakTier.color}15`, background: `linear-gradient(135deg, white 60%, ${streakTier.bg} 100%)` }}>
-                      <div className="absolute right-0 top-0 w-24 h-24 pointer-events-none" style={{ background: `radial-gradient(circle, ${streakTier.color}10, transparent 70%)` }} />
-                      <div className="flex items-center justify-between mb-2.5 relative z-10">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{streakTier.emoji}</span>
-                          <div>
-                            <p className="text-[10px] sm:text-[11px] font-black leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
+                    {/* Brutalist Streak Multiplier Card */}
+                    <div className="border border-slate-200 bg-white p-4 relative overflow-hidden group hover:border-slate-300 transition-colors">
+                      {/* Geometric backdrop */}
+                      <div className="absolute top-0 right-0 w-32 h-32 border-l border-b border-slate-100 -translate-y-8 translate-x-8 rotate-12" />
+                      <div className="absolute bottom-0 right-8 w-px h-16 bg-gradient-to-t from-slate-200 to-transparent" />
+
+                      <div className="flex items-start justify-between mb-6 relative z-10">
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <div className="w-2 h-2" style={{ backgroundColor: streakTier.color }} />
+                            <p className="text-[11px] font-black uppercase tracking-widest leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
                               {streakTier.label}
                             </p>
-                            <p className="text-[7px] font-bold text-slate-400 mt-0.5" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Score Multiplier</p>
                           </div>
+                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.1em]" style={{ fontFamily: 'var(--font-mono, monospace)' }}>Score Multiplier Active</p>
                         </div>
-                        <span className="text-[20px] sm:text-[22px] font-black leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
-                          ×{streakMultiplier.toFixed(streakMultiplier % 1 === 0 ? 0 : streakMultiplier === 1.25 ? 2 : 1)}
-                        </span>
+                        <div className="text-right">
+                          <span className="text-[28px] font-black leading-none block" style={{ fontFamily: 'var(--font-mono, monospace)', color: streakTier.color }}>
+                            ×{streakMultiplier.toFixed(streakMultiplier % 1 === 0 ? 0 : streakMultiplier === 1.25 ? 2 : 1)}
+                          </span>
+                        </div>
                       </div>
-                      {/* Tiers roadmap */}
-                      <div className="flex items-center gap-1 relative z-10">
-                        {STREAK_TIERS.slice(1).map((tier, i) => (
-                          <div key={tier.days} className="flex-1 flex flex-col items-center gap-1">
-                            <div className="w-full h-[3px] rounded-none transition-all" style={{ background: checkInStatus.streak >= tier.days ? tier.color : '#e2e8f0' }} />
-                            <span className="text-[7px] font-bold leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: checkInStatus.streak >= tier.days ? tier.color : '#cbd5e1' }}>
-                              {tier.emoji}{tier.days}d
-                            </span>
-                          </div>
-                        ))}
+
+                      {/* Brutalist Tiers roadmap */}
+                      <div className="flex items-end gap-1 relative z-10 h-10 border-b border-slate-100 pb-1">
+                        {STREAK_TIERS.slice(1).map((tier, i) => {
+                          const isReached = checkInStatus.streak >= tier.days;
+                          const heightPct = 30 + (i * 20); // 30%, 50%, 70%, 90%
+                          return (
+                            <div key={tier.days} className="flex-1 flex flex-col items-center justify-end h-full gap-1.5 group-hover:bg-slate-50/50 transition-colors">
+                              <span className="text-[8px] font-black leading-none" style={{ fontFamily: 'var(--font-mono, monospace)', color: isReached ? tier.color : '#cbd5e1' }}>
+                                {tier.days}D
+                              </span>
+                              <div
+                                className="w-full transition-all duration-500 border-t-2"
+                                style={{
+                                  height: `${heightPct}%`,
+                                  borderColor: isReached ? tier.color : 'transparent',
+                                  backgroundColor: isReached ? `${tier.color}20` : '#f1f5f9'
+                                }}
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
-                      {nextTier && (
-                        <p className="text-[7px] font-bold text-slate-400 mt-2 text-center relative z-10" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                          {nextTier.days - checkInStatus.streak} days until {nextTier.emoji} ×{nextTier.multiplier} boost
-                        </p>
+
+                      {nextTier ? (
+                        <div className="mt-3 flex items-center justify-between text-[8px] font-bold text-slate-400 uppercase tracking-[0.1em] relative z-10 p-1.5 border border-slate-100 bg-slate-50" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                          <span>Target: {nextTier.days} Days</span>
+                          <span style={{ color: nextTier.color }}>→ ×{nextTier.multiplier} Boost</span>
+                        </div>
+                      ) : (
+                        <div className="mt-3 flex items-center justify-center text-[8px] font-bold text-slate-400 uppercase tracking-[0.1em] relative z-10 p-1.5 border border-slate-100 bg-slate-50" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                          <span className="text-[#0ECB81]">Max Multiplier Reached</span>
+                        </div>
                       )}
                     </div>
                     <div className="pt-1"><DailyCheckinButton /></div>
