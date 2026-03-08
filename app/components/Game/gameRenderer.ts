@@ -1038,10 +1038,10 @@ export const drawWorldBanner = (
     ctx.globalAlpha = alpha
 
     const centerX = CFG.WIDTH / 2
-    const bannerY = 50 + (-8 + enter * 8)
+    const bannerY = 56 + (-8 + enter * 8)
 
     // Compact single-line text
-    const fontSize = Math.max(10, Math.min(12, CFG.WIDTH * 0.026))
+    const fontSize = Math.max(9, Math.min(10, CFG.WIDTH * 0.022))
     ctx.font = `600 ${fontSize * 0.8}px monospace`
     const labelW = ctx.measureText('WORLD: ').width
     ctx.font = `700 ${fontSize}px monospace`
@@ -1107,7 +1107,7 @@ export const drawChillMarketBanner = (
     ctx.globalAlpha = alpha
 
     const centerX = CFG.WIDTH / 2
-    const fontSize = Math.max(9, Math.min(11, CFG.WIDTH * 0.024))
+    const fontSize = Math.max(8, Math.min(9, CFG.WIDTH * 0.020))
 
     // Determine label text
     const label = e.whaleTimer > 0 ? 'MARKET FREEZE' : 'CHILL MARKET'
@@ -1123,7 +1123,7 @@ export const drawChillMarketBanner = (
     const barH = fontSize + padY * 2
     const barX = centerX - totalW / 2
     // Position directly below world banner area — tight gap
-    const barY = e.worldBannerTimer > 0 ? 70 : 48
+    const barY = e.worldBannerTimer > 0 ? 74 : 52
 
     // Light backdrop
     ctx.fillStyle = 'rgba(255,255,255,0.92)'

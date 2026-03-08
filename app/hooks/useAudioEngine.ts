@@ -280,9 +280,9 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         gainPad.gain.value = 0.010
         gainBas.gain.value = 0.005
 
-        // Slow fade in
+        // Slow fade in — ramps master bus to 1.0 (per-osc gains handle volume)
         bgmGain.gain.setValueAtTime(0, ctx.currentTime)
-        bgmGain.gain.linearRampToValueAtTime(0.028, ctx.currentTime + 4)
+        bgmGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 4)
 
         oscMelody.start()
         oscChime.start()
@@ -429,7 +429,7 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
                 if (nextTime < audioCtxRef.current.currentTime - 0.5) {
                     nextTime = audioCtxRef.current.currentTime + 0.05
                     bgmGain.gain.setTargetAtTime(0, audioCtxRef.current.currentTime, 0.01)
-                    bgmGain.gain.setTargetAtTime(0.025, audioCtxRef.current.currentTime + 0.1, 0.4)
+                    bgmGain.gain.setTargetAtTime(1.0, audioCtxRef.current.currentTime + 0.1, 0.4)
                     continue
                 }
 
