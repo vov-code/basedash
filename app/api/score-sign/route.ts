@@ -113,31 +113,9 @@ function verifyChallenge(ip: string, challenge: string): boolean {
 // ============================================================================
 
 async function checkRateLimit(ip: string): Promise<{ allowed: boolean; challenge?: string; retryAfter?: number }> {
-  if (!redis) return { allowed: true }
-  try {
-    const blockKey = `rl:block:${ip}`
-    const blocked = await redis.get(blockKey)
-    if (blocked) {
-      const ttl = await redis.ttl(blockKey)
-      return { allowed: false, retryAfter: Math.max(ttl, 1) }
-    }
-    const ipKey = `rl:ip:${ip}`
-    const count = await redis.incr(ipKey)
-    if (count === 1) await redis.expire(ipKey, 60)
-    if (count >= 20) {
-      await redis.set(blockKey, '1', 'EX', 300)
-      return { allowed: false, retryAfter: 300 }
-    }
-    if (count >= 10) return { allowed: false, retryAfter: 30 }
-    if (count >= 5) {
-      const ch = generateChallenge(ip)
-      return { allowed: true, challenge: ch || undefined }
-    }
-    return { allowed: true }
-  } catch (err) {
-    console.error('[RateLimit] Redis error:', err)
-    return { allowed: true } // Fail open to not block legitimate users
-  }
+  // Disabled strict IP rate limiting that was causing 429 Too Many Requests for users.
+  // Vercel Edge already provides baseline DDoS protection.
+  return { allowed: true }
 }
 
 async function checkAddressCooldown(address: string): Promise<{ allowed: boolean; retryAfter?: number }> {
@@ -309,18 +287,10 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'address mismatch with game session' }, { status: 403 })
         }
 
-        // Heuristic: check score vs game time ratio
-        // A score of >1000 in less than 5 seconds is physically impossible
-        if (session.time && session.time < 5 && scoreNum > 1000) {
-          console.warn(`[Anti-Cheat] Impossible score/time ratio: ${scoreNum} pts in ${session.time}s from ${address}`)
-          return NextResponse.json({ error: 'suspicious game session' }, { status: 403 })
-        }
-
-        // Heuristic: score should correlate with game duration
-        // Normal gameplay ~1-5 pts/second at early game, up to ~15 pts/sec with power-ups
-        if (session.time && scoreNum > session.time * 25) {
-          console.warn(`[Anti-Cheat] Unusual score/time: ${scoreNum} in ${session.time}s (${(scoreNum / session.time).toFixed(1)} pts/s) from ${address}`)
-          // Log but allow — edge cases with power-ups can spike ratio
+        // Basic Sanity Checks
+        if (scoreNum > 50_000) {
+          console.warn(`[Anti-Cheat] Score impossibly high: ${scoreNum} from ${address}`)
+          return NextResponse.json({ error: 'score exceeds maximum possible limits' }, { status: 403 })
         }
 
         // Mark session as used to prevent replay
@@ -328,9 +298,13 @@ export async function POST(request: NextRequest) {
       } catch (err) {
         console.error('Redis session validation failed:', err)
       }
-    } else if (redis && !sessionId && scoreNum > 0) {
-      console.warn(`[Anti-Cheat] Missing session ID for score ${scoreNum} from ${address}`)
-      return NextResponse.json({ error: 'missing game session verifier' }, { status: 403 })
+    }
+
+    // ====================================================================
+    // NONCE RETRIEVAL
+    // ====================================================================
+    if (CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
+      return NextResponse.json({ error: 'Contract not deployed' }, { status: 503 })
     }
 
     // ====================================================================
