@@ -162,7 +162,7 @@ export default function Home() {
   // MAIN APP (always renders — entry popup is overlay on top)
   // ========================================================================
   return (
-    <div className="relative h-[100dvh] w-full bg-[#f8fafc]/50 text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] overflow-hidden flex flex-col">
+    <div className="relative h-[100dvh] w-full bg-transparent text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] overflow-hidden flex flex-col">
       {/* GLOBAL PARTICLE BACKGROUND - z-0, covers full length of site */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" style={{ maxHeight: 'calc(100dvh - 80px)' }}>
         <ParticleChaos />
@@ -255,7 +255,7 @@ export default function Home() {
         1. Remove touch-none from global to allow scrolling on Wallet/Leaderboard.
         2. Set min-h-[100dvh] so it takes up exactly the visible browser screen
       */}
-      <div className="flex-1 min-h-0 z-10 flex flex-col overflow-hidden lg:hidden select-none bg-white/60 backdrop-blur-md">
+      <div className="flex-1 min-h-0 z-10 flex flex-col overflow-hidden lg:hidden select-none bg-transparent">
 
         <Header
           isConnected={isConnected}
@@ -270,8 +270,8 @@ export default function Home() {
 
             {/* TAB NAVIGATION - Always visible */}
             <div className="w-full px-2 sm:px-3 pt-0.5 relative z-20 flex-shrink-0">
-              <div className="flex justify-center items-center gap-1 p-0.5 bg-white/60 backdrop-blur-md rounded-none border border-slate-200/50 shadow-inner">
-                <button onClick={() => setActiveTab('game')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-none transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-[#F0F4FF] text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
+              <div className="flex justify-center items-center gap-1 p-0.5 bg-white/50 backdrop-blur-sm rounded-none border border-slate-200/50 shadow-inner">
+                <button onClick={() => setActiveTab('game')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-none transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-[#F0F4FF]/90 text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-white/40 z-0'}`}>
                   <div className="flex items-center gap-0.5">
                     <svg className="w-2.5 h-2.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                     <span className="text-[9px] sm:text-[10px] font-black tracking-wide leading-none">trade</span>
@@ -279,7 +279,7 @@ export default function Home() {
                   <span className="text-[6px] sm:text-[7px] font-semibold opacity-70 leading-none mt-[1px]">play demo</span>
                 </button>
 
-                <button onClick={() => setActiveTab('profile')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-none transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'profile' ? 'bg-[#F0F4FF] text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 z-0'}`}>
+                <button onClick={() => setActiveTab('profile')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-none transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'profile' ? 'bg-[#F0F4FF]/90 text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-white/40 z-0'}`}>
                   <div className="flex items-center gap-0.5">
                     <svg className="w-2.5 h-2.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
                     <span className="text-[9px] sm:text-[10px] font-black tracking-wide leading-none">wallet</span>
@@ -287,7 +287,7 @@ export default function Home() {
                   <span className="text-[6px] sm:text-[7px] font-semibold opacity-70 leading-none mt-[1px]">profile</span>
                 </button>
 
-                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-1.5 sm:px-2 h-[22px] sm:h-[24px] flex flex-col items-center justify-center rounded-none transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white scale-100 ring-1 ring-[#F0B90B] z-10' : 'bg-white text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)] z-0'}`}>
+                <button onClick={() => setActiveTab('leaderboard')} className={`relative overflow-hidden px-1.5 sm:px-2 h-[22px] sm:h-[24px] flex flex-col items-center justify-center rounded-none transition-all duration-200 group flex-1 ${(activeTab as string) === 'leaderboard' ? 'bg-gradient-to-r from-[#F0B90B] to-[#D4A002] text-white scale-100 ring-1 ring-[#F0B90B] z-10' : 'bg-white/50 text-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-[#F0B90B]/20 hover:ring-[#F0B90B] hover:shadow-[0_4px_12px_rgba(240,185,11,0.4)] z-0'}`}>
                   {activeTab !== 'leaderboard' && <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-[#F0B90B] to-transparent opacity-20 -translate-x-full animate-[shimmerSweep_2.5s_ease-in-out_infinite]" />}
                   <div className="flex items-center gap-0.5 relative z-10">
                     <svg className={`w-2.5 h-2.5 hidden sm:block transition-transform duration-300 ${(activeTab as string) !== 'leaderboard' ? 'group-hover:scale-110 text-[#F0B90B]' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
@@ -326,19 +326,19 @@ export default function Home() {
                 {/* GAME HINTS — tap to jump blocks */}
                 <div className="w-full px-2 sm:px-3 relative z-20 flex-shrink-0">
                   <div className="flex items-stretch gap-1.5 mx-auto">
-                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/70 backdrop-blur-md border border-[#0052FF]/15 min-w-0 justify-center">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/50 backdrop-blur-sm border border-[#0052FF]/15 min-w-0 justify-center">
                       <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0052FF]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0052FF]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
                       </div>
                       <span className="text-[7px] sm:text-[8px] font-mono font-bold text-slate-900 tracking-wider truncate text-center">tap to jump</span>
                     </div>
-                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/70 backdrop-blur-md border border-[#F6465D]/15 min-w-0 justify-center">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/50 backdrop-blur-sm border border-[#F6465D]/15 min-w-0 justify-center">
                       <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#F6465D]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#F6465D]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       </div>
                       <span className="text-[7px] sm:text-[8px] font-mono font-bold text-slate-900 tracking-wider truncate text-center">dodge <span className="text-[#F6465D]">red</span></span>
                     </div>
-                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/70 backdrop-blur-md border border-[#0ECB81]/15 min-w-0 justify-center">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/50 backdrop-blur-sm border border-[#0ECB81]/15 min-w-0 justify-center">
                       <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0ECB81]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0ECB81]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                       </div>
@@ -378,11 +378,11 @@ export default function Home() {
 
             {/* PROFILE TAB */}
             {activeTab === 'profile' && (
-              <div className="flex-1 overflow-y-auto px-4 py-5">
+              <div className="flex-1 overflow-y-auto px-4 py-5 bg-transparent">
                 {isConnected && address ? (
                   <div className="space-y-3 max-w-md mx-auto">
-                    <h2 className="text-lg font-black text-slate-900 tracking-tight lowercase" style={{ fontFamily: 'var(--font-mono, monospace)' }}>your wallet</h2>
-                    <div className="p-4 sm:p-5 bg-gradient-to-br from-[#0052FF] to-[#0040CC] rounded-none shadow-[0_12px_24px_rgba(0,82,255,0.2)] text-white relative overflow-hidden">
+                    <h2 className="text-lg font-black text-slate-900 tracking-tight lowercase bg-white/50 backdrop-blur-sm inline-block px-2 py-1" style={{ fontFamily: 'var(--font-mono, monospace)' }}>your wallet</h2>
+                    <div className="p-4 sm:p-5 bg-[#0052FF]/90 backdrop-blur-md rounded-none shadow-[0_12px_24px_rgba(0,82,255,0.2)] text-white relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-3xl -translate-y-1/2 translate-x-1/3" />
                       <div className="relative z-10 flex flex-col justify-between sm:flex-row sm:items-end gap-4">
                         <div>
@@ -399,9 +399,12 @@ export default function Home() {
                           </div>
                         </div>
                       </div>
+                      <button onClick={() => disconnectWallet()} className="mt-4 text-[9px] font-bold text-white/60 hover:text-white transition-colors uppercase tracking-widest underline decoration-white/30 underline-offset-4" style={{ fontFamily: 'var(--font-mono, monospace)' }}>
+                        disconnect
+                      </button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="p-3 border border-slate-200/50 bg-white/60 backdrop-blur-md flex flex-col items-start justify-center relative overlow-hidden">
+                      <div className="p-3 border border-slate-200/50 bg-white/40 backdrop-blur-sm flex flex-col items-start justify-center relative overlow-hidden">
                         <div className="absolute top-0 right-0 w-8 h-8 border-l border-b border-slate-100 flex items-start justify-end p-1">
                           <div className="w-1.5 h-1.5 bg-[#0ECB81]" />
                         </div>
@@ -425,9 +428,9 @@ export default function Home() {
                     <div className="mt-3 group relative rounded-none border transition-all duration-500 overflow-hidden"
                       style={{
                         borderColor: `${streakTier.color}40`,
-                        backgroundColor: `rgba(255,255,255,0.75)`,
+                        backgroundColor: `rgba(255,255,255,0.4)`,
                         boxShadow: `0 8px 32px ${streakTier.color}15`,
-                        backdropFilter: 'blur(12px)'
+                        backdropFilter: 'blur(4px)'
                       }}>
                       {/* Dynamic Background Glow */}
                       <div className="absolute top-0 right-0 w-48 h-full pointer-events-none transition-opacity duration-300 opacity-60 group-hover:opacity-100"
