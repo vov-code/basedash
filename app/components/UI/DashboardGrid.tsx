@@ -23,7 +23,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ score, combo, stre
     return (
         <div className="w-full h-full grid grid-cols-2 grid-rows-[auto_1fr_1fr] gap-1.5 sm:gap-2 max-w-lg mx-auto">
             {/* STREAK MULTIPLIER — full width hero block */}
-            <div className="col-span-2 flex-1 bg-white/70 backdrop-blur-md rounded-none px-3 py-2 sm:px-4 sm:py-2.5 border flex items-center justify-between group hover:bg-white/90 transition-all duration-300 relative overflow-hidden"
+            <div className="col-span-2 flex-1 bg-white/80 backdrop-blur-md rounded-none px-3 py-2 sm:px-4 sm:py-2.5 border flex items-center justify-between group hover:bg-white/90 transition-all duration-300 relative overflow-hidden"
                 style={{
                     borderColor: `${streakTier.color}20`,
                     boxShadow: `0 8px 30px ${streakTier.color}08`
@@ -87,7 +87,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ score, combo, stre
             </div>
 
             {/* Chain Status */}
-            <div className="flex-1 bg-white/70 backdrop-blur-md rounded-none px-3 py-2 sm:px-3.5 sm:py-2.5 border border-[#0052FF]/8 flex flex-col justify-between group hover:border-[#0052FF]/20 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(0,82,255,0.06)] transition-all duration-300 relative overflow-hidden">
+            <div className="flex-1 bg-white/80 backdrop-blur-md rounded-none px-3 py-2 sm:px-3.5 sm:py-2.5 border border-[#0052FF]/8 flex flex-col justify-between group hover:border-[#0052FF]/20 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(0,82,255,0.06)] transition-all duration-300 relative overflow-hidden">
                 <div className="absolute -right-2 -top-2 w-14 h-14 bg-[#0052FF]/5 rounded-none blur-2xl group-hover:bg-[#0052FF]/8 transition-colors" />
                 <div className="flex items-center justify-between w-full z-10">
                     <span className="text-[7px] sm:text-[8px] text-slate-400 tracking-[0.15em] uppercase font-bold leading-none" style={mono}>Network</span>
@@ -100,7 +100,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ score, combo, stre
             </div>
 
             {/* Volatility */}
-            <div className="flex-1 bg-white/70 backdrop-blur-md rounded-none px-3 py-2 sm:px-3.5 sm:py-2.5 border border-[#F0B90B]/8 flex flex-col justify-between group hover:border-[#F0B90B]/20 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(240,185,11,0.06)] transition-all duration-300 relative overflow-hidden">
+            <div className="flex-1 bg-white/80 backdrop-blur-md rounded-none px-3 py-2 sm:px-3.5 sm:py-2.5 border border-[#F0B90B]/8 flex flex-col justify-between group hover:border-[#F0B90B]/20 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(240,185,11,0.06)] transition-all duration-300 relative overflow-hidden">
                 <div className="absolute -right-2 -bottom-2 w-14 h-14 bg-[#F0B90B]/5 rounded-none blur-2xl group-hover:bg-[#F0B90B]/8 transition-colors" />
                 <div className="flex items-center justify-between w-full z-10">
                     <span className="text-[7px] sm:text-[8px] text-slate-400 tracking-[0.15em] uppercase font-bold leading-none" style={mono}>Risk Level</span>
@@ -117,7 +117,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ score, combo, stre
             </div>
 
             {/* On-Chain Security */}
-            <div className="flex-1 bg-white/70 backdrop-blur-md rounded-none px-3 py-2 sm:px-3.5 sm:py-2.5 border border-slate-200/50 flex flex-col justify-between group hover:border-[#0ECB81]/15 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(14,203,129,0.06)] transition-all duration-300 relative overflow-hidden">
+            <div className="flex-1 bg-white/80 backdrop-blur-md rounded-none px-3 py-2 sm:px-3.5 sm:py-2.5 border border-slate-200/50 flex flex-col justify-between group hover:border-[#0ECB81]/15 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(14,203,129,0.06)] transition-all duration-300 relative overflow-hidden">
                 <div className="absolute -left-2 -bottom-2 w-14 h-14 bg-[#0ECB81]/5 rounded-none blur-2xl group-hover:bg-[#0ECB81]/8 transition-colors" />
                 <div className="flex items-center justify-between w-full z-10">
                     <span className="text-[7px] sm:text-[8px] text-slate-400 tracking-[0.15em] uppercase font-bold leading-none" style={mono}>Security</span>

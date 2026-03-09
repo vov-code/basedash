@@ -1023,7 +1023,18 @@ export default function GameEngine({
     setNearRecordDiff(null)
     setRetryVisible(false)
     setMode('playing')
-  }, [activeTrail])
+
+    // Generate anti-cheat session ID (fire-and-forget, don't block game start)
+    gameSessionIdRef.current = null
+    fetch('/api/session/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: address || 'anonymous' }),
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.sessionId) gameSessionIdRef.current = data.sessionId })
+      .catch(() => { /* non-critical, game still works without session */ })
+  }, [activeTrail, address])
 
   // ========================================================================
   // INPUT HANDLERS

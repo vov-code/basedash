@@ -164,7 +164,7 @@ export default function Home() {
   return (
     <div className="relative h-[100dvh] w-full bg-transparent text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] overflow-hidden flex flex-col">
       {/* GLOBAL PARTICLE BACKGROUND - z-0, covers full length of site */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" style={{ maxHeight: 'calc(100dvh - 80px)' }}>
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <ParticleChaos />
       </div>
 
@@ -270,7 +270,7 @@ export default function Home() {
 
             {/* TAB NAVIGATION - Always visible */}
             <div className="w-full px-2 sm:px-3 pt-0.5 relative z-20 flex-shrink-0">
-              <div className="flex justify-center items-center gap-1 p-0.5 bg-white/50 backdrop-blur-sm rounded-none border border-slate-200/50 shadow-inner">
+              <div className="flex justify-center items-center gap-1 p-0.5 bg-white/75 backdrop-blur-sm rounded-none border border-slate-200/50 shadow-inner">
                 <button onClick={() => setActiveTab('game')} className={`relative px-1.5 sm:px-2 h-[22px] sm:h-[24px] rounded-none transition-all duration-200 flex flex-col items-center justify-center flex-1 ${(activeTab as string) === 'game' ? 'bg-[#F0F4FF]/90 text-[#0052FF] scale-100 ring-1 ring-[#0052FF]/30 z-10' : 'text-slate-500 hover:text-slate-800 hover:bg-white/40 z-0'}`}>
                   <div className="flex items-center gap-0.5">
                     <svg className="w-2.5 h-2.5 hidden sm:block" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
@@ -326,19 +326,19 @@ export default function Home() {
                 {/* GAME HINTS — tap to jump blocks */}
                 <div className="w-full px-2 sm:px-3 relative z-20 flex-shrink-0">
                   <div className="flex items-stretch gap-1.5 mx-auto">
-                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/50 backdrop-blur-sm border border-[#0052FF]/15 min-w-0 justify-center">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/75 backdrop-blur-sm border border-[#0052FF]/15 min-w-0 justify-center">
                       <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0052FF]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0052FF]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
                       </div>
                       <span className="text-[7px] sm:text-[8px] font-mono font-bold text-slate-900 tracking-wider truncate text-center">tap to jump</span>
                     </div>
-                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/50 backdrop-blur-sm border border-[#F6465D]/15 min-w-0 justify-center">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/75 backdrop-blur-sm border border-[#F6465D]/15 min-w-0 justify-center">
                       <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#F6465D]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#F6465D]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       </div>
                       <span className="text-[7px] sm:text-[8px] font-mono font-bold text-slate-900 tracking-wider truncate text-center">dodge <span className="text-[#F6465D]">red</span></span>
                     </div>
-                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/50 backdrop-blur-sm border border-[#0ECB81]/15 min-w-0 justify-center">
+                    <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/75 backdrop-blur-sm border border-[#0ECB81]/15 min-w-0 justify-center">
                       <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0ECB81]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0ECB81]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                       </div>
@@ -404,7 +404,7 @@ export default function Home() {
                       </button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="p-3 border border-slate-200/50 bg-white/40 backdrop-blur-sm flex flex-col items-start justify-center relative overlow-hidden">
+                      <div className="p-3 border border-slate-200/50 bg-white/65 backdrop-blur-sm flex flex-col items-start justify-center relative overlow-hidden">
                         <div className="absolute top-0 right-0 w-8 h-8 border-l border-b border-slate-100 flex items-start justify-end p-1">
                           <div className="w-1.5 h-1.5 bg-[#0ECB81]" />
                         </div>
@@ -571,7 +571,7 @@ export default function Home() {
           </div>
         </main>
 
-        <footer className="flex-shrink-0 bg-white z-[40] w-full mt-2">
+        <footer className="flex-shrink-0 bg-white/80 backdrop-blur-sm z-[40] w-full">
           <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 h-[16px] flex flex-row items-end justify-between">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none">© {new Date().getFullYear()} base dash</span>
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none cursor-pointer" onClick={() => window.open('https://x.com/vovweb3', '_blank')}>built by <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-[#0052FF] via-[#4d8aff] to-[#0052FF] bg-[length:200%_auto] animate-[shimmer_2.5s_linear_infinite]">vov</span></span>
