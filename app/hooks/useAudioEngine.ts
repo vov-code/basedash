@@ -244,8 +244,8 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         if (ctx.state === 'suspended') ctx.resume().catch(() => { })
 
         let alive = true
-        const BPM = 120  // Relaxed, groovy tempo — NEVER changes
-        const BEAT = 60 / BPM  // 0.5s per beat
+        const BPM = 132  // Fast driving tempo for Degen Energy!
+        const BEAT = 60 / BPM  // ~0.45s per beat
         const S16 = BEAT / 4   // 0.125s per 16th note
 
         let step = 0
@@ -342,27 +342,25 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         }
 
         // =================================================================
-        // CHORD PROGRESSION: i - VI - III - VII (natural minor)
-        // This is the "epic emotional" progression — Avicii, Waterflame, etc.
-        // Mapped to intervals relative to root: [0, 8, 3, 10]
+        // CHORD PROGRESSION: i - VII - VI - VII (Smalltown Boy / Synthwave)
+        // Melancholic, nostalgic, but endlessly driving
+        // Semitone offsets from root: [0, 10, 8, 10]
         // =================================================================
-        const PROG = [0, 8, 3, 10]  // i - VI - III - VII semitones from root
+        const PROG = [0, 10, 8, 10]  // i - VII - VI - VII
 
         // =================================================================
-        // MELODY — 4 phrases, each 16 steps. Minimal, singable, harmonious.
-        // Values = semitone offset from chord root. 0 = rest.
-        // Only uses intervals: unison(0), 3rd(3/4), 5th(7), octave(12), 9th(14)
-        // These intervals are ALWAYS consonant regardless of key.
+        // MELODY — Smalltown Boy iconic descending riff + Degen Chiptune
+        // Crystalline, melancholic, but with a driving staccato bounce
         // =================================================================
         const MEL = [
-            // A: Gentle opening — ascending breath
-            [12, 0, 0, 0, 7, 0, 0, 12, 0, 0, 14, 0, 12, 0, 0, 0],
-            // B: Playful response — bouncing down
-            [14, 0, 12, 0, 0, 0, 7, 0, 0, 0, 3, 0, 0, 0, 0, 0],
-            // C: Building tension — pushing up
-            [7, 0, 0, 12, 0, 0, 14, 0, 0, 0, 0, 0, 12, 0, 7, 0],
-            // D: Resolution — coming home
-            [12, 0, 0, 0, 0, 7, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0],
+            // A: The iconic descending cry (High -> 7th -> 5th -> 3rd)
+            [12, 0, 10, 0, 7, 0, 3, 0, 0, 0, 3, 0, 7, 0, 0, 0],
+            // B: Degen pulse stutter
+            [12, 12, 0, 10, 10, 0, 7, 7, 0, 3, 0, 0, 0, 0, 0, 0],
+            // C: Ascending hope
+            [3, 0, 0, 7, 0, 0, 10, 0, 0, 12, 0, 0, 15, 0, 0, 0],
+            // D: Resolution with an aggressive stutter
+            [12, 0, 10, 0, 7, 0, 0, 0, 3, 3, 3, 0, 0, 0, 0, 0],
         ]
 
         // =================================================================
@@ -410,21 +408,23 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
             // ----- BASS (from world 1+) -----
             if (intensity >= 1) {
-                // Simple: root note on beat 1 and 3 only
-                if (s16 === 0 || s16 === 8) {
+                // Driving 8th note DEGEN bassline (square wave for bite)
+                if (s16 % 2 === 0) {
                     const bassNote = chordRoot - 12
-                    voice(midi(bassNote), 'sine', t, S16 * 3, 0.3, bassBus, {
-                        atk: 0.015, filt: 350 + intensity * 50
+                    voice(midi(bassNote), 'square', t, S16 * 1.5, 0.08, bassBus, {
+                        atk: 0.005, filt: 400 + intensity * 150
                     })
-                    // Sub
-                    voice(midi(bassNote - 12), 'sine', t, S16 * 3, 0.15, bassBus, {
-                        atk: 0.025, filt: 180
-                    })
+                    // Deep Sub on beats 1 and 3
+                    if (s16 === 0 || s16 === 8) {
+                        voice(midi(bassNote - 12), 'sine', t, S16 * 3, 0.2, bassBus, {
+                            atk: 0.015, filt: 150
+                        })
+                    }
                 }
-                // Octave bounce on offbeats (from world 3+)
-                if (intensity >= 3 && s16 === 4) {
-                    voice(midi(chordRoot), 'sine', t, S16 * 1.5, 0.15, bassBus, {
-                        atk: 0.01, filt: 400
+                // Degen octave jump on 16ths in peak worlds
+                if (intensity >= 4 && s16 % 4 === 3) {
+                    voice(midi(chordRoot), 'square', t, S16, 0.06, bassBus, {
+                        atk: 0.005, filt: 600
                     })
                 }
             }
@@ -435,10 +435,11 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
                 if (s16 === 0 || s16 === 8) kick(t, 0.8 + (intensity - 2) * 0.1)
                 // Snare: beats 2 and 4
                 if (s16 === 4 || s16 === 12) snare(t, 0.7 + (intensity - 2) * 0.1)
-                // Hi-hat: 8th notes
-                if (s16 % 2 === 0) hat(t, s16 % 4 === 0 ? 0.5 : 0.3)
-                // Extra hat on 16ths for world 5+
-                if (intensity >= 5 && s16 % 2 === 1) hat(t, 0.2)
+                // Hi-hat: Driving offbeat trance hats
+                if (s16 % 4 === 2) hat(t, 0.6)  // Strong offbeat
+                // 16th note rolling hats (world 4+)
+                if (intensity >= 4 && s16 % 2 === 0) hat(t, 0.3)
+                if (intensity >= 5) hat(t, 0.2) // Full 16th degen spray
             }
 
             // ----- MELODY -----
@@ -450,20 +451,18 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
                 const melNote = chordRoot + noteOff
                 const dur = S16 * (intensity >= 4 ? 2.5 : 2)
 
-                // Primary: clean sine — always beautiful
-                voice(midi(melNote), 'sine', t, dur, 0.06, melBus, {
-                    atk: 0.008, filt: 2500 + intensity * 400
+                // Lead: Plucky square wave for that DEGEN CHIPTUNE feel
+                voice(midi(melNote), 'square', t, dur * 0.8, 0.035, melBus, {
+                    atk: 0.005, filt: 1500 + intensity * 400, rel: dur * 0.8
                 })
-                // Harmonic: soft triangle octave lower for warmth (world 1+)
-                if (intensity >= 1) {
-                    voice(midi(melNote), 'triangle', t, dur, 0.03, melBus, {
-                        atk: 0.01, filt: 2000 + intensity * 300
-                    })
-                }
-                // Sparkle: high octave square for chiptune feel (world 4+)
-                if (intensity >= 4) {
-                    voice(midi(melNote + 12), 'square', t, dur * 0.6, 0.015, melBus, {
-                        atk: 0.005, filt: 3500
+                // Harmonic layer: clean sine for body
+                voice(midi(melNote), 'sine', t, dur, 0.05, melBus, {
+                    atk: 0.008, filt: 3000
+                })
+                // Sparkle: high octave saw for aggressive trance energy (world 3+)
+                if (intensity >= 3) {
+                    voice(midi(melNote + 12), 'sawtooth', t, dur * 0.6, 0.02, melBus, {
+                        atk: 0.003, filt: 4000
                     })
                 }
             }
