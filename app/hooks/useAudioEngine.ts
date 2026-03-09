@@ -244,9 +244,9 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         if (ctx.state === 'suspended') ctx.resume().catch(() => { })
 
         let alive = true
-        const BPM = 132  // Fast driving tempo for Degen Energy!
-        const BEAT = 60 / BPM  // ~0.45s per beat
-        const S16 = BEAT / 4   // 0.125s per 16th note
+        const BPM = 135  // Exact Smalltown Boy tempo
+        const BEAT = 60 / BPM
+        const S16 = BEAT / 4
 
         let step = 0
         let nextTime = ctx.currentTime + 0.2
@@ -342,139 +342,110 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         }
 
         // =================================================================
-        // CHORD PROGRESSION: i - VII - VI - VII (Smalltown Boy / Synthwave)
-        // Melancholic, nostalgic, but endlessly driving
-        // Semitone offsets from root: [0, 10, 8, 10]
+        // EXACT SMALLTOWN BOY CHORDS (Relative to Key Root)
+        // Progression: i - VII - VI - VII (e.g. Fm - Eb - Db - Eb)
         // =================================================================
-        const PROG = [0, 10, 8, 10]  // i - VII - VI - VII
-
-        // =================================================================
-        // MELODY — Smalltown Boy iconic descending riff + Degen Chiptune
-        // Crystalline, melancholic, but with a driving staccato bounce
-        // =================================================================
-        const MEL = [
-            // A: The iconic descending cry (High -> 7th -> 5th -> 3rd)
-            [12, 0, 10, 0, 7, 0, 3, 0, 0, 0, 3, 0, 7, 0, 0, 0],
-            // B: Degen pulse stutter
-            [12, 12, 0, 10, 10, 0, 7, 7, 0, 3, 0, 0, 0, 0, 0, 0],
-            // C: Ascending hope
-            [3, 0, 0, 7, 0, 0, 10, 0, 0, 12, 0, 0, 15, 0, 0, 0],
-            // D: Resolution with an aggressive stutter
-            [12, 0, 10, 0, 7, 0, 0, 0, 3, 3, 3, 0, 0, 0, 0, 0],
+        const CHORDS = [
+            [0, 3, 7],     // i   (e.g., F, Ab, C)
+            [-2, 2, 5],    // VII (e.g., Eb, G, Bb)
+            [-4, 0, 3],    // VI  (e.g., Db, F, Ab)
+            [-2, 2, 5],    // VII (e.g., Eb, G, Bb)
         ]
 
         // =================================================================
-        // SONG STRUCTURE — builds with world progress
-        // world 0-1: pad + melody only (dreamy)
-        // world 2-3: add light drums + bass (grooving)
-        // world 4+:  full beat + arp layer (driving)
+        // EXACT SMALLTOWN BOY SYNTH RIFF (100% Accurate)
+        // Rhythm: Dotted quarter, Dotted quarter, Quarter (Steps 0, 6, 12)
+        // Values: Semitone offset from the KEY ROOT. -99 = Rest.
+        // Phrase 1: 5th, 4th, 2nd (e.g. C, Bb, G over Fm)
+        // Phrase 2: 4th, min3rd, Root (e.g. Bb, Ab, F over Eb)
+        // Phrase 3: min3rd, maj2nd, min7th (e.g. Ab, G, Eb over Db)
+        // Phrase 4: 4th, min3rd, Root (e.g. Bb, Ab, F over Eb)
         // =================================================================
+        const MEL = [
+            [7, -99, -99, -99, -99, -99, 5, -99, -99, -99, -99, -99, 2, -99, -99, -99],
+            [5, -99, -99, -99, -99, -99, 3, -99, -99, -99, -99, -99, 0, -99, -99, -99],
+            [3, -99, -99, -99, -99, -99, 2, -99, -99, -99, -99, -99, -2, -99, -99, -99],
+            [5, -99, -99, -99, -99, -99, 3, -99, -99, -99, -99, -99, 0, -99, -99, -99],
+        ]
 
         const schedule = (s: number, t: number) => {
             const world = bgmThemeRef.current || 0
-
-            // Get root note for current world — smooth key changes!
             const wk = WORLD_KEYS[Math.min(world, WORLD_KEYS.length - 1)]
             const root = wk.root
 
-            // Song position
-            const bar = Math.floor(s / 16) // which bar we're in
-            const s16 = s % 16             // position in bar
-            const chordIdx = bar % 4       // which chord in progression
-            const chordRoot = root + PROG[chordIdx]
+            const bar = Math.floor(s / 16)
+            const s16 = s % 16
+            const chordIdx = bar % 4
+            const chordNotes = CHORDS[chordIdx]
+            const bassNote = root + chordNotes[0] // Root of the current chord
 
-            // Intensity ramps up with world
             const intensity = Math.min(world, 5)
 
-            // ----- PAD CHORD (always plays — the harmonic foundation) -----
+            // ----- PAD CHORD (classic warm 80s pad) -----
             if (s16 === 0) {
-                const notes = [chordRoot, chordRoot + 3, chordRoot + 7]
-                if (intensity >= 3) notes.push(chordRoot + 12)
                 const dur = S16 * 15.5
-
-                notes.forEach(n => {
-                    // Warm sine pad — the core sound
-                    voice(midi(n), 'sine', t, dur, 0.055, padBus, {
-                        atk: 0.25, rel: dur, filt: 1200 + intensity * 200
+                chordNotes.forEach(offset => {
+                    const n = root + offset
+                    voice(midi(n), 'sine', t, dur, 0.05, padBus, {
+                        atk: 0.1, rel: dur, filt: 1500 + intensity * 200
                     })
-                    // Subtle shimmer layer (from world 2+)
                     if (intensity >= 2) {
-                        voice(midi(n), 'triangle', t, dur, 0.02, padBus, {
-                            atk: 0.3, rel: dur, filt: 800 + intensity * 150, det: 6
+                        voice(midi(n), 'sawtooth', t, dur, 0.015, padBus, {
+                            atk: 0.2, rel: dur, filt: 800 + intensity * 200, det: 8
                         })
                     }
                 })
             }
 
-            // ----- BASS (from world 1+) -----
+            // ----- DRIVING 8TH NOTE BASS (Iconic synthwave pulse) -----
             if (intensity >= 1) {
-                // Driving 8th note DEGEN bassline (square wave for bite)
                 if (s16 % 2 === 0) {
-                    const bassNote = chordRoot - 12
-                    voice(midi(bassNote), 'square', t, S16 * 1.5, 0.08, bassBus, {
-                        atk: 0.005, filt: 400 + intensity * 150
+                    // Plucky sawtooth bass
+                    voice(midi(bassNote - 12), 'sawtooth', t, S16 * 1.5, 0.08, bassBus, {
+                        atk: 0.005, filt: 600 + intensity * 200, rel: S16 * 1.2
                     })
-                    // Deep Sub on beats 1 and 3
+                    // Deep Sub
                     if (s16 === 0 || s16 === 8) {
-                        voice(midi(bassNote - 12), 'sine', t, S16 * 3, 0.2, bassBus, {
+                        voice(midi(bassNote - 24), 'sine', t, S16 * 3, 0.25, bassBus, {
                             atk: 0.015, filt: 150
                         })
                     }
                 }
-                // Degen octave jump on 16ths in peak worlds
-                if (intensity >= 4 && s16 % 4 === 3) {
-                    voice(midi(chordRoot), 'square', t, S16, 0.06, bassBus, {
-                        atk: 0.005, filt: 600
-                    })
-                }
             }
 
-            // ----- DRUMS (from world 2+) -----
+            // ----- DRUMS (Retro 4-on-the-floor) -----
             if (intensity >= 2) {
-                // Kick: beats 1 and 3
                 if (s16 === 0 || s16 === 8) kick(t, 0.8 + (intensity - 2) * 0.1)
-                // Snare: beats 2 and 4
                 if (s16 === 4 || s16 === 12) snare(t, 0.7 + (intensity - 2) * 0.1)
-                // Hi-hat: Driving offbeat trance hats
-                if (s16 % 4 === 2) hat(t, 0.6)  // Strong offbeat
-                // 16th note rolling hats (world 4+)
-                if (intensity >= 4 && s16 % 2 === 0) hat(t, 0.3)
-                if (intensity >= 5) hat(t, 0.2) // Full 16th degen spray
+                // Classic offbeat open hat
+                if (s16 % 4 === 2) hat(t, 0.5)
+                if (intensity >= 4 && s16 % 2 === 0) hat(t, 0.25)
             }
 
-            // ----- MELODY -----
-            // Rotate through 4 phrases, one per bar
-            const phrase = MEL[chordIdx % MEL.length]
+            // ----- EXACT ICONIC LEAD SYNTH -----
+            const phrase = MEL[chordIdx]
             const noteOff = phrase[s16]
 
-            if (noteOff > 0) {
-                const melNote = chordRoot + noteOff
-                const dur = S16 * (intensity >= 4 ? 2.5 : 2)
+            if (noteOff !== -99) {
+                const melNote = root + 12 + noteOff // Play an octave higher for that piercing clarity
+                const dur = S16 * 2.5 // Slightly longer pluck for the Bronski Beat delay effect
 
-                // Lead: Plucky square wave for that DEGEN CHIPTUNE feel
-                voice(midi(melNote), 'square', t, dur * 0.8, 0.035, melBus, {
-                    atk: 0.005, filt: 1500 + intensity * 400, rel: dur * 0.8
+                // Classic 80s analog pluck: Sawtooth+Square combo with sharp filter envelope
+                voice(midi(melNote), 'sawtooth', t, dur, 0.045, melBus, {
+                    atk: 0.005, filt: 2500 + intensity * 500, rel: dur * 0.8
                 })
-                // Harmonic layer: clean sine for body
-                voice(midi(melNote), 'sine', t, dur, 0.05, melBus, {
-                    atk: 0.008, filt: 3000
+                voice(midi(melNote), 'square', t, dur, 0.035, melBus, {
+                    atk: 0.005, filt: 3000, rel: dur * 0.7, det: 5
                 })
-                // Sparkle: high octave saw for aggressive trance energy (world 3+)
-                if (intensity >= 3) {
-                    voice(midi(melNote + 12), 'sawtooth', t, dur * 0.6, 0.02, melBus, {
-                        atk: 0.003, filt: 4000
+
+                // Add shimmering high octave in peak worlds
+                if (intensity >= 4) {
+                    voice(midi(melNote + 12), 'sine', t, dur, 0.03, melBus, {
+                        atk: 0.005, filt: 5000
                     })
                 }
             }
 
-            // ----- ARP (world 4+ only, very subtle) -----
-            if (intensity >= 4 && s16 % 4 === 2) {
-                const arpIntervals = [0, 7, 12, 7]
-                const arpNote = chordRoot + 12 + arpIntervals[(s16 / 4) % 4]
-                voice(midi(arpNote), 'sine', t, S16 * 1.2, 0.02, melBus, {
-                    atk: 0.003, filt: 2200
-                })
-            }
         }
 
         // === SCHEDULER LOOP (constant BPM, never changes) ===
