@@ -21,97 +21,23 @@ export interface AudioEngine {
 }
 
 // ============================================================================
-// MUSIC THEORY CONSTANTS
+// MUSIC THEORY — Premium, minimal, harmonic
 // ============================================================================
 
-// Pentatonic minor scale intervals — always sounds pleasant, impossible to clash
-const PENTA_MINOR = [0, 3, 5, 7, 10]
+const midi = (n: number) => 440 * Math.pow(2, (n - 69) / 12)
 
-// Note frequencies (A4 = 440Hz standard tuning)
-const noteFreq = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12)
-
-// Chord progressions — emotionally resonant, universally loved
-// Using Am - F - C - G (vi-IV-I-V in C major) — the "pop punk" progression
-// Mapped to MIDI: A3=57, F3=53, C4=60, G3=55
-const PROGRESSIONS = [
-    // Warm & dreamy (for early worlds)
-    { roots: [57, 53, 60, 55], mode: 'minor', feel: 'dreamy' },
-    // Uplifting energy (for mid worlds)   
-    { roots: [60, 55, 57, 53], mode: 'major', feel: 'uplifting' },
-    // Euphoric drive (for fast worlds)
-    { roots: [64, 60, 65, 62], mode: 'major', feel: 'euphoric' },
-    // Epic finale (for endgame worlds)
-    { roots: [69, 64, 67, 62], mode: 'major', feel: 'epic' },
+// World keys — each world has its own emotional key that transitions smoothly
+// Using relative minor/major relationships for seamless modulation
+const WORLD_KEYS = [
+    { root: 57, name: 'Am', feel: 'mysterious' },   // A minor  (World 0 — Genesis)
+    { root: 60, name: 'C', feel: 'bright' },       // C major  (World 1 — warming up)
+    { root: 62, name: 'Dm', feel: 'driving' },      // D minor  (World 2 — getting serious)
+    { root: 64, name: 'Em', feel: 'intense' },       // E minor  (World 3 — dark energy)
+    { root: 65, name: 'F', feel: 'euphoric' },      // F major  (World 4 — euphoria)
+    { root: 67, name: 'G', feel: 'triumphant' },    // G major  (World 5 — peak)
+    { root: 69, name: 'Am8', feel: 'transcendent' },   // A minor octave up (World 6+)
+    { root: 72, name: 'C8', feel: 'celestial' },      // C major octave up (World 7+)
 ]
-
-// Melodic phrases — hand-crafted to sound beautiful over each chord
-// Each phrase is 16 steps (16th notes), values are MIDI note numbers, 0 = rest
-const MELODY_PHRASES = [
-    // Phrase A: Gentle opening — ascending, hopeful
-    [72, 0, 74, 0, 76, 0, 79, 0, 76, 0, 74, 0, 72, 0, 0, 0],
-    // Phrase B: Playful bounce
-    [79, 0, 76, 79, 0, 0, 74, 0, 76, 0, 72, 0, 0, 0, 0, 0],
-    // Phrase C: Emotional climb
-    [72, 0, 0, 74, 0, 76, 0, 0, 79, 0, 81, 0, 79, 0, 76, 0],
-    // Phrase D: Resolution — falling back home
-    [84, 0, 81, 0, 79, 0, 0, 76, 0, 74, 0, 72, 0, 0, 0, 0],
-    // Phrase E: Chiptune arp (fast and catchy)
-    [72, 76, 79, 84, 79, 76, 72, 76, 79, 84, 86, 84, 79, 76, 72, 0],
-    // Phrase F: Syncopated groove
-    [0, 72, 0, 0, 74, 0, 76, 0, 0, 79, 0, 0, 76, 0, 74, 0],
-    // Phrase G: High energy descending
-    [84, 0, 84, 81, 0, 79, 0, 76, 0, 74, 0, 72, 74, 0, 0, 0],
-    // Phrase H: Call and response
-    [72, 74, 76, 0, 0, 0, 79, 81, 79, 0, 0, 0, 76, 74, 72, 0],
-]
-
-// Arpeggio patterns (chord tones cycled)
-const ARP_PATTERNS = [
-    [0, 4, 7, 12],      // Up
-    [12, 7, 4, 0],      // Down
-    [0, 7, 4, 12],      // Bounce
-    [0, 12, 7, 4],      // Skip
-]
-
-// Bass patterns (rhythmic variations per section)
-const BASS_RHYTHMS = [
-    // Minimal: whole notes
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    // Pulse: quarter notes
-    [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-    // Driving: octave bounce
-    [1, 0, 0, 0, 0.7, 0, 1, 0, 0, 0, 0.7, 0, 1, 0, 0, 0],
-    // Energetic: 8th notes with octave
-    [1, 0, 0.6, 0, 1, 0, 0.6, 0, 1, 0, 0.6, 0, 1, 0, 0.6, 0],
-]
-
-// Drum patterns
-const DRUM_PATTERNS = {
-    // Intro: just soft hats
-    intro: {
-        kick: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        snare: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        hat: [0.3, 0, 0.2, 0, 0.3, 0, 0.2, 0, 0.3, 0, 0.2, 0, 0.3, 0, 0.2, 0],
-    },
-    // Light: kick + soft snare
-    light: {
-        kick: [0.8, 0, 0, 0, 0, 0, 0, 0, 0.8, 0, 0, 0, 0, 0, 0, 0],
-        snare: [0, 0, 0, 0, 0.6, 0, 0, 0, 0, 0, 0, 0, 0.6, 0, 0, 0],
-        hat: [0.4, 0, 0.3, 0, 0.4, 0, 0.3, 0, 0.4, 0, 0.3, 0, 0.4, 0, 0.3, 0],
-    },
-    // Full: 4-on-the-floor
-    full: {
-        kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-        snare: [0, 0, 0, 0, 0.9, 0, 0, 0, 0, 0, 0, 0, 0.9, 0, 0, 0],
-        hat: [0.5, 0, 0.4, 0, 0.5, 0, 0.4, 0, 0.5, 0, 0.4, 0, 0.5, 0, 0.4, 0],
-    },
-    // Driving: fast hats + syncopated kick
-    driving: {
-        kick: [1, 0, 0, 0.5, 1, 0, 0, 0, 1, 0, 0.5, 0, 1, 0, 0, 0.5],
-        snare: [0, 0, 0, 0, 1, 0, 0, 0.3, 0, 0, 0, 0, 1, 0, 0, 0.3],
-        hat: [0.6, 0.3, 0.5, 0.3, 0.6, 0.3, 0.5, 0.3, 0.6, 0.3, 0.5, 0.3, 0.6, 0.3, 0.5, 0.3],
-    },
-}
 
 export function useAudioEngine(soundEnabled: boolean): AudioEngine {
     const audioCtxRef = useRef<AudioContext | null>(null)
@@ -122,604 +48,484 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
     const noiseBufferRef = useRef<AudioBuffer | null>(null)
 
     const updateAudioParams = useCallback((speedMultiplier: number, themeIndex: number) => {
+        // NOTE: Music speeds up with game speed but NEVER slows below base BPM.
+        // This means chill market won't slow music, but faster worlds speed it up.
         bgmSpeedRef.current = speedMultiplier
         bgmThemeRef.current = themeIndex
     }, [])
 
     const initAudio = useCallback(() => {
         if (!audioCtxRef.current) {
-            const AudioContext = window.AudioContext || (window as any).webkitAudioContext
-            const ctx = new AudioContext()
+            const AC = window.AudioContext || (window as any).webkitAudioContext
+            const ctx = new AC()
             audioCtxRef.current = ctx
 
-            // Smooth master compression — not too aggressive, keeps it musical
-            const compressor = ctx.createDynamicsCompressor()
-            compressor.threshold.value = -18
-            compressor.knee.value = 12
-            compressor.ratio.value = 6
-            compressor.attack.value = 0.005
-            compressor.release.value = 0.15
-            compressor.connect(ctx.destination)
+            // Gentle master compression — musical, not squashed
+            const comp = ctx.createDynamicsCompressor()
+            comp.threshold.value = -20
+            comp.knee.value = 15
+            comp.ratio.value = 4
+            comp.attack.value = 0.01
+            comp.release.value = 0.2
+            comp.connect(ctx.destination)
 
             masterGainRef.current = ctx.createGain()
-            masterGainRef.current.gain.value = 0.35
-            masterGainRef.current.connect(compressor)
+            masterGainRef.current.gain.value = 0.3
+            masterGainRef.current.connect(comp)
 
-            // Generate noise buffer for percussion
-            const bufferSize = ctx.sampleRate * 2
-            const noiseBuf = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
-            const output = noiseBuf.getChannelData(0)
-            for (let i = 0; i < bufferSize; i++) {
-                output[i] = Math.random() * 2 - 1
-            }
-            noiseBufferRef.current = noiseBuf
+            // Noise buffer for percussion
+            const len = ctx.sampleRate * 2
+            const buf = ctx.createBuffer(1, len, ctx.sampleRate)
+            const d = buf.getChannelData(0)
+            for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1
+            noiseBufferRef.current = buf
         }
-        if (audioCtxRef.current.state === 'suspended') {
-            audioCtxRef.current.resume()
-        }
+        if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume()
     }, [])
 
     // =========================================================================
-    // CORE SYNTH: play a single note with envelope and optional filter
+    // SYNTH VOICE — clean, warm, filtered
     // =========================================================================
-    const playNote = useCallback((
-        freq: number,
-        type: OscillatorType,
-        time: number,
-        dur: number,
-        vol: number,
-        dest: AudioNode,
-        opts?: {
-            filterFreq?: number
-            filterQ?: number
-            detune?: number
-            attack?: number
-            decay?: number
-            sustain?: number
-        }
+    const voice = useCallback((
+        freq: number, type: OscillatorType, t: number, dur: number,
+        vol: number, dest: AudioNode,
+        opts?: { filt?: number, det?: number, atk?: number, rel?: number }
     ) => {
         const ctx = audioCtxRef.current
         if (!ctx) return
-
         const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-
+        const g = ctx.createGain()
         osc.type = type
-        osc.frequency.setValueAtTime(freq, time)
-        if (opts?.detune) osc.detune.value = opts.detune
-
-        const atk = opts?.attack ?? 0.015
-        const dec = opts?.decay ?? dur * 0.3
-        const sus = opts?.sustain ?? 0.6
-
-        gain.gain.setValueAtTime(0, time)
-        gain.gain.linearRampToValueAtTime(vol, time + atk)
-        gain.gain.linearRampToValueAtTime(vol * sus, time + atk + dec)
-        gain.gain.exponentialRampToValueAtTime(0.001, time + dur)
-
-        if (opts?.filterFreq) {
-            const filter = ctx.createBiquadFilter()
-            filter.type = 'lowpass'
-            filter.frequency.setValueAtTime(opts.filterFreq, time)
-            filter.frequency.exponentialRampToValueAtTime(
-                Math.max(200, opts.filterFreq * 0.2), time + dur
-            )
-            filter.Q.value = opts?.filterQ ?? 1
-            osc.connect(filter)
-            filter.connect(gain)
+        osc.frequency.setValueAtTime(freq, t)
+        if (opts?.det) osc.detune.value = opts.det
+        const a = opts?.atk ?? 0.02
+        const r = opts?.rel ?? dur
+        g.gain.setValueAtTime(0, t)
+        g.gain.linearRampToValueAtTime(vol, t + a)
+        g.gain.setValueAtTime(vol * 0.85, t + a + 0.01)
+        g.gain.exponentialRampToValueAtTime(0.001, t + r)
+        if (opts?.filt) {
+            const f = ctx.createBiquadFilter()
+            f.type = 'lowpass'
+            f.frequency.setValueAtTime(opts.filt, t)
+            f.frequency.exponentialRampToValueAtTime(Math.max(150, opts.filt * 0.15), t + r)
+            osc.connect(f); f.connect(g)
         } else {
-            osc.connect(gain)
+            osc.connect(g)
         }
-
-        gain.connect(dest)
-        osc.start(time)
-        osc.stop(time + dur + 0.05)
+        g.connect(dest)
+        osc.start(t); osc.stop(t + r + 0.1)
     }, [])
 
     // =========================================================================
-    // SIMPLE TONE PLAYER (for SFX compatibility)
+    // SIMPLE TONE (SFX compat)
     // =========================================================================
     const playTone = useCallback((freq: number, type: OscillatorType = 'sine', vol = 0.1, dur = 0.1, slideFreq?: number) => {
-        if (!soundEnabled) return
-        initAudio()
-        const ctx = audioCtxRef.current
-        const master = masterGainRef.current
-        if (!ctx || !master) return
-
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.type = type
-        osc.frequency.setValueAtTime(freq, ctx.currentTime)
+        if (!soundEnabled) return; initAudio()
+        const ctx = audioCtxRef.current, m = masterGainRef.current
+        if (!ctx || !m) return
+        const osc = ctx.createOscillator(), g = ctx.createGain()
+        osc.type = type; osc.frequency.setValueAtTime(freq, ctx.currentTime)
         if (slideFreq) osc.frequency.exponentialRampToValueAtTime(slideFreq, ctx.currentTime + dur)
-
-        gain.gain.setValueAtTime(0, ctx.currentTime)
-        gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 0.01)
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
-
-        osc.connect(gain)
-        gain.connect(master)
-        osc.start(ctx.currentTime)
-        osc.stop(ctx.currentTime + dur + 0.05)
+        g.gain.setValueAtTime(0, ctx.currentTime)
+        g.gain.linearRampToValueAtTime(vol, ctx.currentTime + 0.008)
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
+        osc.connect(g); g.connect(m)
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + dur + 0.05)
     }, [soundEnabled, initAudio])
 
     // =========================================================================
-    // PLEASANT SOUND EFFECTS — warm, musical, satisfying
+    // PLEASANT SFX — warm, musical, satisfying
     // =========================================================================
-
-    // Jump: soft ascending chime (like a xylophone tap)
     const sfxJump = useCallback(() => {
-        if (!soundEnabled) return
-        initAudio()
-        const ctx = audioCtxRef.current
-        const master = masterGainRef.current
-        if (!ctx || !master) return
-        const t = ctx.currentTime
-        playNote(523.25, 'sine', t, 0.12, 0.06, master, { attack: 0.005 })
-        playNote(783.99, 'sine', t + 0.015, 0.1, 0.03, master, { attack: 0.005 })
-    }, [soundEnabled, initAudio, playNote])
+        if (!soundEnabled) return; initAudio()
+        const ctx = audioCtxRef.current, m = masterGainRef.current
+        if (!ctx || !m) return; const t = ctx.currentTime
+        voice(523, 'sine', t, 0.1, 0.05, m, { atk: 0.004 })
+        voice(784, 'sine', t + 0.012, 0.09, 0.03, m, { atk: 0.004 })
+    }, [soundEnabled, initAudio, voice])
 
-    // Double jump: sparkling two-note rise
     const sfxDoubleJump = useCallback(() => {
-        if (!soundEnabled) return
-        initAudio()
-        const ctx = audioCtxRef.current
-        const master = masterGainRef.current
-        if (!ctx || !master) return
-        const t = ctx.currentTime
-        playNote(659.25, 'sine', t, 0.08, 0.05, master, { attack: 0.003 })
-        playNote(987.77, 'triangle', t + 0.05, 0.12, 0.04, master, { attack: 0.003 })
-    }, [soundEnabled, initAudio, playNote])
+        if (!soundEnabled) return; initAudio()
+        const ctx = audioCtxRef.current, m = masterGainRef.current
+        if (!ctx || !m) return; const t = ctx.currentTime
+        voice(659, 'sine', t, 0.08, 0.04, m, { atk: 0.003 })
+        voice(988, 'triangle', t + 0.045, 0.1, 0.03, m, { atk: 0.003 })
+    }, [soundEnabled, initAudio, voice])
 
-    // Dash: whoosh (low filtered sweep)
     const sfxDash = useCallback(() => {
-        if (!soundEnabled) return
-        initAudio()
-        const ctx = audioCtxRef.current
-        const master = masterGainRef.current
-        if (!ctx || !master) return
-        const t = ctx.currentTime
-        playNote(220, 'triangle', t, 0.15, 0.04, master, { filterFreq: 800, attack: 0.01 })
-    }, [soundEnabled, initAudio, playNote])
+        if (!soundEnabled) return; initAudio()
+        const ctx = audioCtxRef.current, m = masterGainRef.current
+        if (!ctx || !m) return
+        voice(220, 'triangle', ctx.currentTime, 0.14, 0.035, m, { filt: 700, atk: 0.01 })
+    }, [soundEnabled, initAudio, voice])
 
-    // Collect: warm sparkle (major third interval = happy sound)
     const sfxCollect = useCallback(() => {
-        if (!soundEnabled) return
-        initAudio()
-        const ctx = audioCtxRef.current
-        const master = masterGainRef.current
-        if (!ctx || !master) return
-        const t = ctx.currentTime
-        playNote(880, 'sine', t, 0.15, 0.05, master, { attack: 0.003 })
-        playNote(1108.73, 'sine', t + 0.04, 0.18, 0.04, master, { attack: 0.003 })
-        playNote(1318.51, 'sine', t + 0.09, 0.14, 0.025, master, { attack: 0.003 })
-    }, [soundEnabled, initAudio, playNote])
+        if (!soundEnabled) return; initAudio()
+        const ctx = audioCtxRef.current, m = masterGainRef.current
+        if (!ctx || !m) return; const t = ctx.currentTime
+        voice(880, 'sine', t, 0.13, 0.045, m, { atk: 0.003 })
+        voice(1109, 'sine', t + 0.035, 0.15, 0.03, m, { atk: 0.003 })
+        voice(1319, 'sine', t + 0.08, 0.12, 0.02, m, { atk: 0.003 })
+    }, [soundEnabled, initAudio, voice])
 
-    // Power-up: ascending arpeggio (magical fairy dust)
     const sfxPowerup = useCallback(() => {
-        if (!soundEnabled) return
-        initAudio()
-        const ctx = audioCtxRef.current
-        const master = masterGainRef.current
-        if (!ctx || !master) return
-        const t = ctx.currentTime
-        const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51]
-        notes.forEach((f, i) => {
-            playNote(f, 'sine', t + i * 0.06, 0.2 - i * 0.02, 0.04 - i * 0.005, master, { attack: 0.003 })
-        })
-    }, [soundEnabled, initAudio, playNote])
+        if (!soundEnabled) return; initAudio()
+        const ctx = audioCtxRef.current, m = masterGainRef.current
+        if (!ctx || !m) return; const t = ctx.currentTime
+            ;[523, 659, 784, 1047, 1319].forEach((f, i) =>
+                voice(f, 'sine', t + i * 0.055, 0.18 - i * 0.02, 0.035 - i * 0.004, m, { atk: 0.003 }))
+    }, [soundEnabled, initAudio, voice])
 
-    // Hit/Death: soft thud + descending tone (not harsh)
     const sfxHit = useCallback(() => {
-        if (!soundEnabled) return
-        initAudio()
-        const ctx = audioCtxRef.current
-        const master = masterGainRef.current
-        if (!ctx || !master) return
-        const t = ctx.currentTime
+        if (!soundEnabled) return; initAudio()
+        const ctx = audioCtxRef.current, m = masterGainRef.current
+        if (!ctx || !m) return; const t = ctx.currentTime
+        // Soft thud
+        const o = ctx.createOscillator(), g = ctx.createGain()
+        o.type = 'sine'; o.frequency.setValueAtTime(140, t)
+        o.frequency.exponentialRampToValueAtTime(35, t + 0.18)
+        g.gain.setValueAtTime(0.07, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.25)
+        o.connect(g); g.connect(m); o.start(t); o.stop(t + 0.3)
+        // Sad descend
+        voice(370, 'triangle', t + 0.05, 0.25, 0.03, m, { filt: 500 })
+        voice(311, 'sine', t + 0.13, 0.2, 0.025, m, { filt: 350 })
+    }, [soundEnabled, initAudio, voice])
 
-        // Soft impact thud
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.type = 'sine'
-        osc.frequency.setValueAtTime(150, t)
-        osc.frequency.exponentialRampToValueAtTime(40, t + 0.2)
-        gain.gain.setValueAtTime(0.08, t)
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3)
-        osc.connect(gain)
-        gain.connect(master)
-        osc.start(t)
-        osc.stop(t + 0.35)
-
-        // Sad descending tone
-        playNote(392, 'triangle', t + 0.05, 0.3, 0.04, master, { filterFreq: 600 })
-        playNote(330, 'sine', t + 0.15, 0.25, 0.03, master, { filterFreq: 400 })
-    }, [soundEnabled, initAudio, playNote])
-
-    // Select: gentle click
     const sfxSelect = useCallback(() => {
-        if (!soundEnabled) return
-        initAudio()
-        const ctx = audioCtxRef.current
-        const master = masterGainRef.current
-        if (!ctx || !master) return
-        playNote(784, 'sine', ctx.currentTime, 0.06, 0.04, master, { attack: 0.002 })
-    }, [soundEnabled, initAudio, playNote])
+        if (!soundEnabled) return; initAudio()
+        const ctx = audioCtxRef.current, m = masterGainRef.current
+        if (!ctx || !m) return
+        voice(784, 'sine', ctx.currentTime, 0.06, 0.035, m, { atk: 0.002 })
+    }, [soundEnabled, initAudio, voice])
 
-    // Combo: ascending pentatonic notes (higher combo = higher pitch)
     const sfxCombo = useCallback((combo: number) => {
-        if (!soundEnabled) return
-        initAudio()
-        const ctx = audioCtxRef.current
-        const master = masterGainRef.current
-        if (!ctx || !master) return
-        const t = ctx.currentTime
+        if (!soundEnabled) return; initAudio()
+        const ctx = audioCtxRef.current, m = masterGainRef.current
+        if (!ctx || !m) return; const t = ctx.currentTime
+        const n = 60 + Math.min(combo, 12) * 2
+        voice(midi(n), 'sine', t, 0.11, 0.04, m, { atk: 0.003 })
+        voice(midi(n + 7), 'sine', t + 0.035, 0.12, 0.025, m, { atk: 0.003 })
+    }, [soundEnabled, initAudio, voice])
 
-        const baseNote = 60 + Math.min(combo, 12) * 2
-        const freq1 = noteFreq(baseNote)
-        const freq2 = noteFreq(baseNote + 7) // Perfect fifth = always consonant
-
-        playNote(freq1, 'sine', t, 0.12, 0.045, master, { attack: 0.003 })
-        playNote(freq2, 'sine', t + 0.04, 0.14, 0.03, master, { attack: 0.003 })
-    }, [soundEnabled, initAudio, playNote])
-
-    // Milestone: fanfare arpeggio (triumphant major chord)
     const sfxMilestone = useCallback(() => {
-        if (!soundEnabled) return
-        initAudio()
-        const ctx = audioCtxRef.current
-        const master = masterGainRef.current
-        if (!ctx || !master) return
-        const t = ctx.currentTime
-        const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51]
-        notes.forEach((f, i) => {
-            playNote(f, 'sine', t + i * 0.08, 0.25, 0.04, master, { attack: 0.005 })
-            if (i >= 3) playNote(f, 'triangle', t + i * 0.08, 0.3, 0.025, master, { attack: 0.005 })
-        })
-    }, [soundEnabled, initAudio, playNote])
+        if (!soundEnabled) return; initAudio()
+        const ctx = audioCtxRef.current, m = masterGainRef.current
+        if (!ctx || !m) return; const t = ctx.currentTime
+            ;[523, 659, 784, 1047, 1319].forEach((f, i) => {
+                voice(f, 'sine', t + i * 0.07, 0.22, 0.035, m, { atk: 0.005 })
+                if (i >= 3) voice(f, 'triangle', t + i * 0.07, 0.25, 0.02, m, { atk: 0.005 })
+            })
+    }, [soundEnabled, initAudio, voice])
 
-    // Level up: glittering ascending scale
     const sfxLevelUp = useCallback(() => {
-        if (!soundEnabled) return
-        initAudio()
-        const ctx = audioCtxRef.current
-        const master = masterGainRef.current
-        if (!ctx || !master) return
-        const t = ctx.currentTime
-        const scale = [60, 64, 67, 72, 76, 79, 84]
-        scale.forEach((n, i) => {
-            playNote(noteFreq(n), 'sine', t + i * 0.055, 0.15, 0.035, master, { attack: 0.003 })
-        })
-    }, [soundEnabled, initAudio, playNote])
+        if (!soundEnabled) return; initAudio()
+        const ctx = audioCtxRef.current, m = masterGainRef.current
+        if (!ctx || !m) return; const t = ctx.currentTime
+            ;[60, 64, 67, 72, 76, 79, 84].forEach((n, i) =>
+                voice(midi(n), 'sine', t + i * 0.05, 0.13, 0.03, m, { atk: 0.003 }))
+    }, [soundEnabled, initAudio, voice])
 
     // =========================================================================
-    // BACKGROUND MUSIC ENGINE — Melodious, Relaxing, Geometry Dash Degen Style
+    // PREMIUM BACKGROUND MUSIC — Melodious, Minimal, Harmonic
     // =========================================================================
+    //
+    // Design principles:
+    // 1. CONSTANT TEMPO — never slows down (chill market doesn't affect music)
+    // 2. MINIMAL notes — space between notes makes melody breathe
+    // 3. SMOOTH world transitions — only the key changes, smoothly
+    // 4. WARM tones — sine pads, gentle triangle leads, subtle movement
+    // 5. REPEATING motifs — familiar patterns that evolve with each world
+    //
     const startBackgroundMusic = useCallback(() => {
-        if (!soundEnabled) return
-        initAudio()
-        const ctx = audioCtxRef.current
-        const master = masterGainRef.current
+        if (!soundEnabled) return; initAudio()
+        const ctx = audioCtxRef.current, master = masterGainRef.current
         if (!ctx || !master || bgmNodesRef.current) return
         if (ctx.state === 'suspended') ctx.resume().catch(() => { })
 
-        let isPlaying = true
-        const TEMPO = 128 // BPM — chill but groovy
-        const STEPS_PER_BEAT = 4 // 16th notes
-        const STEP_DUR = 60 / TEMPO / STEPS_PER_BEAT // ~0.117s
+        let alive = true
+        const BPM = 120  // Relaxed, groovy tempo — NEVER changes
+        const BEAT = 60 / BPM  // 0.5s per beat
+        const S16 = BEAT / 4   // 0.125s per 16th note
 
-        let currentStep = 0
-        let nextStepTime = ctx.currentTime + 0.15
+        let step = 0
+        let nextTime = ctx.currentTime + 0.2
 
-        // === Audio buses ===
+        // --- Audio buses ---
         const bgmGain = ctx.createGain()
         bgmGain.gain.value = 0
         bgmGain.connect(master)
 
-        // Sidechain envelope (duck on kick)
-        const sidechainGain = ctx.createGain()
-        sidechainGain.gain.value = 1
-        sidechainGain.connect(bgmGain)
+        // Sidechain (gentle pump on kick)
+        const scGain = ctx.createGain()
+        scGain.gain.value = 1
+        scGain.connect(bgmGain)
 
-        // Drum bus
         const drumBus = ctx.createGain()
-        drumBus.gain.value = 0.9
+        drumBus.gain.value = 0.75
         drumBus.connect(bgmGain)
 
-        // Melody bus with delay for spaciousness
-        const melodyBus = ctx.createGain()
-        melodyBus.gain.value = 1.0
-        const melodyDelay = ctx.createDelay(2.0)
-        const delayFeedback = ctx.createGain()
-        const delayFilter = ctx.createBiquadFilter()
+        // Melody with lush stereo delay
+        const melBus = ctx.createGain()
+        melBus.gain.value = 0.9
+        const del = ctx.createDelay(2)
+        const delFb = ctx.createGain()
+        const delFilt = ctx.createBiquadFilter()
+        del.delayTime.value = BEAT * 0.75  // Dotted eighth = classic feel
+        delFb.gain.value = 0.3
+        delFilt.type = 'lowpass'
+        delFilt.frequency.value = 1800
+        melBus.connect(scGain)        // dry
+        melBus.connect(del)           // wet send
+        del.connect(delFilt)
+        delFilt.connect(delFb)
+        delFb.connect(del)
+        del.connect(scGain)           // wet return
 
-        melodyDelay.delayTime.value = STEP_DUR * 6 // dotted quarter = lush echo
-        delayFeedback.gain.value = 0.35
-        delayFilter.type = 'lowpass'
-        delayFilter.frequency.value = 2000
-
-        melodyBus.connect(sidechainGain) // dry signal
-        melodyBus.connect(melodyDelay)   // wet signal
-        melodyDelay.connect(delayFilter)
-        delayFilter.connect(delayFeedback)
-        delayFeedback.connect(melodyDelay)
-        melodyDelay.connect(sidechainGain)
-
-        // Pad bus (warm chords)
         const padBus = ctx.createGain()
-        padBus.gain.value = 0.7
-        padBus.connect(sidechainGain)
+        padBus.gain.value = 0.6
+        padBus.connect(scGain)
 
-        // Bass bus
         const bassBus = ctx.createGain()
-        bassBus.gain.value = 1.0
-        bassBus.connect(sidechainGain)
+        bassBus.gain.value = 0.85
+        bassBus.connect(scGain)
 
-        // === DRUM SYNTH ===
-        const playKick = (time: number, vel: number) => {
-            const osc = ctx.createOscillator()
-            const g = ctx.createGain()
-            osc.type = 'sine'
-            osc.frequency.setValueAtTime(80 * vel, time)
-            osc.frequency.exponentialRampToValueAtTime(35, time + 0.08)
-            g.gain.setValueAtTime(0, time)
-            g.gain.linearRampToValueAtTime(0.7 * vel, time + 0.005)
-            g.gain.exponentialRampToValueAtTime(0.001, time + 0.25)
-            osc.connect(g)
-            g.connect(drumBus)
-            osc.start(time)
-            osc.stop(time + 0.3)
-            // Sidechain ducking
-            sidechainGain.gain.setValueAtTime(0.3, time)
-            sidechainGain.gain.linearRampToValueAtTime(1.0, time + 0.15)
+        // --- Drums ---
+        const kick = (t: number, v: number) => {
+            const o = ctx.createOscillator(), g = ctx.createGain()
+            o.type = 'sine'
+            o.frequency.setValueAtTime(75 * v, t)
+            o.frequency.exponentialRampToValueAtTime(30, t + 0.1)
+            g.gain.setValueAtTime(0, t)
+            g.gain.linearRampToValueAtTime(0.55 * v, t + 0.004)
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.22)
+            o.connect(g); g.connect(drumBus)
+            o.start(t); o.stop(t + 0.25)
+            // gentle sidechain
+            scGain.gain.setValueAtTime(0.4, t)
+            scGain.gain.linearRampToValueAtTime(1, t + 0.12)
         }
 
-        const playSnare = (time: number, vel: number) => {
+        const snare = (t: number, v: number) => {
             if (!noiseBufferRef.current) return
-            // Tonal body
-            const osc = ctx.createOscillator()
-            const og = ctx.createGain()
-            osc.type = 'triangle'
-            osc.frequency.setValueAtTime(200, time)
-            osc.frequency.exponentialRampToValueAtTime(120, time + 0.08)
-            og.gain.setValueAtTime(0, time)
-            og.gain.linearRampToValueAtTime(0.35 * vel, time + 0.003)
-            og.gain.exponentialRampToValueAtTime(0.001, time + 0.1)
-            osc.connect(og)
-            og.connect(drumBus)
-            osc.start(time)
-            osc.stop(time + 0.15)
-            // Noise tail
-            const noise = ctx.createBufferSource()
-            noise.buffer = noiseBufferRef.current
-            const nf = ctx.createBiquadFilter()
-            nf.type = 'bandpass'
-            nf.frequency.value = 3000
-            nf.Q.value = 0.8
-            const ng = ctx.createGain()
-            ng.gain.setValueAtTime(0, time)
-            ng.gain.linearRampToValueAtTime(0.4 * vel, time + 0.003)
-            ng.gain.exponentialRampToValueAtTime(0.001, time + 0.12)
-            noise.connect(nf)
-            nf.connect(ng)
-            ng.connect(drumBus)
-            noise.start(time)
-            noise.stop(time + 0.15)
+            const o = ctx.createOscillator(), og = ctx.createGain()
+            o.type = 'triangle'
+            o.frequency.setValueAtTime(180, t)
+            o.frequency.exponentialRampToValueAtTime(100, t + 0.06)
+            og.gain.setValueAtTime(0, t)
+            og.gain.linearRampToValueAtTime(0.25 * v, t + 0.003)
+            og.gain.exponentialRampToValueAtTime(0.001, t + 0.08)
+            o.connect(og); og.connect(drumBus)
+            o.start(t); o.stop(t + 0.1)
+            const n = ctx.createBufferSource()
+            n.buffer = noiseBufferRef.current
+            const nf = ctx.createBiquadFilter(), ng = ctx.createGain()
+            nf.type = 'bandpass'; nf.frequency.value = 3500; nf.Q.value = 0.7
+            ng.gain.setValueAtTime(0, t)
+            ng.gain.linearRampToValueAtTime(0.3 * v, t + 0.003)
+            ng.gain.exponentialRampToValueAtTime(0.001, t + 0.1)
+            n.connect(nf); nf.connect(ng); ng.connect(drumBus)
+            n.start(t); n.stop(t + 0.12)
         }
 
-        const playHat = (time: number, vel: number, open = false) => {
+        const hat = (t: number, v: number) => {
             if (!noiseBufferRef.current) return
-            const noise = ctx.createBufferSource()
-            noise.buffer = noiseBufferRef.current
-            const f = ctx.createBiquadFilter()
-            f.type = 'highpass'
-            f.frequency.value = 8000
-            const g = ctx.createGain()
-            const dur = open ? 0.15 : 0.04
-            g.gain.setValueAtTime(0, time)
-            g.gain.linearRampToValueAtTime(0.25 * vel, time + 0.002)
-            g.gain.exponentialRampToValueAtTime(0.001, time + dur)
-            noise.connect(f)
-            f.connect(g)
-            g.connect(drumBus)
-            noise.start(time)
-            noise.stop(time + dur + 0.05)
+            const n = ctx.createBufferSource()
+            n.buffer = noiseBufferRef.current
+            const f = ctx.createBiquadFilter(), g = ctx.createGain()
+            f.type = 'highpass'; f.frequency.value = 9000
+            g.gain.setValueAtTime(0, t)
+            g.gain.linearRampToValueAtTime(0.18 * v, t + 0.002)
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.035)
+            n.connect(f); f.connect(g); g.connect(drumBus)
+            n.start(t); n.stop(t + 0.06)
         }
 
-        // === SONG SECTION LOGIC ===
-        // Song structure cycles every 256 steps (64 beats = 30 seconds at 128bpm)
-        // Section 0: Intro (bars 1-4)  — hats only, pad, gentle melody
-        // Section 1: Build (bars 5-8)  — add kick, fuller bass, arp melody
-        // Section 2: Drop (bars 9-12)  — full drums, driving bass, catchy lead
-        // Section 3: Peak (bars 13-16) — max energy, fast arps, euphoric
+        // =================================================================
+        // CHORD PROGRESSION: i - VI - III - VII (natural minor)
+        // This is the "epic emotional" progression — Avicii, Waterflame, etc.
+        // Mapped to intervals relative to root: [0, 8, 3, 10]
+        // =================================================================
+        const PROG = [0, 8, 3, 10]  // i - VI - III - VII semitones from root
 
-        const getSection = (step: number, worldTheme: number): number => {
-            const barInCycle = Math.floor((step % 256) / 16) // 0-15
-            let section = 0
-            if (barInCycle >= 12) section = 3
-            else if (barInCycle >= 8) section = 2
-            else if (barInCycle >= 4) section = 1
+        // =================================================================
+        // MELODY — 4 phrases, each 16 steps. Minimal, singable, harmonious.
+        // Values = semitone offset from chord root. 0 = rest.
+        // Only uses intervals: unison(0), 3rd(3/4), 5th(7), octave(12), 9th(14)
+        // These intervals are ALWAYS consonant regardless of key.
+        // =================================================================
+        const MEL = [
+            // A: Gentle opening — ascending breath
+            [12, 0, 0, 0, 7, 0, 0, 12, 0, 0, 14, 0, 12, 0, 0, 0],
+            // B: Playful response — bouncing down
+            [14, 0, 12, 0, 0, 0, 7, 0, 0, 0, 3, 0, 0, 0, 0, 0],
+            // C: Building tension — pushing up
+            [7, 0, 0, 12, 0, 0, 14, 0, 0, 0, 0, 0, 12, 0, 7, 0],
+            // D: Resolution — coming home
+            [12, 0, 0, 0, 0, 7, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0],
+        ]
 
-            // Higher worlds push to higher sections faster
-            return Math.min(3, section + Math.floor(worldTheme / 3))
-        }
+        // =================================================================
+        // SONG STRUCTURE — builds with world progress
+        // world 0-1: pad + melody only (dreamy)
+        // world 2-3: add light drums + bass (grooving)
+        // world 4+:  full beat + arp layer (driving)
+        // =================================================================
 
-        const getDrumPattern = (section: number) => {
-            if (section <= 0) return DRUM_PATTERNS.intro
-            if (section === 1) return DRUM_PATTERNS.light
-            if (section === 2) return DRUM_PATTERNS.full
-            return DRUM_PATTERNS.driving
-        }
+        const schedule = (s: number, t: number) => {
+            const world = bgmThemeRef.current || 0
 
-        // === MAIN SCHEDULER ===
-        const scheduleStep = (step: number, time: number) => {
-            const worldTheme = bgmThemeRef.current || 0
-            const speedMult = Math.max(0.6, bgmSpeedRef.current || 1)
-            const section = getSection(step, worldTheme)
+            // Get root note for current world — smooth key changes!
+            const wk = WORLD_KEYS[Math.min(world, WORLD_KEYS.length - 1)]
+            const root = wk.root
 
-            const prog = PROGRESSIONS[Math.min(worldTheme, PROGRESSIONS.length - 1) % PROGRESSIONS.length]
-            const chordIdx = Math.floor((step % 64) / 16) // Chord changes every 16 steps (1 bar)
-            const root = prog.roots[chordIdx % prog.roots.length]
+            // Song position
+            const bar = Math.floor(s / 16) // which bar we're in
+            const s16 = s % 16             // position in bar
+            const chordIdx = bar % 4       // which chord in progression
+            const chordRoot = root + PROG[chordIdx]
 
-            const s16 = step % 16 // Position within a bar
+            // Intensity ramps up with world
+            const intensity = Math.min(world, 5)
 
-            // --- DRUMS ---
-            const dp = getDrumPattern(section)
-            if (dp.kick[s16] > 0) playKick(time, dp.kick[s16])
-            if (dp.snare[s16] > 0) playSnare(time, dp.snare[s16])
-            if (dp.hat[s16] > 0) playHat(time, dp.hat[s16], s16 % 8 === 6)
-
-            // --- BASS ---
-            const bassRhythm = BASS_RHYTHMS[Math.min(section, BASS_RHYTHMS.length - 1)]
-            if (bassRhythm[s16] > 0) {
-                const bassFreq = noteFreq(root - 12) // One octave below chord root
-                const octaveUp = s16 % 8 === 4 && section >= 2 // Octave bounce in drop
-                playNote(
-                    octaveUp ? bassFreq * 2 : bassFreq,
-                    'sine', time,
-                    STEP_DUR * 1.8,
-                    0.35 * bassRhythm[s16],
-                    bassBus,
-                    { filterFreq: 400 + section * 100, attack: 0.01 }
-                )
-                // Sub layer
-                if (section >= 1) {
-                    playNote(bassFreq, 'sine', time, STEP_DUR * 2, 0.2 * bassRhythm[s16], bassBus, {
-                        filterFreq: 200, attack: 0.02
-                    })
-                }
-            }
-
-            // --- PAD CHORDS (warm, gentle) ---
+            // ----- PAD CHORD (always plays — the harmonic foundation) -----
             if (s16 === 0) {
-                // Play full chord on downbeat of each bar
-                const chordNotes = [root, root + 4, root + 7] // Major triad
-                if (section >= 2) chordNotes.push(root + 12) // Add octave in drop
+                const notes = [chordRoot, chordRoot + 3, chordRoot + 7]
+                if (intensity >= 3) notes.push(chordRoot + 12)
+                const dur = S16 * 15.5
 
-                const padDur = STEP_DUR * 15 // Nearly full bar sustain
-                chordNotes.forEach(n => {
-                    // Warm sine pad
-                    playNote(noteFreq(n), 'sine', time, padDur, 0.06, padBus, {
-                        attack: 0.15, decay: padDur * 0.5, sustain: 0.7,
-                        filterFreq: 1500 + section * 500
+                notes.forEach(n => {
+                    // Warm sine pad — the core sound
+                    voice(midi(n), 'sine', t, dur, 0.055, padBus, {
+                        atk: 0.25, rel: dur, filt: 1200 + intensity * 200
                     })
-                    // Soft sawtooth shimmer (very quiet)
-                    if (section >= 1) {
-                        playNote(noteFreq(n), 'sawtooth', time, padDur, 0.02, padBus, {
-                            attack: 0.2, decay: padDur * 0.4, sustain: 0.5,
-                            filterFreq: 800 + section * 300, detune: 8
-                        })
-                        playNote(noteFreq(n), 'sawtooth', time, padDur, 0.02, padBus, {
-                            attack: 0.2, decay: padDur * 0.4, sustain: 0.5,
-                            filterFreq: 800 + section * 300, detune: -8
+                    // Subtle shimmer layer (from world 2+)
+                    if (intensity >= 2) {
+                        voice(midi(n), 'triangle', t, dur, 0.02, padBus, {
+                            atk: 0.3, rel: dur, filt: 800 + intensity * 150, det: 6
                         })
                     }
                 })
             }
 
-            // --- MELODY ---
-            const phraseSet = section <= 1
-                ? [0, 5, 2, 3] // Gentle phrases for intro/build
-                : [4, 1, 6, 7] // Energetic phrases for drop/peak
-
-            const phraseIdx = phraseSet[chordIdx % phraseSet.length]
-            const phrase = MELODY_PHRASES[phraseIdx % MELODY_PHRASES.length]
-            const melodyNote = phrase[s16]
-
-            if (melodyNote > 0) {
-                // Transpose melody to fit current chord key
-                const transposeOffset = root - 60 // Shift melody relative to C4
-                const finalNote = melodyNote + transposeOffset
-
-                const melodyDur = STEP_DUR * (section >= 2 ? 1.5 : 1.2)
-                // Clean lead: sine + triangle blend
-                playNote(noteFreq(finalNote), 'sine', time, melodyDur, 0.07, melodyBus, {
-                    attack: 0.008, filterFreq: 3000 + section * 1000
-                })
-                if (section >= 1) {
-                    playNote(noteFreq(finalNote), 'triangle', time, melodyDur, 0.04, melodyBus, {
-                        attack: 0.008, filterFreq: 2500 + section * 800
+            // ----- BASS (from world 1+) -----
+            if (intensity >= 1) {
+                // Simple: root note on beat 1 and 3 only
+                if (s16 === 0 || s16 === 8) {
+                    const bassNote = chordRoot - 12
+                    voice(midi(bassNote), 'sine', t, S16 * 3, 0.3, bassBus, {
+                        atk: 0.015, filt: 350 + intensity * 50
+                    })
+                    // Sub
+                    voice(midi(bassNote - 12), 'sine', t, S16 * 3, 0.15, bassBus, {
+                        atk: 0.025, filt: 180
                     })
                 }
-                // Chiptune square wave lead in high-energy sections
-                if (section >= 3) {
-                    playNote(noteFreq(finalNote + 12), 'square', time, melodyDur * 0.8, 0.025, melodyBus, {
-                        attack: 0.005, filterFreq: 4000
+                // Octave bounce on offbeats (from world 3+)
+                if (intensity >= 3 && s16 === 4) {
+                    voice(midi(chordRoot), 'sine', t, S16 * 1.5, 0.15, bassBus, {
+                        atk: 0.01, filt: 400
                     })
                 }
             }
 
-            // --- ARP (in higher sections) ---
-            if (section >= 2 && s16 % 2 === 0) {
-                const arpPattern = ARP_PATTERNS[section - 2]
-                const arpIdx = (s16 / 2) % arpPattern.length
-                const arpNote = root + 12 + arpPattern[arpIdx] // One octave up
-                playNote(noteFreq(arpNote), 'sine', time, STEP_DUR * 0.8, 0.03, melodyBus, {
-                    attack: 0.003, filterFreq: 2500
+            // ----- DRUMS (from world 2+) -----
+            if (intensity >= 2) {
+                // Kick: beats 1 and 3
+                if (s16 === 0 || s16 === 8) kick(t, 0.8 + (intensity - 2) * 0.1)
+                // Snare: beats 2 and 4
+                if (s16 === 4 || s16 === 12) snare(t, 0.7 + (intensity - 2) * 0.1)
+                // Hi-hat: 8th notes
+                if (s16 % 2 === 0) hat(t, s16 % 4 === 0 ? 0.5 : 0.3)
+                // Extra hat on 16ths for world 5+
+                if (intensity >= 5 && s16 % 2 === 1) hat(t, 0.2)
+            }
+
+            // ----- MELODY -----
+            // Rotate through 4 phrases, one per bar
+            const phrase = MEL[chordIdx % MEL.length]
+            const noteOff = phrase[s16]
+
+            if (noteOff > 0) {
+                const melNote = chordRoot + noteOff
+                const dur = S16 * (intensity >= 4 ? 2.5 : 2)
+
+                // Primary: clean sine — always beautiful
+                voice(midi(melNote), 'sine', t, dur, 0.06, melBus, {
+                    atk: 0.008, filt: 2500 + intensity * 400
+                })
+                // Harmonic: soft triangle octave lower for warmth (world 1+)
+                if (intensity >= 1) {
+                    voice(midi(melNote), 'triangle', t, dur, 0.03, melBus, {
+                        atk: 0.01, filt: 2000 + intensity * 300
+                    })
+                }
+                // Sparkle: high octave square for chiptune feel (world 4+)
+                if (intensity >= 4) {
+                    voice(midi(melNote + 12), 'square', t, dur * 0.6, 0.015, melBus, {
+                        atk: 0.005, filt: 3500
+                    })
+                }
+            }
+
+            // ----- ARP (world 4+ only, very subtle) -----
+            if (intensity >= 4 && s16 % 4 === 2) {
+                const arpIntervals = [0, 7, 12, 7]
+                const arpNote = chordRoot + 12 + arpIntervals[(s16 / 4) % 4]
+                voice(midi(arpNote), 'sine', t, S16 * 1.2, 0.02, melBus, {
+                    atk: 0.003, filt: 2200
                 })
             }
         }
 
-        // === SCHEDULER LOOP ===
-        let timerID: ReturnType<typeof setTimeout>
-        const LOOKAHEAD_MS = 50
-        const SCHEDULE_AHEAD = 0.18
+        // === SCHEDULER LOOP (constant BPM, never changes) ===
+        let timer: ReturnType<typeof setTimeout>
+        const LOOK = 45       // check every 45ms
+        const AHEAD = 0.2     // schedule 200ms ahead
 
-        const scheduler = () => {
-            if (!isPlaying || !audioCtxRef.current) return
-            const speedMult = Math.max(0.6, bgmSpeedRef.current || 1)
-            const interval = STEP_DUR / speedMult
-
-            while (nextStepTime < audioCtxRef.current.currentTime + SCHEDULE_AHEAD) {
-                scheduleStep(currentStep, nextStepTime)
-                nextStepTime += interval
-                currentStep++
-                if (currentStep > 1_000_000) currentStep = 0
+        const loop = () => {
+            if (!alive || !audioCtxRef.current) return
+            // Speed multiplier: only speed UP, never slow DOWN
+            const speedMult = Math.max(1, bgmSpeedRef.current || 1)
+            const interval = S16 / speedMult
+            while (nextTime < audioCtxRef.current.currentTime + AHEAD) {
+                schedule(step, nextTime)
+                nextTime += interval  // Speeds up with game, never below base BPM
+                step++
+                if (step > 500_000) step = 0
             }
-            timerID = setTimeout(scheduler, LOOKAHEAD_MS)
+            timer = setTimeout(loop, LOOK)
         }
 
-        // Gentle fade in
+        // Gentle 4-second fade in
         bgmGain.gain.setValueAtTime(0, ctx.currentTime)
-        bgmGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 4.0)
+        bgmGain.gain.linearRampToValueAtTime(1, ctx.currentTime + 4)
 
-        timerID = setTimeout(scheduler, LOOKAHEAD_MS)
+        timer = setTimeout(loop, LOOK)
 
         bgmNodesRef.current = {
             stop: () => {
-                isPlaying = false
-                clearTimeout(timerID)
+                alive = false
+                clearTimeout(timer)
                 try {
                     bgmGain.gain.cancelScheduledValues(ctx.currentTime)
                     bgmGain.gain.setValueAtTime(bgmGain.gain.value, ctx.currentTime)
                     bgmGain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.5)
-                } catch { /* ctx may be closed */ }
+                } catch { /* ctx closed */ }
             },
             gain: bgmGain,
         }
-    }, [soundEnabled, initAudio, playNote])
+    }, [soundEnabled, initAudio, voice])
 
     const stopBackgroundMusic = useCallback(() => {
-        if (bgmNodesRef.current) {
-            bgmNodesRef.current.stop()
-            bgmNodesRef.current = null
-        }
+        if (bgmNodesRef.current) { bgmNodesRef.current.stop(); bgmNodesRef.current = null }
     }, [])
 
     return {
-        playTone,
-        updateAudioParams,
-        sfxJump,
-        sfxDoubleJump,
-        sfxDash,
-        sfxCollect,
-        sfxPowerup,
-        sfxHit,
-        sfxSelect,
-        sfxCombo,
-        sfxMilestone,
-        sfxLevelUp,
-        startBackgroundMusic,
-        stopBackgroundMusic,
+        playTone, updateAudioParams,
+        sfxJump, sfxDoubleJump, sfxDash, sfxCollect, sfxPowerup,
+        sfxHit, sfxSelect, sfxCombo, sfxMilestone, sfxLevelUp,
+        startBackgroundMusic, stopBackgroundMusic,
         unlockAudio: initAudio,
     }
 }

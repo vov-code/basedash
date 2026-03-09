@@ -302,7 +302,7 @@ export default function Home() {
 
             {/* GAME TAB */}
             {activeTab === 'game' && (
-              <div className="flex flex-col flex-1 w-full min-h-0 gap-1">
+              <div className="flex flex-col flex-1 w-full min-h-0 gap-0.5">
                 {/* CONNECT WALLET BANNER - with spacing from header and canvas */}
                 {!isConnected && (
                   <div className="w-full flex-shrink-0">
@@ -348,7 +348,7 @@ export default function Home() {
                 </div>
 
                 {/* Game Canvas */}
-                <div className="w-full flex-shrink-0 relative z-20 flex flex-col items-center justify-center fade-in mt-1 mb-1" style={{ height: '42vh' }}>
+                <div className="w-full flex-shrink-0 relative z-20 flex flex-col items-center justify-center fade-in" style={{ height: '42vh' }}>
                   <div
                     className="relative w-full h-full max-w-[600px] overflow-hidden border border-slate-200 bg-white mx-auto touch-none"
                   >
@@ -571,7 +571,7 @@ export default function Home() {
           </div>
         </main>
 
-        <footer className="flex-shrink-0 bg-white/80 backdrop-blur-sm z-[40] w-full">
+        <footer className="flex-shrink-0 bg-white/80 backdrop-blur-sm z-[40] w-full mt-2">
           <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 h-[16px] flex flex-row items-end justify-between">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none">© {new Date().getFullYear()} base dash</span>
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none cursor-pointer" onClick={() => window.open('https://x.com/vovweb3', '_blank')}>built by <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-[#0052FF] via-[#4d8aff] to-[#0052FF] bg-[length:200%_auto] animate-[shimmer_2.5s_linear_infinite]">vov</span></span>
