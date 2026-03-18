@@ -445,6 +445,8 @@ export default function GameEngine({
     }
     p.squash = lerp(p.squash, 0, dt * 8)  // Smooth decay
     p.scale = 1 + p.squash * (p.velocityY < 0 ? -0.25 : 0.35)  // Softer effect
+    // CRITICAL: Clamp scale to prevent invisible/giant cube
+    p.scale = clamp(p.scale, 0.5, 2.0)
 
     // Tilt based on velocity — smooth interpolation
     const targetTilt = clamp(p.velocityY / 900, -0.9, 0.9)  // Reduced tilt range
@@ -456,12 +458,12 @@ export default function GameEngine({
     // === FULL NaN/Infinity FIREWALL — prevent cube disappearance ===
     if (!isFinite(p.y)) p.y = CFG.GROUND - CFG.PLAYER_SIZE
     if (!isFinite(p.velocityY)) p.velocityY = 0
-    if (!isFinite(p.scale)) p.scale = 1
+    if (!isFinite(p.scale) || p.scale <= 0) p.scale = 1
     if (!isFinite(p.rotation)) p.rotation = 0
     if (!isFinite(p.tilt)) p.tilt = 0
     if (!isFinite(p.squash)) p.squash = 0
-    if (!isFinite(p.flash)) p.flash = 0
-    if (!isFinite(p.invincible)) p.invincible = 0
+    if (!isFinite(p.flash) || p.flash < 0) p.flash = 0
+    if (!isFinite(p.invincible) || p.invincible < 0) p.invincible = 0
     if (!isFinite(e.speed)) e.speed = CFG.BASE_SPEED
     if (!isFinite(e.score)) e.score = 0
     if (!isFinite(e.distance)) e.distance = 0
@@ -469,6 +471,17 @@ export default function GameEngine({
     if (!isFinite(e.gameTime)) e.gameTime = 0
     if (!isFinite(e.difficulty)) e.difficulty = 0
     if (!isFinite(e.scoreMultiplier) || e.scoreMultiplier <= 0) e.scoreMultiplier = 1
+    // Clamp y to sane bounds — prevent underground/sky escape
+    p.y = clamp(p.y, -CFG.PLAYER_SIZE * 3, CFG.GROUND)
+    // Clamp scale again after all computations
+    p.scale = clamp(p.scale, 0.5, 2.0)
+    // Ensure flash+invincible never make cube fully invisible
+    if (p.flash > 0.95) p.flash = 0.95
+    if (p.invincible > 10) p.invincible = 2
+    // Cap particles to prevent tornado
+    if (e.particles.length > CFG.PARTICLE_LIMIT * 1.5) {
+      e.particles.length = CFG.PARTICLE_LIMIT
+    }
 
     // Invincibility
     p.invincible = Math.max(0, p.invincible - dt)
@@ -946,6 +959,8 @@ export default function GameEngine({
     p.onGround = false
     p.coyoteTimer = 0
     p.squash = -0.15
+    // NaN safety after setting velocityY
+    if (!isFinite(p.velocityY)) p.velocityY = isDouble ? CFG.DOUBLE_JUMP : CFG.JUMP
     e.totalJumps += 1
     e.shakeTimer = 0.04
 
@@ -999,6 +1014,10 @@ export default function GameEngine({
 
     // ALSO cancel demo RAF — prevents concurrent demo+game loops after rapid restarts
     if (demoRafRef.current) { cancelAnimationFrame(demoRafRef.current); demoRafRef.current = null }
+
+    // Extra safety: delay-cancel any orphaned RAFs (handles edge cases with rapid restarts)
+    const orphanCleanup = rafRef.current
+    if (orphanCleanup) { cancelAnimationFrame(orphanCleanup); rafRef.current = null }
 
     const engine = createEngine()
     engine.activeTrail = activeTrail

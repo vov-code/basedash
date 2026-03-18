@@ -16,7 +16,7 @@ export const Header: React.FC<HeaderProps> = ({ isConnected, address, handleConn
     }, [])
 
     return (
-        <header className="w-full bg-white/75 backdrop-blur-md relative z-[40] flex-shrink-0 h-[40px] sm:h-[48px]">
+        <header className="w-full bg-white/75 backdrop-blur-md relative z-[40] flex-shrink-0 h-[34px] sm:h-[40px]">
             <div className="mx-auto w-full max-w-3xl px-3 sm:px-4 h-full flex items-center justify-between">
                 <div className="flex items-center gap-2 sm:gap-3">
                     <div className="relative h-6 w-6 sm:h-7 sm:w-7 flex-shrink-0 overflow-hidden border-2 border-[#0052FF]/80 rounded p-0.5 bg-white shadow-[0_0_12px_rgba(0,82,255,0.4)] animate-icon-float">

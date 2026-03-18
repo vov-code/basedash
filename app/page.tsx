@@ -73,6 +73,16 @@ export default function Home() {
   useEffect(() => {
     setIsClientLoaded(true)
 
+    // Fix viewport shift bug: scroll to top when returning to tab
+    const handleVisChange = () => {
+      if (!document.hidden) {
+        window.scrollTo(0, 0)
+        document.documentElement.scrollTop = 0
+        document.body.scrollTop = 0
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisChange)
+
     // Check if new user
     const hasVisited = safeStorage.get('bd_visited') === '1'
     const chimePlayed = safeStorage.get('bd_played_chime') === '1'
@@ -91,11 +101,12 @@ export default function Home() {
     // Auto-enter fallback for mobile
     if (!hasVisited && isTouch) {
       const timeoutId = setTimeout(() => handleEnterRef.current(), 15000) // 15s auto-enter for new users
-      return () => clearTimeout(timeoutId)
+      return () => { clearTimeout(timeoutId); document.removeEventListener('visibilitychange', handleVisChange) }
     } else if (hasVisited && isTouch) {
       const timeoutId = setTimeout(() => handleEnterRef.current(), 6000) // Fast auto-enter for returning
-      return () => clearTimeout(timeoutId)
+      return () => { clearTimeout(timeoutId); document.removeEventListener('visibilitychange', handleVisChange) }
     }
+    return () => document.removeEventListener('visibilitychange', handleVisChange)
   }, [])
 
   // Stable enter function via ref (prevents stale closure)
@@ -266,7 +277,7 @@ export default function Home() {
 
         {/* MAIN CONTENT - z-[20], under header but above background */}
         <main className="flex-1 flex flex-col overflow-hidden min-h-0 w-full relative z-[20]">
-          <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col relative min-h-0 gap-1">
+          <div className="mx-auto w-full max-w-5xl flex-1 flex flex-col relative min-h-0 gap-1.5">
 
             {/* TAB NAVIGATION - Always visible */}
             <div className="w-full px-2 sm:px-3 pt-0.5 relative z-20 flex-shrink-0">
@@ -302,7 +313,7 @@ export default function Home() {
 
             {/* GAME TAB */}
             {activeTab === 'game' && (
-              <div className="flex flex-col flex-1 w-full min-h-0 gap-0.5">
+              <div className="flex flex-col flex-1 w-full min-h-0 gap-1.5">
                 {/* CONNECT WALLET BANNER - with spacing from header and canvas */}
                 {!isConnected && (
                   <div className="w-full flex-shrink-0">
@@ -330,25 +341,25 @@ export default function Home() {
                       <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0052FF]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0052FF]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
                       </div>
-                      <span className="text-[7px] sm:text-[8px] font-mono font-bold text-slate-900 tracking-wider truncate text-center">tap to jump</span>
+                      <span className="text-[8px] sm:text-[9px] font-mono font-bold text-slate-900 tracking-wider truncate text-center">tap to jump</span>
                     </div>
                     <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/75 backdrop-blur-sm border border-[#F6465D]/15 min-w-0 justify-center">
                       <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#F6465D]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#F6465D]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                       </div>
-                      <span className="text-[7px] sm:text-[8px] font-mono font-bold text-slate-900 tracking-wider truncate text-center">dodge <span className="text-[#F6465D]">red</span></span>
+                      <span className="text-[8px] sm:text-[9px] font-mono font-bold text-slate-900 tracking-wider truncate text-center">dodge <span className="text-[#F6465D]">red</span></span>
                     </div>
                     <div className="flex-1 flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/75 backdrop-blur-sm border border-[#0ECB81]/15 min-w-0 justify-center">
                       <div className="w-4 h-4 sm:w-5 sm:h-5 bg-[#0ECB81]/10 flex items-center justify-center flex-shrink-0">
                         <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#0ECB81]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                       </div>
-                      <span className="text-[7px] sm:text-[8px] font-mono font-bold text-slate-900 tracking-wider truncate text-center">collect <span className="text-[#0ECB81]">green</span></span>
+                      <span className="text-[8px] sm:text-[9px] font-mono font-bold text-slate-900 tracking-wider truncate text-center">collect <span className="text-[#0ECB81]">green</span></span>
                     </div>
                   </div>
                 </div>
 
                 {/* Game Canvas */}
-                <div className="w-full flex-shrink-0 relative z-20 flex flex-col items-center justify-center fade-in" style={{ height: '42vh' }}>
+                <div className="w-full flex-shrink-0 relative z-20 flex flex-col items-center justify-center fade-in" style={{ height: '40vh' }}>
                   <div
                     className="relative w-full h-full max-w-[600px] overflow-hidden border border-slate-200 bg-white mx-auto touch-none"
                   >
@@ -571,7 +582,7 @@ export default function Home() {
           </div>
         </main>
 
-        <footer className="flex-shrink-0 bg-white/80 backdrop-blur-sm z-[40] w-full mt-2">
+        <footer className="flex-shrink-0 bg-white/80 backdrop-blur-sm z-[40] w-full mt-0.5">
           <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 h-[16px] flex flex-row items-end justify-between">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none">© {new Date().getFullYear()} base dash</span>
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none cursor-pointer" onClick={() => window.open('https://x.com/vovweb3', '_blank')}>built by <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-[#0052FF] via-[#4d8aff] to-[#0052FF] bg-[length:200%_auto] animate-[shimmer_2.5s_linear_infinite]">vov</span></span>

@@ -542,16 +542,16 @@ export const CFG = {
     SLOW_MULT: 0.50,
     SLOW_TIME: 2.5,
 
-    PARTICLE_LIMIT: 140,
-    TRAIL_LIMIT: 7,
-    STAR_COUNT: 45,
-    CLOUD_COUNT: 6,
+    PARTICLE_LIMIT: IS_MOBILE ? 60 : 140,
+    TRAIL_LIMIT: IS_MOBILE ? 5 : 7,
+    STAR_COUNT: IS_MOBILE ? 30 : 45,
+    CLOUD_COUNT: IS_MOBILE ? 4 : 6,
     MAX_CANDLES: 14,
-    GROUND_PARTICLE_COUNT: 24,
+    GROUND_PARTICLE_COUNT: IS_MOBILE ? 16 : 24,
     MAX_POWERUPS: 3,
 
     // Full HD quality settings
-    MAX_DPR: 2,  // Capped at 2 — 3x is too expensive on mobile for minimal visual gain
+    MAX_DPR: IS_MOBILE ? 1.5 : 2,  // 1.5 on mobile still looks retina, saves GPU
 };
 
 // ============================================================================
