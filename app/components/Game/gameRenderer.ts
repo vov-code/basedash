@@ -410,7 +410,7 @@ const drawSingleCandle = (
         // Floating score text
         ctx.globalAlpha = (1 - ease) * 0.9
         ctx.fillStyle = '#FFFFFF'
-        ctx.font = `700 ${CFG.WIDTH < 600 ? 13 : 11}px Inter, sans-serif`
+        ctx.font = `700 ${CFG.WIDTH < 600 ? 13 : 11}px "JetBrains Mono", monospace`
         ctx.textAlign = 'center'
         ctx.fillText('+' + CFG.GREEN_SCORE, cx, c.bodyY - ease * 22 - 6)
     }
@@ -459,9 +459,9 @@ const drawSinglePowerUp = (
         ctx.stroke()
         // Float label
         ctx.fillStyle = config.color1
-        ctx.font = `700 ${CFG.WIDTH < 600 ? 14 : 10}px Inter, sans-serif`
+        ctx.font = `700 ${CFG.WIDTH < 600 ? 14 : 10}px "JetBrains Mono", monospace`
         ctx.textAlign = 'center'
-        ctx.fillText(config.label.split(' ')[0], cx, cy - prog * 30 - 10)
+        ctx.fillText(config.symbol, cx, cy - prog * 30 - 10)
         ctx.restore()
         return
     }
@@ -592,7 +592,7 @@ export const drawPowerUpIndicators = (
         // Icon
         ctx.globalAlpha = 1
         ctx.fillStyle = ind.color
-        ctx.font = 'bold 14px Arial'
+        ctx.font = 'bold 14px "JetBrains Mono", monospace'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         const icon = ind.type === 'diamond' ? '💎' : ind.type === 'rocket' ? '🚀' : '🐋'
@@ -1049,9 +1049,9 @@ export const drawWorldBanner = (
 
     // Compact single-line text
     const fontSize = Math.max(14, Math.min(18, CFG.WIDTH * 0.035))
-    ctx.font = `600 ${fontSize * 0.8}px monospace`
+    ctx.font = `600 ${fontSize * 0.8}px "JetBrains Mono", monospace`
     const labelW = ctx.measureText('WORLD: ').width
-    ctx.font = `700 ${fontSize}px monospace`
+    ctx.font = `700 ${fontSize}px "JetBrains Mono", monospace`
     const worldName = w.name.toUpperCase()
     const textW = ctx.measureText(worldName).width
 
@@ -1123,7 +1123,7 @@ export const drawChillMarketBanner = (
     const isFreeze = e.whaleTimer > 0
     const accentColor = isFreeze ? '#60A5FA' : '#0ECB81'
 
-    ctx.font = `700 ${fontSize}px monospace`
+    ctx.font = `700 ${fontSize}px "JetBrains Mono", monospace`
     const textW = ctx.measureText(label).width
 
     const padX = 6
@@ -1145,7 +1145,7 @@ export const drawChillMarketBanner = (
     // Text
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.font = `700 ${fontSize}px monospace`
+    ctx.font = `700 ${fontSize}px "JetBrains Mono", monospace`
     ctx.fillStyle = accentColor
     ctx.fillText(label, centerX, barY + barH / 2)
 
@@ -1279,7 +1279,7 @@ export const drawTutorialHint = (
 
     // Minimalist text
     ctx.fillStyle = '#0052FF'
-    ctx.font = `600 ${CFG.WIDTH < 600 ? 11 : 14}px monospace`
+    ctx.font = `600 ${CFG.WIDTH < 600 ? 11 : 14}px "JetBrains Mono", monospace`
     ctx.textAlign = 'center'
     ctx.letterSpacing = '3px'
     ctx.fillText('TAP TO JUMP', cx, cy)

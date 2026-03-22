@@ -1150,14 +1150,16 @@ export default function GameEngine({
       const canvas = canvasRef.current
       if (!canvas) return
       ctxRef.current = canvas.getContext('2d')
+      if (ctxRef.current) {
+        ctxRef.current.imageSmoothingEnabled = true
+        ctxRef.current.imageSmoothingQuality = 'high'
+      }
     }
     const ctx = ctxRef.current
     if (!ctx) return
 
-    // High-DPI scaling with smooth gradients
+    // High-DPI scaling
     ctx.setTransform(1, 0, 0, 1, 0, 0)
-    ctx.imageSmoothingEnabled = true
-    ctx.imageSmoothingQuality = 'high'
 
     drawFrame(ctx, engineRef.current, {
       w: CFG.WIDTH,
