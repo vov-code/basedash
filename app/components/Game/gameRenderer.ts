@@ -552,53 +552,54 @@ export const drawPowerUps = (
 // ACTIVE POWER-UP INDICATORS
 // ============================================================================
 
-/** Draw active power-up indicators — Compact & clean */
+/** Draw active power-up indicators — Unified pill style matching world/market banners */
 export const drawPowerUpIndicators = (
     ctx: CanvasRenderingContext2D,
     e: EngineState
 ): void => {
-    const indicators: { type: string; color: string; timer: number; maxTime: number }[] = []
-    if (e.shieldActive) indicators.push({ type: 'diamond', color: '#00D4FF', timer: 1, maxTime: 1 })
-    if (e.moonBoostTimer > 0) indicators.push({ type: 'rocket', color: '#FFD700', timer: e.moonBoostTimer, maxTime: 5 })
-    if (e.whaleTimer > 0) indicators.push({ type: 'whale', color: '#7B68EE', timer: e.whaleTimer, maxTime: 4 })
+    const indicators: { label: string; sym: string; color: string; timer: number; maxTime: number }[] = []
+    if (e.shieldActive) indicators.push({ label: 'SHIELD', sym: '💎', color: '#00D4FF', timer: 1, maxTime: 1 })
+    if (e.moonBoostTimer > 0) indicators.push({ label: '2X', sym: '🚀', color: '#FFD700', timer: e.moonBoostTimer, maxTime: 5 })
+    if (e.whaleTimer > 0) indicators.push({ label: 'FREEZE', sym: '🐋', color: '#7B68EE', timer: e.whaleTimer, maxTime: 4 })
 
     if (indicators.length === 0) return
 
     ctx.save()
-    let offsetX = 8
-    for (const ind of indicators) {
-        const y = CFG.GROUND - 32  // Чуть выше
-        const boxW = 48  // Меньше ширина
-        const boxH = 22  // Меньше высота
+    // Position at top-right, same vertical row as other banners
+    const fontSize = Math.max(8, Math.min(10, CFG.WIDTH * 0.02))
+    let offsetX = CFG.WIDTH - 8
 
-        // Background
-        ctx.globalAlpha = 0.95
-        ctx.fillStyle = 'rgba(10,10,20,0.95)'
-        ctx.strokeStyle = ind.color
-        ctx.lineWidth = 1.5
-        ctx.beginPath()
-        ctx.roundRect(offsetX, y, boxW, boxH, 6)
-        ctx.fill()
-        ctx.stroke()
-
-        // Progress bar (timer)
+    for (let i = indicators.length - 1; i >= 0; i--) {
+        const ind = indicators[i]
         const progress = ind.timer / ind.maxTime
-        ctx.globalAlpha = 0.3
-        ctx.fillStyle = ind.color
-        ctx.beginPath()
-        ctx.roundRect(offsetX + 2, y + boxH - 4, (boxW - 4) * progress, 2, 1)
-        ctx.fill()
 
-        // Icon
-        ctx.globalAlpha = 1
+        ctx.font = `700 ${fontSize}px "JetBrains Mono", monospace`
+        const textW = ctx.measureText(ind.label).width
+
+        const padX = 6
+        const padY = 3
+        const totalW = padX + textW + padX
+        const barH = fontSize + padY * 2
+        const barX = offsetX - totalW
+        const barY = 6
+
+        // Dark backdrop — same as world banner
+        ctx.globalAlpha = 0.85
+        ctx.fillStyle = 'rgba(15,23,42,0.80)'
+        ctx.fillRect(barX, barY, totalW, barH)
+
+        // Progress underline — colored, shrinks with timer
         ctx.fillStyle = ind.color
-        ctx.font = 'bold 14px "JetBrains Mono", monospace'
+        ctx.fillRect(barX, barY + barH - 1, totalW * progress, 1)
+
+        // Label text
+        ctx.globalAlpha = 1
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        const icon = ind.type === 'diamond' ? '💎' : ind.type === 'rocket' ? '🚀' : '🐋'
-        ctx.fillText(icon, offsetX + boxW / 2, y + boxH / 2 - 2)
+        ctx.fillStyle = ind.color
+        ctx.fillText(ind.label, barX + totalW / 2, barY + barH / 2)
 
-        offsetX += boxW + 4
+        offsetX = barX - 4
     }
     ctx.restore()
 }
@@ -1047,26 +1048,26 @@ export const drawWorldBanner = (
     const centerX = CFG.WIDTH / 2
     const bannerY = 82 + (-8 + enter * 8)
 
-    // Compact single-line text
-    const fontSize = Math.max(14, Math.min(18, CFG.WIDTH * 0.035))
+    // Compact single-line text — smaller for minimal HUD feel
+    const fontSize = Math.max(10, Math.min(13, CFG.WIDTH * 0.025))
     ctx.font = `600 ${fontSize * 0.8}px "JetBrains Mono", monospace`
     const labelW = ctx.measureText('WORLD: ').width
     ctx.font = `700 ${fontSize}px "JetBrains Mono", monospace`
     const worldName = w.name.toUpperCase()
     const textW = ctx.measureText(worldName).width
 
-    // Ultra-slim minimalist bar
-    const padX = 8
+    // Slim dark pill
+    const padX = 6
     const padY = 3
     const dotSize = 3
-    const gap = 4
+    const gap = 3
     const totalW = padX + dotSize + gap + labelW + textW + padX
     const barH = fontSize + padY * 2
     const barX = centerX - totalW / 2
     const barY = bannerY - padY
 
-    // Dark backdrop — thin and sharp
-    ctx.fillStyle = 'rgba(15,23,42,0.75)'
+    // Dark backdrop
+    ctx.fillStyle = 'rgba(15,23,42,0.80)'
     ctx.fillRect(barX, barY, totalW, barH)
 
     // Accent underline — 1px colored bar at bottom
@@ -1083,12 +1084,12 @@ export const drawWorldBanner = (
     const labelStartX = dotX + dotSize + gap
     ctx.textAlign = 'left'
     ctx.textBaseline = 'middle'
-    ctx.font = `600 ${fontSize * 0.8}px monospace`
+    ctx.font = `600 ${fontSize * 0.8}px "JetBrains Mono", monospace`
     ctx.fillStyle = 'rgba(255,255,255,0.4)'
     ctx.fillText('WORLD:', labelStartX, textY)
 
     // World name — clean white
-    ctx.font = `700 ${fontSize}px monospace`
+    ctx.font = `700 ${fontSize}px "JetBrains Mono", monospace`
     ctx.fillStyle = '#FFFFFF'
     ctx.fillText(worldName, labelStartX + labelW, textY)
 
@@ -1099,7 +1100,7 @@ export const drawWorldBanner = (
 // CHILL MARKET BANNER (canvas-rendered for frame-accurate display)
 // ============================================================================
 
-/** Draw the chill market / market freeze indicator — sits below world banner */
+/** Draw the chill market / market freeze indicator — unified dark-pill style */
 export const drawChillMarketBanner = (
     ctx: CanvasRenderingContext2D,
     e: EngineState,
@@ -1107,18 +1108,15 @@ export const drawChillMarketBanner = (
 ): void => {
     if (e.slowdownTimer <= 0) return
 
-    const alpha = Math.min(1, e.slowdownTimer / 0.3) // fade out in last 0.3s
+    const alpha = Math.min(1, e.slowdownTimer / 0.3)
     if (alpha <= 0.01) return
 
     ctx.save()
     ctx.globalAlpha = alpha
 
     const centerX = CFG.WIDTH / 2
-    // Chill Market Overlay Banner
-    // ==========================================
-    const fontSize = Math.max(13, Math.min(15, CFG.WIDTH * 0.030))
+    const fontSize = Math.max(9, Math.min(12, CFG.WIDTH * 0.022))
 
-    // Determine label text
     const label = e.whaleTimer > 0 ? 'MARKET FREEZE' : 'CHILL MARKET'
     const isFreeze = e.whaleTimer > 0
     const accentColor = isFreeze ? '#60A5FA' : '#0ECB81'
@@ -1127,25 +1125,23 @@ export const drawChillMarketBanner = (
     const textW = ctx.measureText(label).width
 
     const padX = 6
-    const padY = 2
+    const padY = 3
     const totalW = padX + textW + padX
     const barH = fontSize + padY * 2
     const barX = centerX - totalW / 2
-    // Position directly below world banner area — larger gap
-    const barY = e.worldBannerTimer > 0 ? 115 : 82
+    const barY = e.worldBannerTimer > 0 ? 108 : 82
 
-    // Light backdrop
-    ctx.fillStyle = 'rgba(255,255,255,0.92)'
+    // Dark backdrop — same as world banner
+    ctx.fillStyle = 'rgba(15,23,42,0.80)'
     ctx.fillRect(barX, barY, totalW, barH)
 
-    // Left accent bar
+    // Accent underline
     ctx.fillStyle = accentColor
-    ctx.fillRect(barX, barY, 2, barH)
+    ctx.fillRect(barX, barY + barH - 1, totalW, 1)
 
     // Text
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.font = `700 ${fontSize}px "JetBrains Mono", monospace`
     ctx.fillStyle = accentColor
     ctx.fillText(label, centerX, barY + barH / 2)
 
