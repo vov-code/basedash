@@ -21,23 +21,23 @@ export interface AudioEngine {
 }
 
 // ============================================================================
-// MELODIOUS MINIMALISM — Pentatonic Purity
+// 🎵 FULL SONG — "Midnight on the Chain"
 // ============================================================================
 //
-// Design philosophy:
-//   1. PENTATONIC ONLY — the pentatonic scale cannot produce dissonance.
-//      Every note combination sounds beautiful and consonant.
-//   2. FEWER SOUNDS — max 6 simultaneous voices, open voicings (root + 5th)
-//   3. SINE + TRIANGLE ONLY — purest, warmest timbres. No sawtooth/square.
-//   4. MELODY BREATHES — rests are as important as notes. Space = premium.
-//   5. EARWORM MOTIF — 4-note phrase per world, repeats with tiny variation.
-//   6. PSYCHOACOUSTIC WARMTH — ±3 cent detuning creates binaural shimmer.
+// A lo-fi chillhop track that relaxes the degen and pulls them into flow state.
 //
-// Performance rules (unchanged):
-//   - Max 16 oscillators on mobile, 24 on desktop
-//   - All scheduling via setTimeout, NEVER in requestAnimationFrame
-//   - Short oscillator lifetimes with mandatory osc.stop()
-//   - Single pre-allocated noise buffer
+// Structure (16-bar loop = 256 steps at 16th-note resolution):
+//   INTRO   (bars 0-3):   Pad + sub drone — ambient warmth, sets the mood
+//   VERSE   (bars 4-7):   + melody hook + walking bass — groove establishes
+//   CHORUS  (bars 8-11):  + counter-melody + kick + hat — full energy, hook peaks
+//   BRIDGE  (bars 12-15): Melody thins to echoes, bass walks alone — tension/release
+//
+// Melody: 8-note pentatonic hook per world — singable, memorable
+// Harmony: 4-chord loop with open voicings, changes every 4 bars
+// Bass: Walking pattern (not just root) — alive, jazzy feel
+// Percussion: Lo-fi kit — vinyl-warm kick, paper-thin hat
+//
+// All pentatonic. All sine+triangle. Max 8 simultaneous oscs.
 // ============================================================================
 
 const midi = (n: number) => 440 * Math.pow(2, (n - 69) / 12)
@@ -46,49 +46,102 @@ const IS_MOBILE =
     typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0 &&
     (typeof window !== 'undefined' ? window.innerWidth < 1100 : true)
 
-const MAX_OSCILLATORS = IS_MOBILE ? 16 : 24
+const MAX_OSCILLATORS = IS_MOBILE ? 18 : 26
 
-// Pentatonic intervals: [0, 2, 4, 7, 9] (major pentatonic)
-// Every combination of these notes is consonant — impossible to create dissonance.
-//
-// Per-world: unique root + unique 4-note motif using pentatonic intervals only
-const WORLD_KEYS = [
-    { root: 62, motif: [0, 4, 7, 12] },    // W0: D — hopeful rise (1→3→5→8)
-    { root: 64, motif: [0, 7, 12, 9] },     // W1: E — leap & settle (1→5→8→6)
-    { root: 66, motif: [0, 2, 7, 4] },      // W2: F# — gentle climb (1→2→5→3)
-    { root: 69, motif: [0, 7, 4, 12] },     // W3: A — wide sweep (1→5→3→8)
-    { root: 71, motif: [0, 4, 9, 7] },      // W4: B — flowing arc (1→3→6→5)
-    { root: 61, motif: [0, 2, 4, 7] },      // W5: C# — stepwise rise (1→2→3→5)
-    { root: 63, motif: [0, 9, 7, 12] },     // W6: Eb — reaching (1→6→5→8)
-    { root: 65, motif: [0, 7, 9, 4] },      // W7: F — call-response (1→5→6→3)
-    { root: 68, motif: [0, 4, 12, 7] },     // W8: Ab — leap-return (1→3→8→5)
-    { root: 74, motif: [0, 7, 12, 16] },    // W9: D8va — soaring (1→5→8→10)
+// ============================================================================
+// SONG DATA — Per-world musical identity
+// ============================================================================
+
+// Pentatonic intervals: [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24]
+// These intervals CANNOT produce dissonance in any combination.
+
+// Each world has a unique 8-note melodic hook + chord tones
+// The hook is the "chorus melody" — the earworm that gets stuck in your head
+const WORLD_SONGS = [
+    { // W0: "Paper Hands" — Hopeful, ascending, like dawn breaking
+        root: 62,
+        hook:    [0, 4, 7, 12, 9, 7, 4, 7],       // D pentatonic: up-up-up-peak-settle-back-dip-home
+        counter: [12, 9, 12, 14, 12, 9, 7, 9],     // High mirror: answers the hook
+        chords:  [[0, 7], [4, 12], [7, 14], [2, 9]], // Open 5ths walking up
+    },
+    { // W1: "Buying the Dip" — Confident bounce
+        root: 64,
+        hook:    [0, 7, 4, 0, 2, 9, 7, 4],
+        counter: [12, 14, 12, 9, 12, 16, 14, 12],
+        chords:  [[0, 7], [2, 9], [4, 12], [7, 14]],
+    },
+    { // W2: "Diamond Hands" — Determined, driving
+        root: 66,
+        hook:    [0, 2, 4, 7, 4, 2, 0, 4],
+        counter: [9, 12, 14, 12, 9, 7, 9, 12],
+        chords:  [[0, 7], [4, 12], [2, 9], [7, 14]],
+    },
+    { // W3: "Whale Spotted" — Wide, epic, majestic
+        root: 69,
+        hook:    [0, 7, 12, 9, 7, 12, 14, 12],
+        counter: [14, 12, 9, 12, 14, 16, 14, 12],
+        chords:  [[0, 7], [7, 14], [4, 12], [9, 16]],
+    },
+    { // W4: "To the Moon" — Euphoric, soaring
+        root: 71,
+        hook:    [0, 4, 9, 12, 14, 12, 9, 7],
+        counter: [12, 16, 19, 16, 14, 12, 14, 16],
+        chords:  [[0, 7], [4, 12], [9, 16], [7, 14]],
+    },
+    { // W5: "Full Degen" — Mysterious, compelling
+        root: 61,
+        hook:    [0, 2, 7, 4, 9, 7, 2, 4],
+        counter: [12, 14, 16, 14, 12, 9, 12, 14],
+        chords:  [[0, 7], [2, 9], [7, 14], [4, 12]],
+    },
+    { // W6: "Margin Call" — Tense but beautiful
+        root: 63,
+        hook:    [0, 9, 7, 4, 7, 9, 12, 9],
+        counter: [14, 12, 9, 12, 14, 16, 14, 12],
+        chords:  [[0, 7], [9, 16], [4, 12], [7, 14]],
+    },
+    { // W7: "Liquidation" — Bittersweet, reflective
+        root: 65,
+        hook:    [0, 7, 9, 7, 4, 2, 4, 7],
+        counter: [12, 14, 16, 14, 12, 9, 12, 14],
+        chords:  [[0, 7], [7, 14], [2, 9], [4, 12]],
+    },
+    { // W8: "GG No Re" — Defiant, energetic
+        root: 68,
+        hook:    [0, 4, 12, 9, 4, 7, 9, 12],
+        counter: [12, 16, 19, 16, 14, 12, 14, 16],
+        chords:  [[0, 7], [4, 12], [7, 14], [9, 16]],
+    },
+    { // W9: "Valhalla" — Transcendent, peaceful
+        root: 74,
+        hook:    [0, 7, 12, 14, 12, 9, 7, 12],
+        counter: [14, 19, 21, 19, 16, 14, 16, 19],
+        chords:  [[0, 7], [7, 14], [9, 16], [12, 19]],
+    },
 ]
 
-// Open voicings: root + perfect 5th only (2 notes, never 4)
-// These change per 2-bar section, cycling through pentatonic tones
-const PAD_VOICINGS = [
-    [0, 7],      // Root + P5
-    [4, 12],     // M3 + Octave
-    [7, 14],     // P5 + 9th
-    [2, 9],      // M2 + M6
+// Melody rhythm: which 16th-note steps get a melody note
+// 8 notes spread across 2 bars (32 steps) — syncopated, breathing
+//   "♩ . . ♩ . ♩ . . ♩ . . ♩ . ♩ . ♩"
+const MELODY_RHYTHM = [0, 3, 5, 8, 11, 13, 16, 21]
+
+// Counter-melody rhythm: offset from main hook — call and response
+const COUNTER_RHYTHM = [2, 6, 10, 14, 18, 22, 26, 30]
+
+// Walking bass: 4 notes per bar, walking through chord tones
+// Each value is an index into pentatonic scale degrees
+const BASS_WALK = [
+    [0, -5, -3, -5],    // Bar type A: root, down, step up, back
+    [-3, -5, 0, -7],    // Bar type B: 3rd down, 5th down, root, octave down
 ]
 
-// Arp pattern — sparse, breathing, with rests (-1 = silence)
-// Much simpler than before: only 6 active notes out of 16 steps
-const ARP_PATTERN = [
-    0, -1, -1, 1,  -1, -1, 2, -1,  -1, 0, -1, -1,  1, -1, 2, -1
+// Kick pattern: boom-bap feel (beat 1, ghost on &3)
+const KICK_STEPS = [0, 10]
+
+// Hat pattern: offbeats with ghost notes — lo-fi shuffle
+const HAT_PATTERN = [
+    0, 0, 0.3, 0,  0.7, 0, 0.3, 0,  0, 0, 0.3, 0,  0.7, 0, 0.4, 0
 ]
-
-// Bass: root note only, half-note pulse (minimal)
-const BASS_HITS = [0, 8]  // Beat 1 and beat 3
-
-// Kick: only on downbeats
-const KICK_HITS = [0, 8]
-
-// Hi-hat: gentle offbeats only (4 hits per bar, not 8 or 16)
-const HAT_HITS = [4, 12]
-const HAT_VEL = 0.4
 
 export function useAudioEngine(soundEnabled: boolean): AudioEngine {
     const audioCtxRef = useRef<AudioContext | null>(null)
@@ -105,7 +158,7 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
     }, [])
 
     // =========================================================================
-    // AUDIO INIT — Lazy, one-time setup
+    // AUDIO INIT
     // =========================================================================
     const initAudio = useCallback(() => {
         if (!audioCtxRef.current) {
@@ -113,20 +166,19 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             const ctx = new AC()
             audioCtxRef.current = ctx
 
-            // Gentle master compression — musical, not squashed
             const comp = ctx.createDynamicsCompressor()
-            comp.threshold.value = -18
-            comp.knee.value = 12
-            comp.ratio.value = 3
-            comp.attack.value = 0.01
-            comp.release.value = 0.25
+            comp.threshold.value = -16
+            comp.knee.value = 10
+            comp.ratio.value = 3.5
+            comp.attack.value = 0.008
+            comp.release.value = 0.2
             comp.connect(ctx.destination)
 
             masterGainRef.current = ctx.createGain()
-            masterGainRef.current.gain.value = IS_MOBILE ? 0.22 : 0.28
+            masterGainRef.current.gain.value = IS_MOBILE ? 0.24 : 0.30
             masterGainRef.current.connect(comp)
 
-            // Pre-allocate noise buffer (2s) — reused for all percussion
+            // Pre-allocated noise buffer
             const len = ctx.sampleRate * 2
             const buf = ctx.createBuffer(1, len, ctx.sampleRate)
             const d = buf.getChannelData(0)
@@ -137,8 +189,7 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
     }, [])
 
     // =========================================================================
-    // VOICE — Single oscillator with envelope and optional filter
-    // Tracks active count, skips if at cap
+    // VOICE — Single oscillator with envelope
     // =========================================================================
     const voice = useCallback((
         freq: number, type: OscillatorType, t: number, dur: number,
@@ -147,7 +198,6 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
     ) => {
         const ctx = audioCtxRef.current
         if (!ctx) return
-
         if (activeOscCountRef.current >= MAX_OSCILLATORS) return
         activeOscCountRef.current++
 
@@ -177,21 +227,16 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         g.connect(dest)
         osc.start(t)
         osc.stop(t + r + 0.1)
-
         osc.onended = () => { activeOscCountRef.current = Math.max(0, activeOscCountRef.current - 1) }
     }, [])
 
-    // =========================================================================
-    // HELPER — Get current world
-    // =========================================================================
     const getRoot = useCallback(() => {
-        const idx = Math.min(bgmThemeRef.current || 0, WORLD_KEYS.length - 1)
-        return WORLD_KEYS[idx].root
+        const idx = Math.min(bgmThemeRef.current || 0, WORLD_SONGS.length - 1)
+        return WORLD_SONGS[idx].root
     }, [])
 
     // =========================================================================
-    // SFX — Crystalline, minimal, key-aware
-    // All SFX: max 2 oscillators. Pure sine. Pentatonic intervals only.
+    // SFX — Musical, key-aware, minimal oscillators
     // =========================================================================
 
     const playTone = useCallback((freq: number, type: OscillatorType = 'sine', vol = 0.1, dur = 0.1, slideFreq?: number) => {
@@ -215,75 +260,61 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         osc.onended = () => { activeOscCountRef.current = Math.max(0, activeOscCountRef.current - 1) }
     }, [soundEnabled, initAudio])
 
-    // Jump: single rising perfect 5th (root → P5) — pure, instant
     const sfxJump = useCallback(() => {
         if (!soundEnabled) return
         initAudio()
         const ctx = audioCtxRef.current, m = masterGainRef.current
         if (!ctx || !m) return
-        const t = ctx.currentTime
-        const r = getRoot()
+        const t = ctx.currentTime, r = getRoot()
         voice(midi(r + 12), 'sine', t, 0.09, 0.04, m, { atk: 0.003 })
         voice(midi(r + 19), 'sine', t + 0.015, 0.08, 0.025, m, { atk: 0.003 })
     }, [soundEnabled, initAudio, voice, getRoot])
 
-    // Double jump: octave + 5th — brighter, airier
     const sfxDoubleJump = useCallback(() => {
         if (!soundEnabled) return
         initAudio()
         const ctx = audioCtxRef.current, m = masterGainRef.current
         if (!ctx || !m) return
-        const t = ctx.currentTime
-        const r = getRoot()
+        const t = ctx.currentTime, r = getRoot()
         voice(midi(r + 19), 'sine', t, 0.07, 0.03, m, { atk: 0.003 })
         voice(midi(r + 24), 'triangle', t + 0.04, 0.08, 0.02, m, { atk: 0.003 })
     }, [soundEnabled, initAudio, voice, getRoot])
 
-    // Near-miss: low octave pulse — "felt", not heard
     const sfxDash = useCallback(() => {
         if (!soundEnabled) return
         initAudio()
         const ctx = audioCtxRef.current, m = masterGainRef.current
         if (!ctx || !m) return
-        const r = getRoot()
-        voice(midi(r - 12), 'sine', ctx.currentTime, 0.12, 0.03, m, { filt: 500, atk: 0.008 })
+        voice(midi(getRoot() - 12), 'sine', ctx.currentTime, 0.12, 0.03, m, { filt: 500, atk: 0.008 })
     }, [soundEnabled, initAudio, voice, getRoot])
 
-    // Collect: rising 5th (2 notes only) — clean, satisfying
     const sfxCollect = useCallback(() => {
         if (!soundEnabled) return
         initAudio()
         const ctx = audioCtxRef.current, m = masterGainRef.current
         if (!ctx || !m) return
-        const t = ctx.currentTime
-        const r = getRoot()
+        const t = ctx.currentTime, r = getRoot()
         voice(midi(r + 12), 'sine', t, 0.12, 0.04, m, { atk: 0.003 })
         voice(midi(r + 19), 'sine', t + 0.05, 0.1, 0.03, m, { atk: 0.003 })
     }, [soundEnabled, initAudio, voice, getRoot])
 
-    // Power-up: 3-note pentatonic rise (root → 5th → octave)
     const sfxPowerup = useCallback(() => {
         if (!soundEnabled) return
         initAudio()
         const ctx = audioCtxRef.current, m = masterGainRef.current
         if (!ctx || !m) return
-        const t = ctx.currentTime
-        const r = getRoot()
+        const t = ctx.currentTime, r = getRoot()
         voice(midi(r + 12), 'sine', t, 0.15, 0.035, m, { atk: 0.003 })
         voice(midi(r + 19), 'sine', t + 0.06, 0.13, 0.03, m, { atk: 0.003 })
         voice(midi(r + 24), 'triangle', t + 0.12, 0.14, 0.025, m, { atk: 0.003 })
     }, [soundEnabled, initAudio, voice, getRoot])
 
-    // Death: root to tritone drop — visceral "wrong" without harshness
     const sfxHit = useCallback(() => {
         if (!soundEnabled) return
         initAudio()
         const ctx = audioCtxRef.current, m = masterGainRef.current
         if (!ctx || !m) return
-        const t = ctx.currentTime
-        const r = getRoot()
-
-        // Sub thud — sine sweep down, felt in chest
+        const t = ctx.currentTime, r = getRoot()
         if (activeOscCountRef.current < MAX_OSCILLATORS) {
             activeOscCountRef.current++
             const o = ctx.createOscillator(), g = ctx.createGain()
@@ -292,19 +323,13 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             o.frequency.exponentialRampToValueAtTime(30, t + 0.2)
             g.gain.setValueAtTime(0.07, t)
             g.gain.exponentialRampToValueAtTime(0.001, t + 0.3)
-            o.connect(g)
-            g.connect(m)
-            o.start(t)
-            o.stop(t + 0.35)
+            o.connect(g); g.connect(m); o.start(t); o.stop(t + 0.35)
             o.onended = () => { activeOscCountRef.current = Math.max(0, activeOscCountRef.current - 1) }
         }
-
-        // Descending tritone — the most psychoacoustically "wrong" interval
         voice(midi(r + 6), 'triangle', t + 0.04, 0.2, 0.025, m, { filt: 400 })
         voice(midi(r - 6), 'sine', t + 0.12, 0.25, 0.02, m, { filt: 300 })
     }, [soundEnabled, initAudio, voice, getRoot])
 
-    // Select: clean single ping
     const sfxSelect = useCallback(() => {
         if (!soundEnabled) return
         initAudio()
@@ -313,60 +338,41 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         voice(midi(79), 'sine', ctx.currentTime, 0.06, 0.03, m, { atk: 0.002 })
     }, [soundEnabled, initAudio, voice])
 
-    // Combo: pitch rises with combo, single note + octave
     const sfxCombo = useCallback((combo: number) => {
         if (!soundEnabled) return
         initAudio()
         const ctx = audioCtxRef.current, m = masterGainRef.current
         if (!ctx || !m) return
-        const t = ctx.currentTime
         const r = getRoot()
-        // Pentatonic scale degrees: each combo steps up the scale
-        const pentatonic = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24]
-        const n = r + pentatonic[Math.min(combo, pentatonic.length - 1)]
-        voice(midi(n), 'sine', t, 0.1, 0.035, m, { atk: 0.003 })
+        const penta = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24]
+        const n = r + penta[Math.min(combo, penta.length - 1)]
+        voice(midi(n), 'sine', ctx.currentTime, 0.1, 0.035, m, { atk: 0.003 })
     }, [soundEnabled, initAudio, voice, getRoot])
 
-    // Milestone: 3-note pentatonic arp
     const sfxMilestone = useCallback(() => {
         if (!soundEnabled) return
         initAudio()
         const ctx = audioCtxRef.current, m = masterGainRef.current
         if (!ctx || !m) return
-        const t = ctx.currentTime
-        const r = getRoot()
+        const t = ctx.currentTime, r = getRoot()
         voice(midi(r + 12), 'sine', t, 0.18, 0.03, m, { atk: 0.005 })
         voice(midi(r + 16), 'sine', t + 0.08, 0.16, 0.025, m, { atk: 0.005 })
         voice(midi(r + 19), 'triangle', t + 0.16, 0.2, 0.03, m, { atk: 0.005 })
     }, [soundEnabled, initAudio, voice, getRoot])
 
-    // New record: 4-note ascending pentatonic with last note held
     const sfxLevelUp = useCallback(() => {
         if (!soundEnabled) return
         initAudio()
         const ctx = audioCtxRef.current, m = masterGainRef.current
         if (!ctx || !m) return
-        const t = ctx.currentTime
-        const r = getRoot()
+        const t = ctx.currentTime, r = getRoot()
         const steps = [0, 4, 7, 12]
         steps.forEach((s, i) =>
             voice(midi(r + 12 + s), 'sine', t + i * 0.07, i === 3 ? 0.3 : 0.12, 0.03, m, { atk: 0.003 }))
     }, [soundEnabled, initAudio, voice, getRoot])
 
     // =========================================================================
-    // BACKGROUND MUSIC — Melodious Minimalism
-    // =========================================================================
-    //
-    // 128 BPM, 8-bar phrases, 4 sections (A/B/C/D)
-    // ONLY 5 layers (down from 10):
-    //   1. Sub Drone — always, root sine, LP 80Hz
-    //   2. Pad — root + P5, sine with ±3 cent binaural detune (2-3 oscs)
-    //   3. Melody — world's 4-note pentatonic motif, pure sine (1 osc)
-    //   4. Bass — root, sine, LP 200Hz, half-note pulse (1 osc)
-    //   5. Soft Kick + Hat — minimal percussion (1 osc + 1 noise)
-    //
-    // Total budget: 5-7 simultaneous oscs (vs previous 12-20)
-    // Result: every sound has SPACE to breathe. Consonance guaranteed.
+    // 🎵 BACKGROUND MUSIC — Full Song Engine
     // =========================================================================
 
     const startBackgroundMusic = useCallback(() => {
@@ -385,28 +391,27 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
         let nextTime = ctx.currentTime + 0.15
 
         // ===================================================================
-        // ROUTING — Ultra-simple: bgmGain → master
-        // Plus a single gentle delay for the melody
+        // ROUTING
         // ===================================================================
         const bgmGain = ctx.createGain()
         bgmGain.gain.value = 0
         bgmGain.connect(master)
 
-        // Sidechain bus — gentle duck under kick
+        // Sidechain bus
         const scGain = ctx.createGain()
         scGain.gain.value = 1
         scGain.connect(bgmGain)
 
-        // Melody bus with dotted-8th delay (single echo = dreamy)
+        // Melody bus — warm tape-style delay
         const melBus = ctx.createGain()
-        melBus.gain.value = 0.7
+        melBus.gain.value = 0.65
         const melDelay = ctx.createDelay(2)
         const melDelFb = ctx.createGain()
         const melDelFilt = ctx.createBiquadFilter()
-        melDelay.delayTime.value = BEAT * 0.75  // Dotted eighth — creates flowing echo
-        melDelFb.gain.value = 0.2              // Subtle single repeat
+        melDelay.delayTime.value = BEAT * 0.75  // Dotted eighth — dreamy rhythmic echo
+        melDelFb.gain.value = 0.22
         melDelFilt.type = 'lowpass'
-        melDelFilt.frequency.value = 1800       // Warm echo, no harshness
+        melDelFilt.frequency.value = 1600       // Warm, like tape saturation
         melBus.connect(scGain)
         melBus.connect(melDelay)
         melDelay.connect(melDelFilt)
@@ -416,184 +421,222 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
 
         // Drum bus
         const drumBus = ctx.createGain()
-        drumBus.gain.value = 0.6
+        drumBus.gain.value = 0.55
         drumBus.connect(bgmGain)
 
         // ===================================================================
-        // DRUMS — Feather-light. Felt, not heard.
+        // DRUMS — Lo-fi warmth
         // ===================================================================
 
-        const softKick = (t: number) => {
+        // Boom-bap kick: warm sine sweep with gentle click
+        const lofiKick = (t: number) => {
             if (activeOscCountRef.current >= MAX_OSCILLATORS) return
             activeOscCountRef.current++
             const o = ctx.createOscillator(), g = ctx.createGain()
             o.type = 'sine'
-            o.frequency.setValueAtTime(90, t)
-            o.frequency.exponentialRampToValueAtTime(38, t + 0.07)
+            o.frequency.setValueAtTime(95, t)
+            o.frequency.exponentialRampToValueAtTime(42, t + 0.06)
             g.gain.setValueAtTime(0, t)
-            g.gain.linearRampToValueAtTime(0.06, t + 0.003)
-            g.gain.exponentialRampToValueAtTime(0.001, t + 0.18)
+            g.gain.linearRampToValueAtTime(0.07, t + 0.003)
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.2)
             o.connect(g)
             g.connect(drumBus)
             o.start(t)
-            o.stop(t + 0.22)
+            o.stop(t + 0.25)
             o.onended = () => { activeOscCountRef.current = Math.max(0, activeOscCountRef.current - 1) }
 
-            // Gentle sidechain duck
+            // Gentle sidechain pump — the music breathes with the beat
             scGain.gain.cancelScheduledValues(t)
-            scGain.gain.setValueAtTime(0.7, t)
-            scGain.gain.linearRampToValueAtTime(0.85, t + 0.04)
-            scGain.gain.linearRampToValueAtTime(1, t + 0.1)
+            scGain.gain.setValueAtTime(0.65, t)
+            scGain.gain.linearRampToValueAtTime(0.82, t + 0.04)
+            scGain.gain.linearRampToValueAtTime(1, t + 0.12)
         }
 
-        const softHat = (t: number) => {
-            if (!noiseBufferRef.current) return
+        // Paper-thin hi-hat: filtered noise, 10ms
+        const lofiHat = (t: number, vel: number) => {
+            if (!noiseBufferRef.current || vel <= 0) return
             const n = ctx.createBufferSource()
             n.buffer = noiseBufferRef.current
             const f = ctx.createBiquadFilter(), g = ctx.createGain()
             f.type = 'highpass'
-            f.frequency.value = 9500
+            f.frequency.value = 9000
             g.gain.setValueAtTime(0, t)
-            g.gain.linearRampToValueAtTime(0.035, t + 0.001)
-            g.gain.exponentialRampToValueAtTime(0.001, t + 0.012)
+            g.gain.linearRampToValueAtTime(0.03 * vel, t + 0.001)
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.015)
             n.connect(f)
             f.connect(g)
             g.connect(drumBus)
             n.start(t)
-            n.stop(t + 0.02)
+            n.stop(t + 0.025)
         }
 
         // ===================================================================
-        // MAIN SCHEDULER
+        // MAIN SCHEDULER — 256-step loop (16 bars)
         // ===================================================================
         const schedule = (s: number, t: number) => {
-            const world = Math.min(bgmThemeRef.current || 0, WORLD_KEYS.length - 1)
-            const wk = WORLD_KEYS[world]
-            const root = wk.root
+            const world = Math.min(bgmThemeRef.current || 0, WORLD_SONGS.length - 1)
+            const song = WORLD_SONGS[world]
+            const root = song.root
             const intensity = Math.min(world, 5)
 
-            // Phrase: 128 steps = 8 bars
-            const phraseStep = s % 128
+            // 256-step phrase = 16 bars
+            const phraseStep = s % 256
             const bar = Math.floor(phraseStep / 16)
             const s16 = phraseStep % 16
 
-            // Section: A(0-1) B(2-3) C(4-5) D(6-7)
-            const section = bar < 2 ? 0 : bar < 4 ? 1 : bar < 6 ? 2 : 3
+            // Song sections:
+            //   INTRO   bars 0-3:   Pad + Drone — set the mood
+            //   VERSE   bars 4-7:   + Melody + Walking bass — groove builds
+            //   CHORUS  bars 8-11:  + Counter-melody + Drums — full energy
+            //   BRIDGE  bars 12-15: Melody echoes out, bass walks alone — breath
+            const section = bar < 4 ? 0 : bar < 8 ? 1 : bar < 12 ? 2 : 3
 
-            // Pad voicing index (changes every 2 bars)
-            const padIdx = Math.floor(bar / 2) % PAD_VOICINGS.length
-            const padNotes = PAD_VOICINGS[padIdx]
+            // Chord changes every 4 bars — one chord per section
+            const chordIdx = section
+            const chord = song.chords[chordIdx]
 
             // =============================================================
-            // LAYER 1: Sub Drone — always present, root note 2 octaves down
-            // Single sine, LP 80Hz — you feel it, don't hear it
+            // 🌊 SUB DRONE — always, root -2 octaves
+            // The heartbeat of the track — you feel it in your chest
             // =============================================================
             if (phraseStep === 0) {
-                const droneDur = S16 * 126
-                voice(midi(root - 24), 'sine', t, droneDur, 0.022 + intensity * 0.002, scGain, {
-                    atk: 2, rel: droneDur * 0.9, filt: 80
+                const dur = S16 * 254
+                voice(midi(root - 24), 'sine', t, dur, 0.02 + intensity * 0.002, scGain, {
+                    atk: 2.5, rel: dur * 0.9, filt: 80
                 })
             }
 
             // =============================================================
-            // LAYER 2: Pad — open voicing (root + P5), sine only
-            // ±3 cent detuning creates binaural beating = perceived warmth
-            // Only 2-3 oscillators (down from 12!)
+            // 🎹 PAD — Open 5th voicing with binaural shimmer
+            // Warm bed that everything else sits on top of
+            // Changes with chord progression — gives movement to the track
             // =============================================================
             if (s16 === 0) {
                 const padDur = S16 * 15.5
-                const padVol = 0.03 + intensity * 0.002
+                const padVol = section === 2 ? 0.032 : 0.025
+                const vol = padVol + intensity * 0.002
 
-                padNotes.forEach((offset: number) => {
-                    const n = root + offset
-                    // Main voice — pure sine
-                    voice(midi(n), 'sine', t, padDur, padVol, scGain, {
-                        atk: 0.5, rel: padDur * 0.9, filt: 900 + intensity * 100
+                chord.forEach((offset: number) => {
+                    // Main sine — warm, centered
+                    voice(midi(root + offset), 'sine', t, padDur, vol, scGain, {
+                        atk: 0.6, rel: padDur * 0.9, filt: 850 + intensity * 80
                     })
-                    // Binaural shimmer — same note, +3 cents detune
-                    // Creates ~1Hz beating perceived as warmth/depth
+                    // Binaural pair — +3 cents, creates ~1Hz beating
+                    // Your brain interprets this as "expensive" depth
                     if (intensity >= 1) {
-                        voice(midi(n), 'sine', t, padDur, padVol * 0.5, scGain, {
-                            atk: 0.6, rel: padDur * 0.85, filt: 800, det: 3
+                        voice(midi(root + offset), 'sine', t, padDur, vol * 0.45, scGain, {
+                            atk: 0.7, rel: padDur * 0.85, filt: 750, det: 3
                         })
                     }
                 })
             }
 
             // =============================================================
-            // LAYER 3: Melody — the 4-note pentatonic motif
-            // SINGLE sine voice. The melody delay adds the second "voice".
-            // Plays in Section A sparse, Section B-C full, Section D silent.
+            // 🎵 MELODY — The Hook (8-note pentatonic phrase)
             //
-            // Bar structure:
-            //   First bar of pair: play motif notes 0,1,2,3
-            //   Second bar: repeat notes 0,1,2 then vary note 3 (+2 semitones)
-            //   → Repetition + tiny variation = earworm
+            // Plays during VERSE and CHORUS (sections 1-2)
+            // 8 notes across 2 bars, syncopated rhythm with rests
+            // Through the delay → creates dreamy doubled echoes
+            //
+            // In BRIDGE (section 3): only every other note plays
+            // → melody "dissolves" into delay echoes = hauntingly beautiful
             // =============================================================
-            if (section <= 2 && intensity >= 1) {
-                const arpVal = ARP_PATTERN[s16]
+            if (section >= 1 && intensity >= 1) {
+                // Which 2-bar pair within the section?
+                const twoBarStep = (phraseStep - (section * 64)) % 32
+                const melIdx = MELODY_RHYTHM.indexOf(twoBarStep)
 
-                if (arpVal >= 0) {
-                    const motif = wk.motif
-                    const motifNote = motif[arpVal % motif.length]
-                    // Second bar of each pair: vary the last note up
-                    const variation = (bar % 2 === 1 && arpVal === motif.length - 1) ? 2 : 0
-                    const noteOffset = motifNote + variation
+                if (melIdx >= 0) {
+                    // Bridge: thin out — play only notes 0, 2, 4, 6
+                    if (section === 3 && melIdx % 2 !== 0) {
+                        // Skip — let the delay echoes fill the space
+                    } else {
+                        const noteInterval = song.hook[melIdx]
+                        const melNote = root + 12 + noteInterval
+                        const melDur = S16 * 2.5
+                        const melVol = section === 2 ? 0.035 : 0.025
 
-                    const melNote = root + 12 + noteOffset
-                    const melDur = S16 * 2
-                    const melVol = section >= 2 ? 0.032 : 0.022
+                        // Pure sine — the delay adds all the texture
+                        voice(midi(melNote), 'sine', t, melDur, melVol, melBus, {
+                            atk: 0.006, filt: 2200 + intensity * 200, rel: melDur * 0.7
+                        })
+                    }
+                }
+            }
 
-                    // Pure sine — the delay adds all the "texture" needed
-                    voice(midi(melNote), 'sine', t, melDur, melVol, melBus, {
-                        atk: 0.005, filt: 2500 + intensity * 200, rel: melDur * 0.7
+            // =============================================================
+            // ✨ COUNTER-MELODY — Chorus only (section 2)
+            // Answers the main hook — creates call-and-response
+            // Higher register, triangle wave — airy, sparkly
+            // =============================================================
+            if (section === 2 && intensity >= 3) {
+                const twoBarStep = (phraseStep - 128) % 32
+                const ctrIdx = COUNTER_RHYTHM.indexOf(twoBarStep)
+
+                if (ctrIdx >= 0) {
+                    const noteInterval = song.counter[ctrIdx]
+                    const ctrNote = root + noteInterval
+                    const ctrDur = S16 * 2
+                    const ctrVol = 0.018 + intensity * 0.002
+
+                    // Triangle — slightly brighter, sits above the sine melody
+                    voice(midi(ctrNote), 'triangle', t, ctrDur, ctrVol, melBus, {
+                        atk: 0.008, filt: 1800 + intensity * 150, rel: ctrDur * 0.6
                     })
                 }
             }
 
             // =============================================================
-            // LAYER 4: Bass — Section B+ only
-            // Root note, 1 octave down, sine, LP 200Hz
-            // Half-note pulse: only on beats 1 and 3
+            // 🎸 WALKING BASS — Verse, Chorus, Bridge
+            // Not just root notes — walks through pentatonic tones
+            // Quarter-note pulse that keeps the groove alive
+            // Lo-fi warmth: sine with LP 200Hz
             // =============================================================
             if (section >= 1 && intensity >= 2) {
-                if (BASS_HITS.includes(s16)) {
-                    const bassNote = root + padNotes[0] - 12
-                    const bassDur = S16 * 3
-                    voice(midi(bassNote), 'sine', t, bassDur, 0.08 + intensity * 0.008, scGain, {
-                        atk: 0.008, filt: 200, rel: bassDur * 0.8
+                // Bass hits on quarter notes: steps 0, 4, 8, 12
+                if (s16 % 4 === 0) {
+                    const beatInBar = s16 / 4   // 0, 1, 2, 3
+                    const walkType = bar % 2     // Alternate walk patterns
+                    const walkOffset = BASS_WALK[walkType][beatInBar]
+                    const bassNote = root - 12 + chord[0] + walkOffset
+                    const bassDur = S16 * 3.5
+
+                    voice(midi(bassNote), 'sine', t, bassDur, 0.07 + intensity * 0.006, scGain, {
+                        atk: 0.008, filt: 200, rel: bassDur * 0.75
                     })
                 }
             }
 
             // =============================================================
-            // LAYER 5: Percussion — Section C only
-            // Soft kick: beats 1 & 3 (sine sweep, no click)
-            // Soft hat: offbeats 2 & 4 (filtered noise, 12ms)
+            // 🥁 DRUMS — Chorus only (section 2)
+            // Boom-bap kit: warm kick + paper hat
+            // Lo-fi feel: not aggressive, just groove
             // =============================================================
-            if (section >= 2 && intensity >= 3) {
-                if (KICK_HITS.includes(s16)) {
-                    softKick(t)
+            if (section === 2 && intensity >= 3) {
+                // Kick: boom-bap pattern
+                if (KICK_STEPS.includes(s16)) {
+                    lofiKick(t)
                 }
-                if (HAT_HITS.includes(s16)) {
-                    softHat(t)
+                // Hat: velocity pattern with ghost notes
+                const hatVel = HAT_PATTERN[s16]
+                if (hatVel > 0) {
+                    lofiHat(t, hatVel * (0.6 + intensity * 0.04))
                 }
             }
 
             // =============================================================
-            // TRANSITIONS — Section D
-            // No noise riser. Instead: melody goes silent (natural rest)
-            // Sub boom on phrase downbeat for continuity
+            // 🌅 TRANSITIONS
+            // Phrase downbeat sub boom — marks the loop restart
             // =============================================================
             if (intensity >= 3 && phraseStep === 0 && s > 0) {
-                voice(midi(root - 12), 'sine', t, 0.5, 0.04, scGain, {
-                    atk: 0.005, filt: 150
+                voice(midi(root - 12), 'sine', t, 0.6, 0.04, scGain, {
+                    atk: 0.005, filt: 140
                 })
             }
         }
 
         // =================================================================
-        // SCHEDULER LOOP — decoupled from rAF
+        // SCHEDULER LOOP
         // =================================================================
         let timer: ReturnType<typeof setTimeout>
         const LOOK = 50
@@ -613,13 +656,13 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
             timer = setTimeout(loop, LOOK)
         }
 
-        // Gentle 3-second fade in
+        // 4-second fade in — like sunrise
         bgmGain.gain.setValueAtTime(0, ctx.currentTime)
-        bgmGain.gain.linearRampToValueAtTime(1, ctx.currentTime + 3)
+        bgmGain.gain.linearRampToValueAtTime(1, ctx.currentTime + 4)
 
         timer = setTimeout(loop, LOOK)
 
-        // Handle tab visibility
+        // Tab visibility handling
         const handleVisibility = () => {
             if (document.hidden) {
                 alive = false
@@ -634,7 +677,7 @@ export function useAudioEngine(soundEnabled: boolean): AudioEngine {
                 nextTime = ctx.currentTime + 0.15
                 bgmGain.gain.cancelScheduledValues(ctx.currentTime)
                 bgmGain.gain.setValueAtTime(0, ctx.currentTime)
-                bgmGain.gain.linearRampToValueAtTime(1, ctx.currentTime + 1)
+                bgmGain.gain.linearRampToValueAtTime(1, ctx.currentTime + 1.5)
                 timer = setTimeout(loop, LOOK)
             }
         }
