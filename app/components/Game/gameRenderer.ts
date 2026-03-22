@@ -211,28 +211,20 @@ export const drawGround = (
     w: WorldTheme,
     renderH: number
 ): void => {
-    const groundH = renderH - CFG.GROUND
-
-    // Ground gradient
     // Extend heavily down to prevent any cuts when camera shifts for tall screens
     const safeRenderH = renderH + 1200
-    const gGrad = ctx.createLinearGradient(0, CFG.GROUND, 0, safeRenderH)
-    gGrad.addColorStop(0, w.groundTop)
-    gGrad.addColorStop(0.4, w.groundTop)
-    gGrad.addColorStop(1, '#FFFFFF')
-    ctx.fillStyle = gGrad
+    // Use cached gradient — only re-created on world transitions
+    ctx.fillStyle = getGroundGradient(ctx, w, e.worldIndex, safeRenderH)
     ctx.fillRect(0, CFG.GROUND, CFG.WIDTH, safeRenderH - CFG.GROUND)
 
-    // === GROUND ACCENT LINE — smooth 3-layer glow ===
+    // === GROUND ACCENT LINE — flat fills (no per-frame gradient allocation) ===
     ctx.save()
-    // Wide outer glow
-    const glowGrad = ctx.createLinearGradient(0, CFG.GROUND - 6, 0, CFG.GROUND + 4)
-    glowGrad.addColorStop(0, 'rgba(0,0,0,0)')
-    glowGrad.addColorStop(0.4, w.accent + '15')
-    glowGrad.addColorStop(0.6, w.accent + '20')
-    glowGrad.addColorStop(1, 'rgba(0,0,0,0)')
-    ctx.fillStyle = glowGrad
-    ctx.fillRect(0, CFG.GROUND - 6, CFG.WIDTH, 10)
+    // Wide outer glow — two flat rects approximating the gradient
+    ctx.globalAlpha = 0.08
+    ctx.fillStyle = w.accent
+    ctx.fillRect(0, CFG.GROUND - 4, CFG.WIDTH, 8)
+    ctx.globalAlpha = 0.12
+    ctx.fillRect(0, CFG.GROUND - 2, CFG.WIDTH, 4)
     // Mid accent
     ctx.globalAlpha = 0.35 + Math.sin(e.gameTime * 2) * 0.05
     ctx.fillStyle = w.accent
@@ -271,10 +263,11 @@ const drawFloorPattern = (
             }
         }
     } else if (pattern === 'dots' || pattern === 'hex' || pattern === 'circuit') {
-        // Constellation dots
+        // Constellation dots — pre-compute sin-based alpha outside nested loop
+        const baseFlicker = 0.3 + Math.sin(e.gameTime * 2) * 0.12
+        ctx.globalAlpha = baseFlicker
         for (let x = -fOff; x < CFG.WIDTH + 60; x += 30) {
             for (let y = CFG.GROUND + 15; y < renderH; y += 25) {
-                ctx.globalAlpha = 0.3 + Math.sin(e.gameTime * 2 + x * 0.05 + y * 0.03) * 0.15
                 ctx.beginPath()
                 ctx.arc(x, y, 2, 0, TWO_PI)
                 ctx.fill()
@@ -489,17 +482,25 @@ const drawSinglePowerUp = (
         ctx.stroke()
     }
 
-    // === INNER CIRCLE WITH GRADIENT ===
-    ctx.globalAlpha = 0.9
+    // === INNER CIRCLE — flat color fills (no per-frame gradient allocation) ===
     const r = pu.size * 0.42
-    const innerGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
-    innerGrad.addColorStop(0, config.color1)
-    innerGrad.addColorStop(0.6, config.color2)
-    innerGrad.addColorStop(1, config.color1)
-    ctx.fillStyle = innerGrad
-
+    // Outer ring (color1)
+    ctx.globalAlpha = 0.9
+    ctx.fillStyle = config.color1
     ctx.beginPath()
     ctx.arc(cx, cy, r, 0, TWO_PI)
+    ctx.fill()
+    // Inner core (color2)
+    ctx.globalAlpha = 0.7
+    ctx.fillStyle = config.color2
+    ctx.beginPath()
+    ctx.arc(cx, cy, r * 0.6, 0, TWO_PI)
+    ctx.fill()
+    // Center highlight (color1)
+    ctx.globalAlpha = 0.5
+    ctx.fillStyle = config.color1
+    ctx.beginPath()
+    ctx.arc(cx, cy, r * 0.25, 0, TWO_PI)
     ctx.fill()
 
     // White border
@@ -865,14 +866,19 @@ export const drawParticles = (
             ctx.fill()
             ctx.globalAlpha = lifeRatio * pt.alpha
         } else if (pt.type === 'glow') {
-            // Glow — radial gradient orb
-            const glowGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, sz)
-            glowGrad.addColorStop(0, pt.color)
-            glowGrad.addColorStop(0.5, pt.color + '80')
-            glowGrad.addColorStop(1, pt.color + '00')
-            ctx.fillStyle = glowGrad
+            // Glow — concentric circles (no per-frame gradient allocation)
+            ctx.fillStyle = pt.color
+            ctx.globalAlpha = lifeRatio * pt.alpha * 0.3
             ctx.beginPath()
             ctx.arc(0, 0, sz, 0, TWO_PI)
+            ctx.fill()
+            ctx.globalAlpha = lifeRatio * pt.alpha * 0.6
+            ctx.beginPath()
+            ctx.arc(0, 0, sz * 0.5, 0, TWO_PI)
+            ctx.fill()
+            ctx.globalAlpha = lifeRatio * pt.alpha
+            ctx.beginPath()
+            ctx.arc(0, 0, sz * 0.2, 0, TWO_PI)
             ctx.fill()
         } else if (pt.type === 'star') {
             // Star — crypto sparkle with 8 points
@@ -906,14 +912,15 @@ export const drawParticles = (
             ctx.fillRect(-is / 2, -is / 2, is, is)
             ctx.globalAlpha = lifeRatio * pt.alpha
         } else if (pt.type === 'trail') {
-            // Trail — fading crypto dot with gradient
-            const trailGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, sz * 0.7)
-            trailGrad.addColorStop(0, pt.color)
-            trailGrad.addColorStop(1, pt.color + '00')
-            ctx.fillStyle = trailGrad
-            ctx.globalAlpha *= 0.6
+            // Trail — fading crypto dot (flat fill, no per-frame gradient)
+            ctx.fillStyle = pt.color
+            ctx.globalAlpha = lifeRatio * pt.alpha * 0.35
             ctx.beginPath()
             ctx.arc(0, 0, sz * 0.7, 0, TWO_PI)
+            ctx.fill()
+            ctx.globalAlpha = lifeRatio * pt.alpha * 0.6
+            ctx.beginPath()
+            ctx.arc(0, 0, sz * 0.35, 0, TWO_PI)
             ctx.fill()
             ctx.globalAlpha = lifeRatio * pt.alpha
         } else if (pt.type === 'collect') {

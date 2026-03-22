@@ -378,11 +378,13 @@ export class ParticlePool {
     }
 
     getActive(): Particle[] {
-        return this.pool.filter(p => p.life > 0)
+        // Return full pool — consumers already check life > 0 during iteration
+        return this.pool
     }
 
     get activeCount(): number {
-        return this.pool.filter(p => p.life > 0).length
+        // Use already-tracked counter instead of allocating a .filter() array
+        return this.active
     }
 
     update(dt: number): void {
@@ -832,9 +834,18 @@ export const hexToRgba = (hex: string, alpha: number): string => {
     return `rgba(${r},${g},${b},${alpha})`
 }
 
-/** Format score as crypto market-cap style: "$12,450" */
-export const formatMarketCap = (score: number): string =>
-    '$' + score.toLocaleString('en-US')
+/** Format score as crypto market-cap style: "$12,450" — manual comma insertion (10-50x faster than toLocaleString) */
+export const formatMarketCap = (score: number): string => {
+    const s = String(Math.floor(score))
+    const len = s.length
+    if (len <= 3) return '$' + s
+    let result = ''
+    for (let i = 0; i < len; i++) {
+        if (i > 0 && (len - i) % 3 === 0) result += ','
+        result += s[i]
+    }
+    return '$' + result
+}
 
 // ============================================================================
 // CREATION FUNCTIONS

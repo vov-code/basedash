@@ -289,6 +289,7 @@ export default function GameEngine({
 
   // --- Refs ---
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null) // Cached 2D context — eliminates per-frame getContext
   const containerRef = useRef<HTMLDivElement>(null)
   const engineRef = useRef<EngineState>(createEngine())
   const rafRef = useRef<number | null>(null)
@@ -1144,9 +1145,13 @@ export default function GameEngine({
   // ========================================================================
 
   const draw = useCallback(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
+    // Use cached context — avoids per-frame getContext map lookup
+    if (!ctxRef.current) {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      ctxRef.current = canvas.getContext('2d')
+    }
+    const ctx = ctxRef.current
     if (!ctx) return
 
     // High-DPI scaling with smooth gradients
@@ -1271,7 +1276,10 @@ export default function GameEngine({
     }
   }, [handleAction, releaseJump, mode])
 
-  // Game loop — fixed timestep with accumulator (optimized for mobile)
+  // Game loop — fixed timestep with accumulator + SUB-FRAME INTERPOLATION
+  // The interpolation lerps visual state between physics ticks, producing
+  // buttery smooth rendering even at the fixed 60Hz physics rate.
+  // This is the #1 technique for making a game "feel like 600fps".
   useEffect(() => {
     if (mode !== 'playing') return
     let prev = performance.now()
@@ -1313,12 +1321,64 @@ export default function GameEngine({
         updateAudioParams(speedMult, engineRef.current.worldIndex)
       }
 
-      // Discard excess accumulated time
-      acc = acc % CFG.STEP
+      // Leftover accumulator fraction for interpolation
+      const remainder = acc % CFG.STEP
 
       // Skip rendering if tab is hidden
       if (document.visibilityState !== 'hidden') {
+        // ============================================================
+        // SUB-FRAME INTERPOLATION — "600fps feel"
+        // Temporarily advance visual-only state by the remaining
+        // fraction of a physics step. This smooths jerky 60Hz motion
+        // into fluid, display-refresh-rate-matched rendering.
+        // ============================================================
+        const e = engineRef.current
+        const p = e.player
+        const alpha = remainder / CFG.STEP // 0..1 fraction between ticks
+
+        // Save true physics state
+        const trueY = p.y
+        const trueRotation = p.rotation
+        const trueTilt = p.tilt
+        const trueSquash = p.squash
+        const trueScale = p.scale
+        const trueGroundOffset = e.groundOffset
+        const trueCloudOffset = e.cloudOffset
+        const trueBgOffset = e.backgroundOffset
+
+        // Interpolate player position (most impactful for smoothness)
+        p.y += p.velocityY * remainder
+        // Clamp to ground — don't let interpolation push through floor
+        if (p.y > CFG.GROUND - CFG.PLAYER_SIZE) p.y = CFG.GROUND - CFG.PLAYER_SIZE
+        if (p.y < 0) p.y = 0
+
+        // Interpolate rotation (smooth spinning in air)
+        if (!p.onGround) {
+          p.rotation += 11.5 * remainder
+        }
+
+        // Interpolate visual smoothing values
+        p.squash = lerp(trueSquash, 0, remainder * 12)
+        p.scale = 1 + p.squash * (p.velocityY < 0 ? -0.3 : 0.4)
+        p.tilt = lerp(trueTilt, clamp(p.velocityY / 800, -1, 1), remainder * CFG.TILT_SPEED)
+
+        // Interpolate scroll offsets (smooth parallax)
+        e.groundOffset += e.speed * remainder
+        e.cloudOffset += e.speed * remainder
+        e.backgroundOffset += e.speed * remainder * 0.5
+
+        // Draw with interpolated state
         draw()
+
+        // Restore true physics state — physics integrity preserved
+        p.y = trueY
+        p.rotation = trueRotation
+        p.tilt = trueTilt
+        p.squash = trueSquash
+        p.scale = trueScale
+        e.groundOffset = trueGroundOffset
+        e.cloudOffset = trueCloudOffset
+        e.backgroundOffset = trueBgOffset
       }
 
       // FPS monitoring for debugging (dev only)

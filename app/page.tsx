@@ -30,9 +30,10 @@ import { formatMarketCap } from './components/Game/gameConfig'
 type TabType = 'game' | 'leaderboard' | 'profile'
 
 const mono = { fontFamily: 'var(--font-mono, monospace)' }
+const CURRENT_YEAR = new Date().getFullYear() // Computed once at module load
 
-/** Reactive game history — subscribes to zustand store */
-function GameHistorySection() {
+/** Reactive game history — subscribes to zustand store, memoized to prevent unnecessary re-renders */
+const GameHistorySection = React.memo(function GameHistorySection() {
   const gameHistory = useGameStore((s) => s.gameHistory)
   if (!gameHistory || gameHistory.length === 0) return null
   return (
@@ -55,7 +56,7 @@ function GameHistorySection() {
       </div>
     </div>
   )
-}
+})
 
 export default function Home() {
   const [hasEntered, setHasEntered] = useState(false)
@@ -584,7 +585,7 @@ export default function Home() {
 
         <footer className="flex-shrink-0 bg-white/80 backdrop-blur-sm z-[40] w-full mt-0.5">
           <div className="mx-auto w-full max-w-3xl px-4 border-t border-slate-100/50 h-[16px] flex flex-row items-end justify-between">
-            <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none">© {new Date().getFullYear()} base dash</span>
+            <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none">© {CURRENT_YEAR} base dash</span>
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.1em] font-medium text-slate-400 font-mono leading-none cursor-pointer" onClick={() => window.open('https://x.com/vovweb3', '_blank')}>built by <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-[#0052FF] via-[#4d8aff] to-[#0052FF] bg-[length:200%_auto] animate-[shimmer_2.5s_linear_infinite]">vov</span></span>
           </div>
         </footer>
