@@ -1074,9 +1074,9 @@ export default function GameEngine({
     const e = engineRef.current
     const p = e.player
 
-    // Prevent jump spam — require minimum time between jumps (50ms for premium responsiveness)
+    // Prevent jump spam — require minimum time between jumps
     const now = performance.now()
-    if (e.lastJumpTime && now - e.lastJumpTime < 50) return
+    if (e.lastJumpTime && now - e.lastJumpTime < 80) return
 
     // Ground jump or coyote jump
     if (p.onGround || p.coyoteTimer > 0) {
@@ -1245,46 +1245,38 @@ export default function GameEngine({
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [mode, setMode, stopBackgroundMusic])
 
-  // --- Ref-stable input handlers (bind once, never rebind mid-game) ---
-  const handleActionRef = useRef(handleAction)
-  handleActionRef.current = handleAction
-  const releaseJumpRef = useRef(releaseJump)
-  releaseJumpRef.current = releaseJump
-  const modeRef = useRef(mode)
-  modeRef.current = mode
-
-  // Keyboard controls — bound once to avoid listener churn during gameplay
+  // Keyboard controls
   useEffect(() => {
     const down = (ev: KeyboardEvent) => {
       if (ev.code === 'Space' || ev.code === 'ArrowUp' || ev.code === 'KeyW') {
         ev.preventDefault()
-        handleActionRef.current()
+        handleAction()
       }
-      if (ev.code === 'Escape' && modeRef.current === 'playing') setMode('paused')
+      if (ev.code === 'Escape' && mode === 'playing') setMode('paused')
       if (ev.code === 'KeyP') setMode(m => m === 'playing' ? 'paused' : 'playing')
     }
-    const up = () => releaseJumpRef.current()
+    const up = () => releaseJump()
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     return () => {
       window.removeEventListener('keydown', down)
       window.removeEventListener('keyup', up)
     }
-  }, [setMode])
+  }, [handleAction, releaseJump, mode])
 
-  // Touch controls — bound once, refs ensure latest handler (fix #8)
+  // Touch controls — only preventDefault when playing (fix #8)
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ts = (ev: TouchEvent) => { if (modeRef.current === 'playing') ev.preventDefault(); handleActionRef.current() }
-    const te = (ev: TouchEvent) => { if (modeRef.current === 'playing') ev.preventDefault(); releaseJumpRef.current() }
+    const ts = (ev: TouchEvent) => { if (mode === 'playing') ev.preventDefault(); handleAction() }
+    const te = (ev: TouchEvent) => { if (mode === 'playing') ev.preventDefault(); releaseJump() }
     canvas.addEventListener('touchstart', ts, { passive: false })
     canvas.addEventListener('touchend', te, { passive: false })
     return () => {
       canvas.removeEventListener('touchstart', ts)
       canvas.removeEventListener('touchend', te)
     }
-  }, [])
+  }, [handleAction, releaseJump, mode])
 
   // Game loop — fixed timestep with accumulator + SUB-FRAME INTERPOLATION
   // The interpolation lerps visual state between physics ticks, producing
@@ -1444,8 +1436,8 @@ export default function GameEngine({
     demoEngine.player.y = CFG.GROUND - CFG.PLAYER_SIZE
     demoEngine.player.onGround = true
 
-    // Cache 2D context once — eliminates per-frame getContext('2d') map lookup
-    const demoCtx = canvasRef.current?.getContext('2d') || null
+    // Try to cache 2D context — fall back to per-frame lookup if canvas not ready
+    let demoCtx = canvasRef.current?.getContext('2d') || null
 
     let prev = performance.now()
     let demoAcc = 0
@@ -1644,7 +1636,8 @@ export default function GameEngine({
         demoAcc -= CFG.STEP
       }
 
-      // Draw demo frame — use cached context (avoid per-frame getContext lookup)
+      // Draw demo frame — use cached context, acquire lazily if canvas wasn't ready at init
+      if (!demoCtx) demoCtx = canvasRef.current?.getContext('2d') || null
       if (demoCtx && !cancelled) {
         const demoDpr = Math.min(window.devicePixelRatio || 1, CFG.MAX_DPR)
         demoCtx.setTransform(1, 0, 0, 1, 0, 0)
