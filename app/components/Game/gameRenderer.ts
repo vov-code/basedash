@@ -820,13 +820,54 @@ export const drawPlayer = (
 // PARTICLES
 // ============================================================================
 
-/** Draw all active particles — Crypto themed */
+/** Draw all active particles — Crypto themed
+ *  PERF: Simple particle types (dust, smoke, ground, trail) are drawn
+ *  without per-particle save/restore/translate/rotate — they use absolute
+ *  coordinates directly, eliminating ~60-140 canvas state operations per frame.
+ *  Complex particles keep their full visual rendering unchanged.
+ */
 export const drawParticles = (
     ctx: CanvasRenderingContext2D,
     e: EngineState
 ): void => {
+    // ── FAST PATH: batch simple circle particles (no rotation needed) ──
+    // These types are visually just circles — no rotation, no complex shapes.
+    // Drawing at absolute coords avoids save/translate/rotate/restore overhead.
     ctx.save()
     for (const pt of e.particles) {
+        if (pt.type !== 'dust' && pt.type !== 'smoke' && pt.type !== 'ground' && pt.type !== 'trail') continue
+        const lifeRatio = clamp(pt.life / pt.maxLife, 0, 1)
+        const sz = pt.size * lifeRatio
+        if (sz < 0.3) continue // Skip sub-pixel particles
+
+        if (pt.type === 'trail') {
+            // Trail — two concentric circles at absolute position
+            ctx.fillStyle = pt.color
+            ctx.globalAlpha = lifeRatio * pt.alpha * 0.35
+            ctx.beginPath()
+            ctx.arc(pt.x, pt.y, sz * 0.7, 0, TWO_PI)
+            ctx.fill()
+            ctx.globalAlpha = lifeRatio * pt.alpha * 0.6
+            ctx.beginPath()
+            ctx.arc(pt.x, pt.y, sz * 0.35, 0, TWO_PI)
+            ctx.fill()
+        } else {
+            // Dust/smoke/ground — single circle
+            ctx.globalAlpha = lifeRatio * pt.alpha * 0.5
+            ctx.fillStyle = pt.color
+            ctx.beginPath()
+            ctx.arc(pt.x, pt.y, sz, 0, TWO_PI)
+            ctx.fill()
+        }
+    }
+    ctx.restore()
+
+    // ── FULL PATH: complex particles with transforms ──
+    ctx.save()
+    for (const pt of e.particles) {
+        // Skip simple types (already drawn above)
+        if (pt.type === 'dust' || pt.type === 'smoke' || pt.type === 'ground' || pt.type === 'trail') continue
+
         const lifeRatio = clamp(pt.life / pt.maxLife, 0, 1)
         ctx.save()
         ctx.globalAlpha = lifeRatio * pt.alpha
@@ -912,18 +953,6 @@ export const drawParticles = (
             const is = sz * 0.6
             ctx.fillRect(-is / 2, -is / 2, is, is)
             ctx.globalAlpha = lifeRatio * pt.alpha
-        } else if (pt.type === 'trail') {
-            // Trail — fading crypto dot (flat fill, no per-frame gradient)
-            ctx.fillStyle = pt.color
-            ctx.globalAlpha = lifeRatio * pt.alpha * 0.35
-            ctx.beginPath()
-            ctx.arc(0, 0, sz * 0.7, 0, TWO_PI)
-            ctx.fill()
-            ctx.globalAlpha = lifeRatio * pt.alpha * 0.6
-            ctx.beginPath()
-            ctx.arc(0, 0, sz * 0.35, 0, TWO_PI)
-            ctx.fill()
-            ctx.globalAlpha = lifeRatio * pt.alpha
         } else if (pt.type === 'collect') {
             // Collect — rising coin sparkle
             ctx.fillStyle = pt.color
@@ -994,14 +1023,6 @@ export const drawParticles = (
             ctx.globalAlpha *= 0.6
             ctx.beginPath()
             ctx.arc(0, 0, sz * 0.4, 0, TWO_PI)
-            ctx.fill()
-            ctx.globalAlpha = lifeRatio * pt.alpha
-        } else if (pt.type === 'dust' || pt.type === 'smoke' || pt.type === 'ground') {
-            // Generic — floating dust with gradient
-            ctx.globalAlpha *= 0.5
-            ctx.fillStyle = pt.color
-            ctx.beginPath()
-            ctx.arc(0, 0, sz, 0, TWO_PI)
             ctx.fill()
             ctx.globalAlpha = lifeRatio * pt.alpha
         } else {

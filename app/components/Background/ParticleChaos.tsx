@@ -4,10 +4,14 @@ import React, { useEffect, useRef } from 'react'
 
 interface ParticleChaosProps {
     opacity?: number
+    /** When true, the background animation is completely paused to free CPU/GPU for the game */
+    paused?: boolean
 }
 
-export default function ParticleChaos({ opacity = 1.0 }: ParticleChaosProps) {
+export default function ParticleChaos({ opacity = 1.0, paused = false }: ParticleChaosProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
+    const pausedRef = useRef(paused)
+    pausedRef.current = paused
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -67,6 +71,9 @@ export default function ParticleChaos({ opacity = 1.0 }: ParticleChaosProps) {
         const draw = () => {
             // Bail completely when hidden (no rAF chaining)
             if (document.hidden) { animId = requestAnimationFrame(draw); return }
+
+            // PERF: When paused (during gameplay), skip all work but keep rAF alive for resume
+            if (pausedRef.current) { animId = requestAnimationFrame(draw); return }
 
             // Frame skipping for throttle
             frameSkip++

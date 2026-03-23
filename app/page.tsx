@@ -177,7 +177,7 @@ export default function Home() {
     <div className="relative h-[100dvh] w-full bg-transparent text-slate-900 font-sans selection:bg-[#0052FF]/10 selection:text-[#0052FF] overflow-hidden flex flex-col">
       {/* GLOBAL PARTICLE BACKGROUND - z-0, covers full length of site */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <ParticleChaos />
+        <ParticleChaos paused={activeTab === 'game'} />
       </div>
 
       {/* HEADER BACKGROUND BLUR AND GRID */}

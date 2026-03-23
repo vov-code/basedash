@@ -1074,9 +1074,9 @@ export default function GameEngine({
     const e = engineRef.current
     const p = e.player
 
-    // Prevent jump spam — require minimum time between jumps
+    // Prevent jump spam — require minimum time between jumps (50ms for premium responsiveness)
     const now = performance.now()
-    if (e.lastJumpTime && now - e.lastJumpTime < 80) return
+    if (e.lastJumpTime && now - e.lastJumpTime < 50) return
 
     // Ground jump or coyote jump
     if (p.onGround || p.coyoteTimer > 0) {
@@ -1245,38 +1245,46 @@ export default function GameEngine({
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [mode, setMode, stopBackgroundMusic])
 
-  // Keyboard controls
+  // --- Ref-stable input handlers (bind once, never rebind mid-game) ---
+  const handleActionRef = useRef(handleAction)
+  handleActionRef.current = handleAction
+  const releaseJumpRef = useRef(releaseJump)
+  releaseJumpRef.current = releaseJump
+  const modeRef = useRef(mode)
+  modeRef.current = mode
+
+  // Keyboard controls — bound once to avoid listener churn during gameplay
   useEffect(() => {
     const down = (ev: KeyboardEvent) => {
       if (ev.code === 'Space' || ev.code === 'ArrowUp' || ev.code === 'KeyW') {
         ev.preventDefault()
-        handleAction()
+        handleActionRef.current()
       }
-      if (ev.code === 'Escape' && mode === 'playing') setMode('paused')
+      if (ev.code === 'Escape' && modeRef.current === 'playing') setMode('paused')
       if (ev.code === 'KeyP') setMode(m => m === 'playing' ? 'paused' : 'playing')
     }
-    const up = () => releaseJump()
+    const up = () => releaseJumpRef.current()
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     return () => {
       window.removeEventListener('keydown', down)
       window.removeEventListener('keyup', up)
     }
-  }, [handleAction, releaseJump, mode])
+  }, [setMode])
 
-  // Touch controls — only preventDefault when playing (fix #8)
+  // Touch controls — bound once, refs ensure latest handler (fix #8)
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ts = (ev: TouchEvent) => { if (mode === 'playing') ev.preventDefault(); handleAction() }
-    const te = (ev: TouchEvent) => { if (mode === 'playing') ev.preventDefault(); releaseJump() }
+    const ts = (ev: TouchEvent) => { if (modeRef.current === 'playing') ev.preventDefault(); handleActionRef.current() }
+    const te = (ev: TouchEvent) => { if (modeRef.current === 'playing') ev.preventDefault(); releaseJumpRef.current() }
     canvas.addEventListener('touchstart', ts, { passive: false })
     canvas.addEventListener('touchend', te, { passive: false })
     return () => {
       canvas.removeEventListener('touchstart', ts)
       canvas.removeEventListener('touchend', te)
     }
-  }, [handleAction, releaseJump, mode])
+  }, [])
 
   // Game loop — fixed timestep with accumulator + SUB-FRAME INTERPOLATION
   // The interpolation lerps visual state between physics ticks, producing
@@ -1369,7 +1377,23 @@ export default function GameEngine({
         e.cloudOffset += e.speed * remainder
         e.backgroundOffset += e.speed * remainder * 0.5
 
-        // Draw with interpolated state
+        // ============================================================
+        // INTERPOLATE OBSTACLE POSITIONS — eliminates candle stutter
+        // Without this, candles scroll at discrete 60Hz physics steps
+        // while the player is interpolated — causing visible judder.
+        // ============================================================
+        const candleXSave: number[] = []
+        for (let ci = 0; ci < e.candles.length; ci++) {
+          candleXSave[ci] = e.candles[ci].x
+          e.candles[ci].x -= e.speed * remainder
+        }
+        const puXSave: number[] = []
+        for (let pi = 0; pi < e.powerUps.length; pi++) {
+          puXSave[pi] = e.powerUps[pi].x
+          e.powerUps[pi].x -= e.speed * remainder
+        }
+
+        // Draw with fully interpolated state
         draw()
 
         // Restore true physics state — physics integrity preserved
@@ -1381,6 +1405,8 @@ export default function GameEngine({
         e.groundOffset = trueGroundOffset
         e.cloudOffset = trueCloudOffset
         e.backgroundOffset = trueBgOffset
+        for (let ci = 0; ci < e.candles.length; ci++) e.candles[ci].x = candleXSave[ci]
+        for (let pi = 0; pi < e.powerUps.length; pi++) e.powerUps[pi].x = puXSave[pi]
       }
 
       // FPS monitoring for debugging (dev only)
@@ -1417,6 +1443,9 @@ export default function GameEngine({
     demoEngine.showTutorial = false
     demoEngine.player.y = CFG.GROUND - CFG.PLAYER_SIZE
     demoEngine.player.onGround = true
+
+    // Cache 2D context once — eliminates per-frame getContext('2d') map lookup
+    const demoCtx = canvasRef.current?.getContext('2d') || null
 
     let prev = performance.now()
     let demoAcc = 0
@@ -1615,23 +1644,19 @@ export default function GameEngine({
         demoAcc -= CFG.STEP
       }
 
-      // Draw demo frame
-      const canvas = canvasRef.current
-      if (canvas && !cancelled) {
-        const ctx = canvas.getContext('2d')
-        if (ctx) {
-          const demoDpr = Math.min(window.devicePixelRatio || 1, CFG.MAX_DPR)
-          ctx.setTransform(1, 0, 0, 1, 0, 0)
-          ctx.imageSmoothingEnabled = true
-          ctx.imageSmoothingQuality = 'high'
-          drawFrame(ctx, demoEngine, {
-            w: CFG.WIDTH,
-            h: CFG.HEIGHT,
-            dpr: demoDpr,
-            cssW: dims.w,
-            cssH: dims.h
-          }, logoRef.current, logoLoaded)
-        }
+      // Draw demo frame — use cached context (avoid per-frame getContext lookup)
+      if (demoCtx && !cancelled) {
+        const demoDpr = Math.min(window.devicePixelRatio || 1, CFG.MAX_DPR)
+        demoCtx.setTransform(1, 0, 0, 1, 0, 0)
+        demoCtx.imageSmoothingEnabled = true
+        demoCtx.imageSmoothingQuality = 'high'
+        drawFrame(demoCtx, demoEngine, {
+          w: CFG.WIDTH,
+          h: CFG.HEIGHT,
+          dpr: demoDpr,
+          cssW: dims.w,
+          cssH: dims.h
+        }, logoRef.current, logoLoaded)
       }
 
       demoRafRef.current = requestAnimationFrame(demoLoop)
@@ -1696,7 +1721,7 @@ export default function GameEngine({
   return (
     <div
       className="game-container relative w-full h-full min-h-[280px] bg-[#FAFBFF] overflow-hidden rounded-[20px] select-none shadow-[inset_0_0_20px_rgba(0,82,255,0.05)]"
-      style={{ touchAction: 'none' }}
+      style={{ touchAction: 'none', willChange: 'transform' }}
     >
       {/* GAME CANVAS — Sharp Rendering Setup */}
       <div ref={containerRef} className="absolute inset-0 w-full h-full overflow-hidden flex items-center justify-center bg-transparent touch-none">
