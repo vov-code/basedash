@@ -1245,38 +1245,57 @@ export default function GameEngine({
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [mode, setMode, stopBackgroundMusic])
 
-  // Keyboard controls
+  // --- Ref-stable input handlers (bind once, never rebind mid-game) ---
+  // React's useEffect cleanup+re-attach creates a brief "listener gap" when
+  // deps change (mode, handleAction). Taps during this gap are silently lost.
+  // Using refs ensures handlers are always attached with zero gaps.
+  const handleActionRef = useRef(handleAction)
+  handleActionRef.current = handleAction
+  const releaseJumpRef = useRef(releaseJump)
+  releaseJumpRef.current = releaseJump
+  const modeRef = useRef(mode)
+  modeRef.current = mode
+  const lastTouchTimeRef = useRef(0)
+
+  // Keyboard controls — bound once, refs ensure latest handler
   useEffect(() => {
     const down = (ev: KeyboardEvent) => {
       if (ev.code === 'Space' || ev.code === 'ArrowUp' || ev.code === 'KeyW') {
         ev.preventDefault()
-        handleAction()
+        handleActionRef.current()
       }
-      if (ev.code === 'Escape' && mode === 'playing') setMode('paused')
+      if (ev.code === 'Escape' && modeRef.current === 'playing') setMode('paused')
       if (ev.code === 'KeyP') setMode(m => m === 'playing' ? 'paused' : 'playing')
     }
-    const up = () => releaseJump()
+    const up = () => releaseJumpRef.current()
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     return () => {
       window.removeEventListener('keydown', down)
       window.removeEventListener('keyup', up)
     }
-  }, [handleAction, releaseJump, mode])
+  }, [setMode])
 
-  // Touch controls — only preventDefault when playing (fix #8)
+  // Touch controls — bound once, refs ensure latest handler (fix #8)
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ts = (ev: TouchEvent) => { if (mode === 'playing') ev.preventDefault(); handleAction() }
-    const te = (ev: TouchEvent) => { if (mode === 'playing') ev.preventDefault(); releaseJump() }
+    const ts = (ev: TouchEvent) => {
+      lastTouchTimeRef.current = performance.now()
+      if (modeRef.current === 'playing') ev.preventDefault()
+      handleActionRef.current()
+    }
+    const te = (ev: TouchEvent) => {
+      if (modeRef.current === 'playing') ev.preventDefault()
+      releaseJumpRef.current()
+    }
     canvas.addEventListener('touchstart', ts, { passive: false })
     canvas.addEventListener('touchend', te, { passive: false })
     return () => {
       canvas.removeEventListener('touchstart', ts)
       canvas.removeEventListener('touchend', te)
     }
-  }, [handleAction, releaseJump, mode])
+  }, [])
 
   // Game loop — fixed timestep with accumulator + SUB-FRAME INTERPOLATION
   // The interpolation lerps visual state between physics ticks, producing
@@ -1723,7 +1742,7 @@ export default function GameEngine({
           width={dims.w > 0 ? dims.w * dims.dpr : 960 * dims.dpr}
           height={dims.h > 0 ? dims.h * dims.dpr : 540 * dims.dpr}
           className="absolute inset-0 block w-full h-full object-cover"
-          onClick={handleAction}
+          onClick={() => { if (performance.now() - lastTouchTimeRef.current > 400) handleAction() }}
           tabIndex={0}
           role="application"
           aria-label="Base Dash Game Canvas"
