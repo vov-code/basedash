@@ -988,9 +988,10 @@ export default function GameEngine({
       pt.scale = 1.0
     }
 
-    // Sound + haptic
-    sfxJump()
-    hapticJump()
+    // Sound + haptic — DEFERRED to microtask so they never block the
+    // physics state update. AudioContext.resume() and oscillator creation
+    // can take 1-5ms on mobile, which delays the visual jump response.
+    queueMicrotask(() => { sfxJump(); hapticJump() })
   }, [])
 
   // ========================================================================
@@ -1278,24 +1279,35 @@ export default function GameEngine({
     }
   }, [setMode])
 
-  // Touch controls — bound once, refs ensure latest handler (fix #8)
+  // Touch controls — bound once, refs ensure latest handler
+  // PASSIVE listeners + touch-action:none CSS = fastest possible touch dispatch.
+  // The compositor thread doesn't need to wait for JS when passive=true,
+  // and touch-action:none already prevents scrolling/zooming.
   useEffect(() => {
     const canvas = canvasRef.current
+    const container = containerRef.current
     if (!canvas) return
-    const ts = (ev: TouchEvent) => {
+    const ts = () => {
       lastTouchTimeRef.current = performance.now()
-      if (modeRef.current === 'playing') ev.preventDefault()
       handleActionRef.current()
     }
-    const te = (ev: TouchEvent) => {
-      if (modeRef.current === 'playing') ev.preventDefault()
+    const te = () => {
       releaseJumpRef.current()
     }
-    canvas.addEventListener('touchstart', ts, { passive: false })
-    canvas.addEventListener('touchend', te, { passive: false })
+    // Bind to BOTH canvas and container for maximum touch coverage
+    canvas.addEventListener('touchstart', ts, { passive: true })
+    canvas.addEventListener('touchend', te, { passive: true })
+    if (container) {
+      container.addEventListener('touchstart', ts, { passive: true })
+      container.addEventListener('touchend', te, { passive: true })
+    }
     return () => {
       canvas.removeEventListener('touchstart', ts)
       canvas.removeEventListener('touchend', te)
+      if (container) {
+        container.removeEventListener('touchstart', ts)
+        container.removeEventListener('touchend', te)
+      }
     }
   }, [])
 
@@ -1744,7 +1756,7 @@ export default function GameEngine({
           width={dims.w > 0 ? dims.w * dims.dpr : 960 * dims.dpr}
           height={dims.h > 0 ? dims.h * dims.dpr : 540 * dims.dpr}
           className="absolute inset-0 block w-full h-full object-cover"
-          onClick={() => { if (performance.now() - lastTouchTimeRef.current > 100) handleAction() }}
+          onClick={() => { if (performance.now() - lastTouchTimeRef.current > 300) handleAction() }}
           tabIndex={0}
           role="application"
           aria-label="Base Dash Game Canvas"
@@ -1931,7 +1943,7 @@ export default function GameEngine({
       {mode === 'playing' && (
         <>
           {/* Minimalist Premium HUD — Left with ATH */}
-          <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5 z-10">
+          <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5 z-10 pointer-events-none">
             <div className="flex flex-col items-start gap-1">
               {/* Current Score */}
               <div className="flex items-center gap-2.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-none border border-white/80 shadow-sm pointer-events-none"
@@ -1980,7 +1992,7 @@ export default function GameEngine({
           </div>
 
           {/* Premium HUD — Right: World + Speed + Sound */}
-          <div className="absolute top-3 right-3 flex flex-col items-end gap-2 z-10">
+          <div className="absolute top-3 right-3 flex flex-col items-end gap-2 z-10 pointer-events-none">
             <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-none border border-white/80 shadow-sm pointer-events-none"
               style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
               <span className="text-[9px] font-bold text-slate-600 lowercase leading-none tracking-[0.14em]"
@@ -1997,7 +2009,7 @@ export default function GameEngine({
             {/* Sound toggle — clean, premium */}
             <button
               onClick={() => setSoundEnabled(prev => !prev)}
-              className="h-[30px] w-[30px] flex items-center justify-center bg-white/80 backdrop-blur border border-slate-200/80 rounded-none text-slate-500 hover:text-[#0052FF] hover:border-[#0052FF]/30 active:scale-95 transition-all shadow-sm z-20 touch-manipulation"
+              className="h-[30px] w-[30px] flex items-center justify-center bg-white/80 backdrop-blur border border-slate-200/80 rounded-none text-slate-500 hover:text-[#0052FF] hover:border-[#0052FF]/30 active:scale-95 transition-all shadow-sm z-20 touch-manipulation pointer-events-auto"
               title={soundEnabled ? 'mute' : 'unmute'}
             >
               {soundEnabled ? (
