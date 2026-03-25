@@ -301,6 +301,8 @@ export default function GameEngine({
   const [nearRecordDiff, setNearRecordDiff] = useState<number | null>(null)
   const [retryVisible, setRetryVisible] = useState(false)
 
+  const HALF_PI = Math.PI / 2
+
   // ========================================================================
   // PHYSICS UPDATE — Heart of the game
   // ========================================================================
@@ -941,7 +943,7 @@ export default function GameEngine({
     }
   }, [storageKey])
 
-  const HALF_PI = Math.PI / 2
+  // HALF_PI moved above update() for clarity
 
   // ========================================================================
   // JUMP LOGIC
@@ -1076,7 +1078,7 @@ export default function GameEngine({
 
     // Prevent jump spam — require minimum time between jumps
     const now = performance.now()
-    if (e.lastJumpTime && now - e.lastJumpTime < 80) return
+    if (e.lastJumpTime && now - e.lastJumpTime < 35) return
 
     // Ground jump or coyote jump
     if (p.onGround || p.coyoteTimer > 0) {
@@ -1336,8 +1338,8 @@ export default function GameEngine({
         updates++
       }
 
-      // Update Audio Engine dynamically
-      if (engineRef.current.alive && mode === 'playing') {
+      // Update Audio Engine dynamically (use modeRef to avoid stale closure)
+      if (engineRef.current.alive && modeRef.current === 'playing') {
         const speedMult = engineRef.current.speed / CFG.BASE_SPEED
         updateAudioParams(speedMult, engineRef.current.worldIndex)
       }
@@ -1742,7 +1744,7 @@ export default function GameEngine({
           width={dims.w > 0 ? dims.w * dims.dpr : 960 * dims.dpr}
           height={dims.h > 0 ? dims.h * dims.dpr : 540 * dims.dpr}
           className="absolute inset-0 block w-full h-full object-cover"
-          onClick={() => { if (performance.now() - lastTouchTimeRef.current > 400) handleAction() }}
+          onClick={() => { if (performance.now() - lastTouchTimeRef.current > 100) handleAction() }}
           tabIndex={0}
           role="application"
           aria-label="Base Dash Game Canvas"
