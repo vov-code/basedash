@@ -41,7 +41,7 @@ export const Header: React.FC<HeaderProps> = ({ isConnected, address, handleConn
                                 </svg>
                             </button>
                         ) : (
-                            <div className="flex items-center gap-1.5 sm:gap-2">
+                            <div className="flex items-center gap-1.5 sm:gap-2 overflow-hidden flex-shrink-0">
                                 <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.75 sm:py-1 bg-[#f0fdf4] border border-[#bbf7d0] rounded-none shadow-sm">
                                     <span className="w-1.5 h-1.5 bg-[#22c55e] rounded-none animate-pulse" />
                                     <span className="font-mono text-[8px] sm:text-[9px] font-bold text-[#15803d]">

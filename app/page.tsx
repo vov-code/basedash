@@ -365,7 +365,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="w-full px-2 sm:px-4 flex-1 min-h-0 relative z-20 flex flex-col">
+                <div className="w-full px-2 sm:px-4 flex-shrink-0 relative z-20 flex flex-col mt-0.5">
                   {/* Note: In a future PR we will pull score/combo state UP to page.tsx via Zustand, for now passing 0/0 to initial mount layout */}
                   <DashboardGrid score={0} combo={0} streak={checkInStatus.streak} streakTier={streakTier} streakMultiplier={streakMultiplier} nextTier={nextTier} />
                 </div>
