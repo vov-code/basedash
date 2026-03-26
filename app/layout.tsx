@@ -166,6 +166,7 @@ export default function RootLayout({
       className={`h-full w-full overflow-hidden bg-white touch-none overscroll-none ${outfit.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
     >
       <head>
+        <meta name="base:app_id" content="69c5b6110d7068021beb4665" />
         <link rel="stylesheet" href="/onchainkit.css" />
         {/* Preload critical images */}
         <link
