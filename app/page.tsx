@@ -140,7 +140,7 @@ export default function Home() {
     const res = await fetch('/api/score-sign', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address, score, sessionId }),
+      body: JSON.stringify({ address, score, sessionId, gasless: true }),
     })
 
     if (!res.ok) {
