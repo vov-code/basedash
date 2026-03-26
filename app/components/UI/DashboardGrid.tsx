@@ -21,27 +21,25 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ score, combo, stre
         : 100
 
     return (
-        <div className="w-full h-full grid grid-cols-2 grid-rows-[auto_1fr_1fr] gap-1.5 sm:gap-2 max-w-lg mx-auto">
-            {/* STREAK MULTIPLIER — full width hero block */}
-            <div className="col-span-2 flex-1 bg-white/80 backdrop-blur-md rounded-none px-3 py-2 sm:px-4 sm:py-2.5 border flex items-center justify-between group hover:bg-white/90 transition-all duration-300 relative overflow-hidden"
-                style={{
-                    borderColor: `${streakTier.color}20`,
-                    boxShadow: `0 8px 30px ${streakTier.color}08`
-                }}>
+        <div className="w-full h-full grid grid-cols-2 grid-rows-[auto_1fr_1fr] gap-1 sm:gap-1.5 max-w-lg mx-auto">
+            {/* STREAK MULTIPLIER — full width hero block — UNIFIED STYLE with other blocks */}
+            <div className="col-span-2 flex-1 bg-white/80 backdrop-blur-md rounded-none px-3 py-2 sm:px-4 sm:py-2.5 border border-slate-200/50 flex items-center justify-between group hover:border-slate-300/60 hover:bg-white/90 hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-300 relative overflow-hidden">
                 {/* Subtle side glow */}
-                <div className="absolute right-0 top-0 w-32 h-full pointer-events-none transition-opacity duration-300 opacity-50 group-hover:opacity-100" style={{ background: `linear-gradient(to left, ${streakTier.color}15, transparent)` }} />
+                <div className="absolute right-0 top-0 w-32 h-full pointer-events-none transition-opacity duration-300 opacity-40 group-hover:opacity-70" style={{ background: `linear-gradient(to left, ${streakTier.color}10, transparent)` }} />
+                {/* Accent corner glow — same pattern as other blocks */}
+                <div className="absolute -right-2 -top-2 w-14 h-14 rounded-none blur-2xl group-hover:opacity-80 transition-colors pointer-events-none" style={{ background: `${streakTier.color}08` }} />
 
                 {/* Left: streak info */}
                 <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 z-10">
                     {/* SVG flame icon container */}
                     <div className="relative flex-shrink-0">
                         <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-none flex items-center justify-center transition-transform duration-300 group-hover:scale-105"
-                            style={{ background: `${streakTier.color}12`, color: streakTier.color }}>
+                            style={{ background: `${streakTier.color}10`, color: streakTier.color }}>
                             <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
                                 <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.037 2.211-5.561 3.667-7.333C10 7.167 11.333 5.333 11.667 3c.167.333 1.333 2.667 1.333 2.667C14.333 3 15.667 1 16 0c.333 1 1 3.333 1 3.333S20 6.333 20 10c0 1.5-.333 2.833-1 4-.667 1.167-1.5 2-2.5 2.833C15.167 18 14 19.5 14 21c0 1.083-.917 2-2 2z" />
                             </svg>
                         </div>
-                        {streak > 0 && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-none animate-pulse" style={{ background: streakTier.color, boxShadow: `0 0 8px ${streakTier.color}` }} />}
+                        {streak > 0 && <div className="absolute -top-1 -right-1 w-2 h-2 rounded-none animate-pulse" style={{ background: streakTier.color, boxShadow: `0 0 6px ${streakTier.color}` }} />}
                     </div>
 
                     <div className="flex flex-col min-w-0 gap-0.5 justify-center">
@@ -50,7 +48,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ score, combo, stre
                                 {streakTier.label}
                             </span>
                             {streak > 0 && (
-                                <span className="text-[7.5px] sm:text-[8px] font-bold px-1.5 py-0.5 rounded-none leading-none tracking-widest uppercase" style={{ ...mono, background: `${streakTier.color}15`, color: streakTier.color }}>
+                                <span className="text-[7.5px] sm:text-[8px] font-bold px-1.5 py-0.5 rounded-none leading-none tracking-widest uppercase" style={{ ...mono, background: `${streakTier.color}12`, color: streakTier.color }}>
                                     {streak} DAY{streak !== 1 ? 'S' : ''}
                                 </span>
                             )}

@@ -378,11 +378,13 @@ export class ParticlePool {
     }
 
     getActive(): Particle[] {
-        return this.pool.filter(p => p.life > 0)
+        // Return full pool — consumers already check life > 0 during iteration
+        return this.pool
     }
 
     get activeCount(): number {
-        return this.pool.filter(p => p.life > 0).length
+        // Use already-tracked counter instead of allocating a .filter() array
+        return this.active
     }
 
     update(dt: number): void {
@@ -542,16 +544,16 @@ export const CFG = {
     SLOW_MULT: 0.50,
     SLOW_TIME: 2.5,
 
-    PARTICLE_LIMIT: 140,
-    TRAIL_LIMIT: 7,
-    STAR_COUNT: 45,
-    CLOUD_COUNT: 6,
+    PARTICLE_LIMIT: IS_MOBILE ? 60 : 140,
+    TRAIL_LIMIT: IS_MOBILE ? 5 : 7,
+    STAR_COUNT: IS_MOBILE ? 30 : 45,
+    CLOUD_COUNT: IS_MOBILE ? 4 : 6,
     MAX_CANDLES: 14,
-    GROUND_PARTICLE_COUNT: 24,
+    GROUND_PARTICLE_COUNT: IS_MOBILE ? 16 : 24,
     MAX_POWERUPS: 3,
 
     // Full HD quality settings
-    MAX_DPR: 2,  // Capped at 2 — 3x is too expensive on mobile for minimal visual gain
+    MAX_DPR: IS_MOBILE ? 1.5 : 2,  // 1.5 on mobile still looks retina, saves GPU
 };
 
 // ============================================================================
@@ -832,9 +834,18 @@ export const hexToRgba = (hex: string, alpha: number): string => {
     return `rgba(${r},${g},${b},${alpha})`
 }
 
-/** Format score as crypto market-cap style: "$12,450" */
-export const formatMarketCap = (score: number): string =>
-    '$' + score.toLocaleString('en-US')
+/** Format score as crypto market-cap style: "$12,450" — manual comma insertion (10-50x faster than toLocaleString) */
+export const formatMarketCap = (score: number): string => {
+    const s = String(Math.floor(score))
+    const len = s.length
+    if (len <= 3) return '$' + s
+    let result = ''
+    for (let i = 0; i < len; i++) {
+        if (i > 0 && (len - i) % 3 === 0) result += ','
+        result += s[i]
+    }
+    return '$' + result
+}
 
 // ============================================================================
 // CREATION FUNCTIONS

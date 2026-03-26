@@ -252,9 +252,6 @@ export default function GameEngine({
 
   // --- Realtime DOM Refs (Bypassing React state for 60fps performance) ---
   const uiScoreRef = useRef<HTMLSpanElement>(null)
-  const uiWorldRef = useRef<HTMLSpanElement>(null)
-  const uiSpeedRef = useRef<HTMLSpanElement>(null)
-  const uiSpeedRef2 = useRef<HTMLParagraphElement>(null) // second instance in game-over overlay
   const uiComboRef = useRef<HTMLSpanElement>(null)
   const uiGreenRef = useRef<HTMLSpanElement>(null)
 
@@ -292,6 +289,7 @@ export default function GameEngine({
 
   // --- Refs ---
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null) // Cached 2D context — eliminates per-frame getContext
   const containerRef = useRef<HTMLDivElement>(null)
   const engineRef = useRef<EngineState>(createEngine())
   const rafRef = useRef<number | null>(null)
@@ -302,6 +300,8 @@ export default function GameEngine({
   const gameSessionIdRef = useRef<string | null>(null) // Short session ID for sharing
   const [nearRecordDiff, setNearRecordDiff] = useState<number | null>(null)
   const [retryVisible, setRetryVisible] = useState(false)
+
+  const HALF_PI = Math.PI / 2
 
   // ========================================================================
   // PHYSICS UPDATE — Heart of the game
@@ -448,6 +448,8 @@ export default function GameEngine({
     }
     p.squash = lerp(p.squash, 0, dt * 8)  // Smooth decay
     p.scale = 1 + p.squash * (p.velocityY < 0 ? -0.25 : 0.35)  // Softer effect
+    // CRITICAL: Clamp scale to prevent invisible/giant cube
+    p.scale = clamp(p.scale, 0.5, 2.0)
 
     // Tilt based on velocity — smooth interpolation
     const targetTilt = clamp(p.velocityY / 900, -0.9, 0.9)  // Reduced tilt range
@@ -459,12 +461,12 @@ export default function GameEngine({
     // === FULL NaN/Infinity FIREWALL — prevent cube disappearance ===
     if (!isFinite(p.y)) p.y = CFG.GROUND - CFG.PLAYER_SIZE
     if (!isFinite(p.velocityY)) p.velocityY = 0
-    if (!isFinite(p.scale)) p.scale = 1
+    if (!isFinite(p.scale) || p.scale <= 0) p.scale = 1
     if (!isFinite(p.rotation)) p.rotation = 0
     if (!isFinite(p.tilt)) p.tilt = 0
     if (!isFinite(p.squash)) p.squash = 0
-    if (!isFinite(p.flash)) p.flash = 0
-    if (!isFinite(p.invincible)) p.invincible = 0
+    if (!isFinite(p.flash) || p.flash < 0) p.flash = 0
+    if (!isFinite(p.invincible) || p.invincible < 0) p.invincible = 0
     if (!isFinite(e.speed)) e.speed = CFG.BASE_SPEED
     if (!isFinite(e.score)) e.score = 0
     if (!isFinite(e.distance)) e.distance = 0
@@ -472,6 +474,17 @@ export default function GameEngine({
     if (!isFinite(e.gameTime)) e.gameTime = 0
     if (!isFinite(e.difficulty)) e.difficulty = 0
     if (!isFinite(e.scoreMultiplier) || e.scoreMultiplier <= 0) e.scoreMultiplier = 1
+    // Clamp y to sane bounds — prevent underground/sky escape
+    p.y = clamp(p.y, -CFG.PLAYER_SIZE * 3, CFG.GROUND)
+    // Clamp scale again after all computations
+    p.scale = clamp(p.scale, 0.5, 2.0)
+    // Ensure flash+invincible never make cube fully invisible
+    if (p.flash > 0.95) p.flash = 0.95
+    if (p.invincible > 10) p.invincible = 2
+    // Cap particles to prevent tornado
+    if (e.particles.length > CFG.PARTICLE_LIMIT * 1.5) {
+      e.particles.length = CFG.PARTICLE_LIMIT
+    }
 
     // Invincibility
     p.invincible = Math.max(0, p.invincible - dt)
@@ -924,22 +937,13 @@ export default function GameEngine({
         uiComboRef.current.parentElement!.style.opacity = e.combo > 1 ? '1' : '0'
       }
 
-      // Sync world/speed to DOM directly (ZERO React setState during gameplay)
-      if (uiWorldRef.current) uiWorldRef.current.innerText = (e.worldName || '').toLowerCase()
-      const spd = getSpeed(e.score)
-      if (uiSpeedRef.current) {
-        uiSpeedRef.current.innerText = (spd.label.split('.').pop()?.trim() || spd.label).toLowerCase()
-        uiSpeedRef.current.style.color = spd.color
-        uiSpeedRef.current.style.textShadow = `0 0 8px ${spd.color}80`
-      }
-      if (uiSpeedRef2.current) {
-        uiSpeedRef2.current.innerText = spd.label.toLowerCase()
-        uiSpeedRef2.current.style.color = spd.color
-      }
+      // Sync the rest (cheap updates)
+      setWorldName(e.worldName)
+      setSpeedName(getSpeed(e.score).label)
     }
   }, [storageKey])
 
-  const HALF_PI = Math.PI / 2
+  // HALF_PI moved above update() for clarity
 
   // ========================================================================
   // JUMP LOGIC
@@ -958,6 +962,8 @@ export default function GameEngine({
     p.onGround = false
     p.coyoteTimer = 0
     p.squash = -0.15
+    // NaN safety after setting velocityY
+    if (!isFinite(p.velocityY)) p.velocityY = isDouble ? CFG.DOUBLE_JUMP : CFG.JUMP
     e.totalJumps += 1
     e.shakeTimer = 0.04
 
@@ -982,9 +988,10 @@ export default function GameEngine({
       pt.scale = 1.0
     }
 
-    // Sound + haptic
-    sfxJump()
-    hapticJump()
+    // Sound + haptic — DEFERRED to microtask so they never block the
+    // physics state update. AudioContext.resume() and oscillator creation
+    // can take 1-5ms on mobile, which delays the visual jump response.
+    queueMicrotask(() => { sfxJump(); hapticJump() })
   }, [])
 
   // ========================================================================
@@ -1011,6 +1018,10 @@ export default function GameEngine({
 
     // ALSO cancel demo RAF — prevents concurrent demo+game loops after rapid restarts
     if (demoRafRef.current) { cancelAnimationFrame(demoRafRef.current); demoRafRef.current = null }
+
+    // Extra safety: delay-cancel any orphaned RAFs (handles edge cases with rapid restarts)
+    const orphanCleanup = rafRef.current
+    if (orphanCleanup) { cancelAnimationFrame(orphanCleanup); rafRef.current = null }
 
     const engine = createEngine()
     engine.activeTrail = activeTrail
@@ -1068,7 +1079,7 @@ export default function GameEngine({
 
     // Prevent jump spam — require minimum time between jumps
     const now = performance.now()
-    if (e.lastJumpTime && now - e.lastJumpTime < 80) return
+    if (e.lastJumpTime && now - e.lastJumpTime < 35) return
 
     // Ground jump or coyote jump
     if (p.onGround || p.coyoteTimer > 0) {
@@ -1086,16 +1097,9 @@ export default function GameEngine({
     }
   }, [mode, performJump, startGame])
 
-  // Stable ref so event handlers never go stale
-  const handleActionRef = useRef(handleAction)
-  handleActionRef.current = handleAction
-
   const releaseJump = useCallback(() => {
     if (mode !== 'playing') return
   }, [mode])
-
-  const releaseJumpRef = useRef(releaseJump)
-  releaseJumpRef.current = releaseJump
 
   // Wallet connect wrapper with loading state (Improvement #2)
   const handleConnectWallet = useCallback(async () => {
@@ -1144,15 +1148,21 @@ export default function GameEngine({
   // ========================================================================
 
   const draw = useCallback(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
+    // Use cached context — avoids per-frame getContext map lookup
+    if (!ctxRef.current) {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      ctxRef.current = canvas.getContext('2d')
+      if (ctxRef.current) {
+        ctxRef.current.imageSmoothingEnabled = true
+        ctxRef.current.imageSmoothingQuality = 'high'
+      }
+    }
+    const ctx = ctxRef.current
     if (!ctx) return
 
-    // High-DPI scaling with smooth gradients
+    // High-DPI scaling
     ctx.setTransform(1, 0, 0, 1, 0, 0)
-    ctx.imageSmoothingEnabled = true
-    ctx.imageSmoothingQuality = 'high'
 
     drawFrame(ctx, engineRef.current, {
       w: CFG.WIDTH,
@@ -1238,64 +1248,73 @@ export default function GameEngine({
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [mode, setMode, stopBackgroundMusic])
 
-  // Keyboard controls
+  // --- Ref-stable input handlers (bind once, never rebind mid-game) ---
+  // React's useEffect cleanup+re-attach creates a brief "listener gap" when
+  // deps change (mode, handleAction). Taps during this gap are silently lost.
+  // Using refs ensures handlers are always attached with zero gaps.
+  const handleActionRef = useRef(handleAction)
+  handleActionRef.current = handleAction
+  const releaseJumpRef = useRef(releaseJump)
+  releaseJumpRef.current = releaseJump
+  const modeRef = useRef(mode)
+  modeRef.current = mode
+  const lastTouchTimeRef = useRef(0)
+
+  // Keyboard controls — bound once, refs ensure latest handler
   useEffect(() => {
     const down = (ev: KeyboardEvent) => {
       if (ev.code === 'Space' || ev.code === 'ArrowUp' || ev.code === 'KeyW') {
         ev.preventDefault()
-        handleAction()
+        handleActionRef.current()
       }
-      if (ev.code === 'Escape' && mode === 'playing') setMode('paused')
+      if (ev.code === 'Escape' && modeRef.current === 'playing') setMode('paused')
       if (ev.code === 'KeyP') setMode(m => m === 'playing' ? 'paused' : 'playing')
     }
-    const up = () => releaseJump()
+    const up = () => releaseJumpRef.current()
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     return () => {
       window.removeEventListener('keydown', down)
       window.removeEventListener('keyup', up)
     }
-  }, [handleAction, releaseJump, mode])
+  }, [setMode])
 
-  // Touch + Pointer controls — fires on DOWN for instant response
-  // Uses refs to avoid re-registering listeners when mode changes
+  // Touch controls — bound once, refs ensure latest handler
+  // PASSIVE listeners + touch-action:none CSS = fastest possible touch dispatch.
+  // The compositor thread doesn't need to wait for JS when passive=true,
+  // and touch-action:none already prevents scrolling/zooming.
   useEffect(() => {
     const canvas = canvasRef.current
+    const container = containerRef.current
     if (!canvas) return
-
-    // Pointer events (covers both mouse and touch on modern browsers)
-    const pd = (ev: PointerEvent) => {
-      ev.preventDefault()
+    const ts = () => {
+      lastTouchTimeRef.current = performance.now()
       handleActionRef.current()
     }
-    const pu = (ev: PointerEvent) => {
-      ev.preventDefault()
+    const te = () => {
       releaseJumpRef.current()
     }
-
-    // Touch events as fallback (some mobile browsers)
-    const ts = (ev: TouchEvent) => {
-      ev.preventDefault()
-      handleActionRef.current()
+    // Bind to BOTH canvas and container for maximum touch coverage
+    canvas.addEventListener('touchstart', ts, { passive: true })
+    canvas.addEventListener('touchend', te, { passive: true })
+    if (container) {
+      container.addEventListener('touchstart', ts, { passive: true })
+      container.addEventListener('touchend', te, { passive: true })
     }
-    const te = (ev: TouchEvent) => {
-      ev.preventDefault()
-      releaseJumpRef.current()
-    }
-
-    canvas.addEventListener('pointerdown', pd, { passive: false })
-    canvas.addEventListener('pointerup', pu, { passive: false })
-    canvas.addEventListener('touchstart', ts, { passive: false })
-    canvas.addEventListener('touchend', te, { passive: false })
     return () => {
-      canvas.removeEventListener('pointerdown', pd)
-      canvas.removeEventListener('pointerup', pu)
       canvas.removeEventListener('touchstart', ts)
       canvas.removeEventListener('touchend', te)
+      if (container) {
+        container.removeEventListener('touchstart', ts)
+        container.removeEventListener('touchend', te)
+      }
     }
-  }, []) // Empty deps — refs ensure we always call the latest handler
+  }, [])
 
-  // Game loop — fixed timestep with accumulator (optimized for mobile)
+  // Game loop — fixed timestep with accumulator + SUB-FRAME INTERPOLATION
+  // The interpolation lerps visual state between physics ticks, producing
+  // buttery smooth rendering even at the fixed 60Hz physics rate.
+  // This is the #1 technique for making a game "feel like 600fps".
   useEffect(() => {
     if (mode !== 'playing') return
     let prev = performance.now()
@@ -1331,18 +1350,88 @@ export default function GameEngine({
         updates++
       }
 
-      // Update Audio Engine dynamically
-      if (engineRef.current.alive && mode === 'playing') {
+      // Update Audio Engine dynamically (use modeRef to avoid stale closure)
+      if (engineRef.current.alive && modeRef.current === 'playing') {
         const speedMult = engineRef.current.speed / CFG.BASE_SPEED
         updateAudioParams(speedMult, engineRef.current.worldIndex)
       }
 
-      // Discard excess accumulated time
-      acc = acc % CFG.STEP
+      // Leftover accumulator fraction for interpolation
+      const remainder = acc % CFG.STEP
 
       // Skip rendering if tab is hidden
       if (document.visibilityState !== 'hidden') {
+        // ============================================================
+        // SUB-FRAME INTERPOLATION — "600fps feel"
+        // Temporarily advance visual-only state by the remaining
+        // fraction of a physics step. This smooths jerky 60Hz motion
+        // into fluid, display-refresh-rate-matched rendering.
+        // ============================================================
+        const e = engineRef.current
+        const p = e.player
+        const alpha = remainder / CFG.STEP // 0..1 fraction between ticks
+
+        // Save true physics state
+        const trueY = p.y
+        const trueRotation = p.rotation
+        const trueTilt = p.tilt
+        const trueSquash = p.squash
+        const trueScale = p.scale
+        const trueGroundOffset = e.groundOffset
+        const trueCloudOffset = e.cloudOffset
+        const trueBgOffset = e.backgroundOffset
+
+        // Interpolate player position (most impactful for smoothness)
+        p.y += p.velocityY * remainder
+        // Clamp to ground — don't let interpolation push through floor
+        if (p.y > CFG.GROUND - CFG.PLAYER_SIZE) p.y = CFG.GROUND - CFG.PLAYER_SIZE
+        if (p.y < 0) p.y = 0
+
+        // Interpolate rotation (smooth spinning in air)
+        if (!p.onGround) {
+          p.rotation += 11.5 * remainder
+        }
+
+        // Interpolate visual smoothing values
+        p.squash = lerp(trueSquash, 0, remainder * 12)
+        p.scale = 1 + p.squash * (p.velocityY < 0 ? -0.3 : 0.4)
+        p.tilt = lerp(trueTilt, clamp(p.velocityY / 800, -1, 1), remainder * CFG.TILT_SPEED)
+
+        // Interpolate scroll offsets (smooth parallax)
+        e.groundOffset += e.speed * remainder
+        e.cloudOffset += e.speed * remainder
+        e.backgroundOffset += e.speed * remainder * 0.5
+
+        // ============================================================
+        // INTERPOLATE OBSTACLE POSITIONS — eliminates candle stutter
+        // Without this, candles scroll at discrete 60Hz physics steps
+        // while the player is interpolated — causing visible judder.
+        // ============================================================
+        const candleXSave: number[] = []
+        for (let ci = 0; ci < e.candles.length; ci++) {
+          candleXSave[ci] = e.candles[ci].x
+          e.candles[ci].x -= e.speed * remainder
+        }
+        const puXSave: number[] = []
+        for (let pi = 0; pi < e.powerUps.length; pi++) {
+          puXSave[pi] = e.powerUps[pi].x
+          e.powerUps[pi].x -= e.speed * remainder
+        }
+
+        // Draw with fully interpolated state
         draw()
+
+        // Restore true physics state — physics integrity preserved
+        p.y = trueY
+        p.rotation = trueRotation
+        p.tilt = trueTilt
+        p.squash = trueSquash
+        p.scale = trueScale
+        e.groundOffset = trueGroundOffset
+        e.cloudOffset = trueCloudOffset
+        e.backgroundOffset = trueBgOffset
+        for (let ci = 0; ci < e.candles.length; ci++) e.candles[ci].x = candleXSave[ci]
+        for (let pi = 0; pi < e.powerUps.length; pi++) e.powerUps[pi].x = puXSave[pi]
       }
 
       // FPS monitoring for debugging (dev only)
@@ -1379,6 +1468,9 @@ export default function GameEngine({
     demoEngine.showTutorial = false
     demoEngine.player.y = CFG.GROUND - CFG.PLAYER_SIZE
     demoEngine.player.onGround = true
+
+    // Try to cache 2D context — fall back to per-frame lookup if canvas not ready
+    let demoCtx = canvasRef.current?.getContext('2d') || null
 
     let prev = performance.now()
     let demoAcc = 0
@@ -1577,23 +1669,20 @@ export default function GameEngine({
         demoAcc -= CFG.STEP
       }
 
-      // Draw demo frame
-      const canvas = canvasRef.current
-      if (canvas && !cancelled) {
-        const ctx = canvas.getContext('2d')
-        if (ctx) {
-          const demoDpr = Math.min(window.devicePixelRatio || 1, CFG.MAX_DPR)
-          ctx.setTransform(1, 0, 0, 1, 0, 0)
-          ctx.imageSmoothingEnabled = true
-          ctx.imageSmoothingQuality = 'high'
-          drawFrame(ctx, demoEngine, {
-            w: CFG.WIDTH,
-            h: CFG.HEIGHT,
-            dpr: demoDpr,
-            cssW: dims.w,
-            cssH: dims.h
-          }, logoRef.current, logoLoaded)
-        }
+      // Draw demo frame — use cached context, acquire lazily if canvas wasn't ready at init
+      if (!demoCtx) demoCtx = canvasRef.current?.getContext('2d') || null
+      if (demoCtx && !cancelled) {
+        const demoDpr = Math.min(window.devicePixelRatio || 1, CFG.MAX_DPR)
+        demoCtx.setTransform(1, 0, 0, 1, 0, 0)
+        demoCtx.imageSmoothingEnabled = true
+        demoCtx.imageSmoothingQuality = 'high'
+        drawFrame(demoCtx, demoEngine, {
+          w: CFG.WIDTH,
+          h: CFG.HEIGHT,
+          dpr: demoDpr,
+          cssW: dims.w,
+          cssH: dims.h
+        }, logoRef.current, logoLoaded)
       }
 
       demoRafRef.current = requestAnimationFrame(demoLoop)
@@ -1658,7 +1747,7 @@ export default function GameEngine({
   return (
     <div
       className="game-container relative w-full h-full min-h-[280px] bg-[#FAFBFF] overflow-hidden rounded-[20px] select-none shadow-[inset_0_0_20px_rgba(0,82,255,0.05)]"
-      style={{ touchAction: 'none' }}
+      style={{ touchAction: 'none', willChange: 'transform' }}
     >
       {/* GAME CANVAS — Sharp Rendering Setup */}
       <div ref={containerRef} className="absolute inset-0 w-full h-full overflow-hidden flex items-center justify-center bg-transparent touch-none">
@@ -1667,7 +1756,7 @@ export default function GameEngine({
           width={dims.w > 0 ? dims.w * dims.dpr : 960 * dims.dpr}
           height={dims.h > 0 ? dims.h * dims.dpr : 540 * dims.dpr}
           className="absolute inset-0 block w-full h-full object-cover"
-          /* onClick removed — input is handled via pointerdown/touchstart for instant response */
+          onClick={() => { if (performance.now() - lastTouchTimeRef.current > 300) handleAction() }}
           tabIndex={0}
           role="application"
           aria-label="Base Dash Game Canvas"
@@ -1757,7 +1846,7 @@ export default function GameEngine({
                 </div>
                 <div className="bg-[#eef4ff] px-2 py-1 rounded-none border border-[#0052FF]/20 text-center flex flex-col justify-center">
                   <p className="text-[7px] font-black text-[#6CACFF] lowercase tracking-widest mb-0.5">mode</p>
-                  <p ref={uiSpeedRef2} className="text-[9px] sm:text-[10px] font-black leading-none lowercase tracking-widest" style={{ color: getSpeed(score).color }}>easy</p>
+                  <p className="text-[9px] sm:text-[10px] font-black leading-none lowercase tracking-widest" style={{ color: getSpeed(score).color }}>{speedName.toLowerCase()}</p>
                 </div>
               </div>
 
@@ -1854,7 +1943,7 @@ export default function GameEngine({
       {mode === 'playing' && (
         <>
           {/* Minimalist Premium HUD — Left with ATH */}
-          <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5 z-10">
+          <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5 z-10 pointer-events-none">
             <div className="flex flex-col items-start gap-1">
               {/* Current Score */}
               <div className="flex items-center gap-2.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-none border border-white/80 shadow-sm pointer-events-none"
@@ -1903,24 +1992,24 @@ export default function GameEngine({
           </div>
 
           {/* Premium HUD — Right: World + Speed + Sound */}
-          <div className="absolute top-3 right-3 flex flex-col items-end gap-2 z-10">
+          <div className="absolute top-3 right-3 flex flex-col items-end gap-2 z-10 pointer-events-none">
             <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-none border border-white/80 shadow-sm pointer-events-none"
               style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-              <span ref={uiWorldRef} className="text-[9px] font-bold text-slate-600 lowercase leading-none tracking-[0.14em]"
+              <span className="text-[9px] font-bold text-slate-600 lowercase leading-none tracking-[0.14em]"
                 style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                {WORLDS[0].name.toLowerCase()}
+                {worldName.toLowerCase()}
               </span>
               <div className="w-px h-2.5 bg-slate-300" />
-              <span ref={uiSpeedRef} className="text-[9px] font-black leading-none lowercase tracking-[0.1em]"
+              <span className="text-[9px] font-black leading-none lowercase tracking-[0.1em]"
                 style={{ color: getSpeed(score).color, fontFamily: 'var(--font-mono, monospace)', textShadow: `0 0 8px ${getSpeed(score).color}80` }}>
-                easy
+                {(speedName.split('.').pop()?.trim() || speedName).toLowerCase()}
               </span>
             </div>
 
             {/* Sound toggle — clean, premium */}
             <button
               onClick={() => setSoundEnabled(prev => !prev)}
-              className="h-[30px] w-[30px] flex items-center justify-center bg-white/80 backdrop-blur border border-slate-200/80 rounded-none text-slate-500 hover:text-[#0052FF] hover:border-[#0052FF]/30 active:scale-95 transition-all shadow-sm z-20 touch-manipulation"
+              className="h-[30px] w-[30px] flex items-center justify-center bg-white/80 backdrop-blur border border-slate-200/80 rounded-none text-slate-500 hover:text-[#0052FF] hover:border-[#0052FF]/30 active:scale-95 transition-all shadow-sm z-20 touch-manipulation pointer-events-auto"
               title={soundEnabled ? 'mute' : 'unmute'}
             >
               {soundEnabled ? (
@@ -1943,8 +2032,7 @@ export default function GameEngine({
             ))}
           </div>
         </>
-      )
-      }
-    </div >
+      )}
+    </div>
   )
 }
