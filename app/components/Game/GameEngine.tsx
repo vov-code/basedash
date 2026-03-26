@@ -252,6 +252,9 @@ export default function GameEngine({
 
   // --- Realtime DOM Refs (Bypassing React state for 60fps performance) ---
   const uiScoreRef = useRef<HTMLSpanElement>(null)
+  const uiWorldRef = useRef<HTMLSpanElement>(null)
+  const uiSpeedRef = useRef<HTMLSpanElement>(null)
+  const uiSpeedRef2 = useRef<HTMLParagraphElement>(null) // second instance in game-over overlay
   const uiComboRef = useRef<HTMLSpanElement>(null)
   const uiGreenRef = useRef<HTMLSpanElement>(null)
 
@@ -921,9 +924,18 @@ export default function GameEngine({
         uiComboRef.current.parentElement!.style.opacity = e.combo > 1 ? '1' : '0'
       }
 
-      // Sync the rest (cheap updates)
-      setWorldName(e.worldName)
-      setSpeedName(getSpeed(e.score).label)
+      // Sync world/speed to DOM directly (ZERO React setState during gameplay)
+      if (uiWorldRef.current) uiWorldRef.current.innerText = (e.worldName || '').toLowerCase()
+      const spd = getSpeed(e.score)
+      if (uiSpeedRef.current) {
+        uiSpeedRef.current.innerText = (spd.label.split('.').pop()?.trim() || spd.label).toLowerCase()
+        uiSpeedRef.current.style.color = spd.color
+        uiSpeedRef.current.style.textShadow = `0 0 8px ${spd.color}80`
+      }
+      if (uiSpeedRef2.current) {
+        uiSpeedRef2.current.innerText = spd.label.toLowerCase()
+        uiSpeedRef2.current.style.color = spd.color
+      }
     }
   }, [storageKey])
 
@@ -1074,9 +1086,16 @@ export default function GameEngine({
     }
   }, [mode, performJump, startGame])
 
+  // Stable ref so event handlers never go stale
+  const handleActionRef = useRef(handleAction)
+  handleActionRef.current = handleAction
+
   const releaseJump = useCallback(() => {
     if (mode !== 'playing') return
   }, [mode])
+
+  const releaseJumpRef = useRef(releaseJump)
+  releaseJumpRef.current = releaseJump
 
   // Wallet connect wrapper with loading state (Improvement #2)
   const handleConnectWallet = useCallback(async () => {
@@ -1238,19 +1257,43 @@ export default function GameEngine({
     }
   }, [handleAction, releaseJump, mode])
 
-  // Touch controls — only preventDefault when playing (fix #8)
+  // Touch + Pointer controls — fires on DOWN for instant response
+  // Uses refs to avoid re-registering listeners when mode changes
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ts = (ev: TouchEvent) => { if (mode === 'playing') ev.preventDefault(); handleAction() }
-    const te = (ev: TouchEvent) => { if (mode === 'playing') ev.preventDefault(); releaseJump() }
+
+    // Pointer events (covers both mouse and touch on modern browsers)
+    const pd = (ev: PointerEvent) => {
+      ev.preventDefault()
+      handleActionRef.current()
+    }
+    const pu = (ev: PointerEvent) => {
+      ev.preventDefault()
+      releaseJumpRef.current()
+    }
+
+    // Touch events as fallback (some mobile browsers)
+    const ts = (ev: TouchEvent) => {
+      ev.preventDefault()
+      handleActionRef.current()
+    }
+    const te = (ev: TouchEvent) => {
+      ev.preventDefault()
+      releaseJumpRef.current()
+    }
+
+    canvas.addEventListener('pointerdown', pd, { passive: false })
+    canvas.addEventListener('pointerup', pu, { passive: false })
     canvas.addEventListener('touchstart', ts, { passive: false })
     canvas.addEventListener('touchend', te, { passive: false })
     return () => {
+      canvas.removeEventListener('pointerdown', pd)
+      canvas.removeEventListener('pointerup', pu)
       canvas.removeEventListener('touchstart', ts)
       canvas.removeEventListener('touchend', te)
     }
-  }, [handleAction, releaseJump, mode])
+  }, []) // Empty deps — refs ensure we always call the latest handler
 
   // Game loop — fixed timestep with accumulator (optimized for mobile)
   useEffect(() => {
@@ -1624,7 +1667,7 @@ export default function GameEngine({
           width={dims.w > 0 ? dims.w * dims.dpr : 960 * dims.dpr}
           height={dims.h > 0 ? dims.h * dims.dpr : 540 * dims.dpr}
           className="absolute inset-0 block w-full h-full object-cover"
-          onClick={handleAction}
+          /* onClick removed — input is handled via pointerdown/touchstart for instant response */
           tabIndex={0}
           role="application"
           aria-label="Base Dash Game Canvas"
@@ -1714,7 +1757,7 @@ export default function GameEngine({
                 </div>
                 <div className="bg-[#eef4ff] px-2 py-1 rounded-none border border-[#0052FF]/20 text-center flex flex-col justify-center">
                   <p className="text-[7px] font-black text-[#6CACFF] lowercase tracking-widest mb-0.5">mode</p>
-                  <p className="text-[9px] sm:text-[10px] font-black leading-none lowercase tracking-widest" style={{ color: getSpeed(score).color }}>{speedName.toLowerCase()}</p>
+                  <p ref={uiSpeedRef2} className="text-[9px] sm:text-[10px] font-black leading-none lowercase tracking-widest" style={{ color: getSpeed(score).color }}>easy</p>
                 </div>
               </div>
 
@@ -1863,14 +1906,14 @@ export default function GameEngine({
           <div className="absolute top-3 right-3 flex flex-col items-end gap-2 z-10">
             <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white/70 backdrop-blur rounded-none border border-white/80 shadow-sm pointer-events-none"
               style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-              <span className="text-[9px] font-bold text-slate-600 lowercase leading-none tracking-[0.14em]"
+              <span ref={uiWorldRef} className="text-[9px] font-bold text-slate-600 lowercase leading-none tracking-[0.14em]"
                 style={{ fontFamily: 'var(--font-mono, monospace)' }}>
-                {worldName.toLowerCase()}
+                {WORLDS[0].name.toLowerCase()}
               </span>
               <div className="w-px h-2.5 bg-slate-300" />
-              <span className="text-[9px] font-black leading-none lowercase tracking-[0.1em]"
+              <span ref={uiSpeedRef} className="text-[9px] font-black leading-none lowercase tracking-[0.1em]"
                 style={{ color: getSpeed(score).color, fontFamily: 'var(--font-mono, monospace)', textShadow: `0 0 8px ${getSpeed(score).color}80` }}>
-                {(speedName.split('.').pop()?.trim() || speedName).toLowerCase()}
+                easy
               </span>
             </div>
 
@@ -1900,7 +1943,8 @@ export default function GameEngine({
             ))}
           </div>
         </>
-      )}
-    </div>
+      )
+      }
+    </div >
   )
 }
