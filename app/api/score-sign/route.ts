@@ -301,13 +301,6 @@ export async function POST(request: NextRequest) {
     }
 
     // ====================================================================
-    // NONCE RETRIEVAL
-    // ====================================================================
-    if (CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
-      return NextResponse.json({ error: 'Contract not deployed' }, { status: 503 })
-    }
-
-    // ====================================================================
     // CONTRACT READINESS
     // ====================================================================
     if (CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
@@ -328,10 +321,11 @@ export async function POST(request: NextRequest) {
     // SIGNATURE GENERATION
     // ====================================================================
     const signerAccount = getSignerAccount()
+    // Hash encoding MUST match contract: abi.encodePacked(player, score, nonce, chainId, contractAddress)
     const msgHash = keccak256(
       encodePacked(
-        ['address', 'uint256', 'address', 'uint256', 'uint256'],
-        [CONTRACT_ADDRESS, BigInt(chain.id), address as `0x${string}`, BigInt(scoreNum), nonce as bigint]
+        ['address', 'uint256', 'uint256', 'uint256', 'address'],
+        [address as `0x${string}`, BigInt(scoreNum), nonce as bigint, BigInt(chain.id), CONTRACT_ADDRESS]
       )
     )
     const signature = await signerAccount.signMessage({ message: { raw: msgHash } })

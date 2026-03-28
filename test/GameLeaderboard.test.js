@@ -41,25 +41,35 @@ describe("GameLeaderboard", function () {
       expect(await gameLeaderboard.addressToFid(player1.address)).to.equal(fid);
     });
 
-    it("Should prevent linking already linked FID", async function () {
+    it("Should allow re-linking FID (overwrites previous link)", async function () {
       const fid = 12345;
 
       await gameLeaderboard.connect(player1).linkWallet(fid);
 
-      await expect(
-        gameLeaderboard.connect(player2).linkWallet(fid)
-      ).to.be.reverted;
+      // player2 links same FID — contract allows overwrite
+      const tx = await gameLeaderboard.connect(player2).linkWallet(fid);
+      await tx.wait();
+
+      // FID now points to player2
+      expect(await gameLeaderboard.fidToAddress(fid)).to.equal(player2.address);
+      // player1's link is cleared
+      expect(await gameLeaderboard.addressToFid(player1.address)).to.equal(0);
     });
 
-    it("Should prevent linking wallet that is already linked", async function () {
+    it("Should allow address to re-link to a different FID", async function () {
       const fid1 = 12345;
       const fid2 = 67890;
 
       await gameLeaderboard.connect(player1).linkWallet(fid1);
 
-      await expect(
-        gameLeaderboard.connect(player1).linkWallet(fid2)
-      ).to.be.reverted;
+      // Same address links to different FID — contract allows overwrite
+      const tx = await gameLeaderboard.connect(player1).linkWallet(fid2);
+      await tx.wait();
+
+      // Address now points to fid2
+      expect(await gameLeaderboard.addressToFid(player1.address)).to.equal(fid2);
+      // Old FID is cleared
+      expect(await gameLeaderboard.fidToAddress(fid1)).to.equal('0x0000000000000000000000000000000000000000');
     });
   });
 
@@ -151,9 +161,10 @@ describe("GameLeaderboard", function () {
     const contractAddress = await contract.getAddress();
     const chainId = BigInt((await ethers.provider.getNetwork()).chainId);
 
+    // Encoding order MUST match contract: abi.encodePacked(player, score, nonce, chainId, contractAddress)
     const messageHash = ethers.solidityPackedKeccak256(
-      ["address", "uint256", "address", "uint256", "uint256"],
-      [contractAddress, chainId, playerAddress, scoreValue, nonce]
+      ["address", "uint256", "uint256", "uint256", "address"],
+      [playerAddress, scoreValue, nonce, chainId, contractAddress]
     );
 
     const signature = await signer.signMessage(ethers.getBytes(messageHash));
@@ -217,7 +228,7 @@ describe("GameLeaderboard", function () {
       expect(newNonce).to.equal(nonce + 1n);
     });
 
-    it("Should reject score that is not better than best", async function () {
+    it("Should not update leaderboard for score equal to or less than best", async function () {
       const nonce = await gameLeaderboard.scoreNonces(player1.address);
       const signature = await getValidSignature(
         gameLeaderboard, scoreSigner, player1.address, score, nonce
@@ -225,13 +236,17 @@ describe("GameLeaderboard", function () {
       await gameLeaderboard.connect(player1).submitScore(score, nonce, signature);
 
       const newNonce = await gameLeaderboard.scoreNonces(player1.address);
+      const lowerScore = score - 100;
       const newSignature = await getValidSignature(
-        gameLeaderboard, scoreSigner, player1.address, score - 100, newNonce
+        gameLeaderboard, scoreSigner, player1.address, lowerScore, newNonce
       );
 
-      await expect(
-        gameLeaderboard.connect(player1).submitScore(score - 100, newNonce, newSignature)
-      ).to.be.reverted;
+      // Lower score still succeeds (nonce increments) but leaderboard doesn't update
+      await gameLeaderboard.connect(player1).submitScore(lowerScore, newNonce, newSignature);
+
+      // Best score should still be the original
+      const [, bestScore] = await gameLeaderboard.getPlayerRank(player1.address);
+      expect(bestScore).to.equal(score);
     });
 
     it("Should reject score exceeding maximum", async function () {

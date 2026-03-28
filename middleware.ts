@@ -52,7 +52,7 @@ export function middleware(request: NextRequest) {
         "img-src 'self' data: blob: https:",
         "connect-src 'self' https://mainnet.base.org https://sepolia.base.org https://*.base.org wss://*.walletlink.org https://*.coinbase.com https://*.walletconnect.com https://vercel.live https://*.vercel-insights.com",
         "frame-src 'self' https://keys.coinbase.com https://wallet.coinbase.com",
-        "frame-ancestors 'none'",
+        "frame-ancestors 'self' https://warpcast.com https://*.farcaster.xyz",
         "base-uri 'self'",
         "form-action 'self'",
     ].join('; ')

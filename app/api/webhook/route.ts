@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'crypto'
+import Redis from 'ioredis'
 
 export const dynamic = 'force-dynamic'
 
-// Simple in-memory store for recent transactions (in production, use Redis)
-const processedTransactions = new Map<string, number>()
+// Redis-backed dedup store (survives serverless cold starts)
+const redisUrl = process.env.REDIS_URL || process.env.KV_URL
+const redis = redisUrl ? new Redis(redisUrl) : null
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'default-webhook-secret'
 
 /**
@@ -40,24 +42,20 @@ export async function POST(request: NextRequest) {
     const body = JSON.parse(rawBody)
     const { event, transactionHash, status, type, data } = body
 
-    // Prevent duplicate processing
-    if (transactionHash) {
-      const now = Date.now()
-      const lastProcessed = processedTransactions.get(transactionHash) || 0
-      if (now - lastProcessed < 60000) { // 1 minute cooldown
-        console.log('Duplicate transaction ignored:', transactionHash)
-        return NextResponse.json({ success: true, message: 'Already processed' })
-      }
-      processedTransactions.set(transactionHash, now)
-
-      // Cleanup old entries (keep last 5 minutes)
-      if (processedTransactions.size > 100) {
-        const entries = Array.from(processedTransactions.entries())
-        for (const [hash, time] of entries) {
-          if (now - time > 300000) {
-            processedTransactions.delete(hash)
-          }
+    // Prevent duplicate processing (Redis-backed)
+    if (transactionHash && redis) {
+      try {
+        const dedupKey = `webhook:dedup:${transactionHash}`
+        const exists = await redis.get(dedupKey)
+        if (exists) {
+          console.log('Duplicate transaction ignored:', transactionHash)
+          return NextResponse.json({ success: true, message: 'Already processed' })
         }
+        // Mark as processed with 5-minute TTL (auto-cleanup)
+        await redis.set(dedupKey, '1', 'EX', 300)
+      } catch (err) {
+        console.error('Redis dedup error:', err)
+        // Continue processing even if Redis fails
       }
     }
 

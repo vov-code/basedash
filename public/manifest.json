@@ -10,8 +10,15 @@
   "icons": [
     {
       "src": "/base-logo.png",
-      "sizes": "192x192 512x512",
-      "type": "image/png"
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/base-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

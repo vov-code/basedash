@@ -2,10 +2,13 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { base, baseSepolia } from 'wagmi/chains'
 import { GAME_LEADERBOARD_ABI, CONTRACT_ADDRESS } from '@/app/contracts'
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 const SECONDS_IN_DAY = BigInt(86400)
+const isTestnet = process.env.NEXT_PUBLIC_USE_TESTNET === 'true'
+const activeChainId = isTestnet ? baseSepolia.id : base.id
 
 // ============================================================================
 // STREAK MULTIPLIER TIERS
@@ -119,6 +122,7 @@ export function useDailyCheckin(address: `0x${string}` | undefined, enabled = tr
         abi: GAME_LEADERBOARD_ABI,
         functionName: 'linkWallet',
         args: [fid],
+        chainId: activeChainId,
       })
     },
     [address, isContractReady, writeLinkWallet]
@@ -131,6 +135,7 @@ export function useDailyCheckin(address: `0x${string}` | undefined, enabled = tr
       address: CONTRACT_ADDRESS,
       abi: GAME_LEADERBOARD_ABI,
       functionName: 'dailyCheckIn',
+      chainId: activeChainId,
     })
   }, [address, canCheckIn, isContractReady, writeDailyCheckIn])
 

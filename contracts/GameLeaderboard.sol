@@ -87,11 +87,15 @@ contract GameLeaderboard {
 
     // ── Constants ───────────────────────────────────────────────────────
     uint256 public constant MAX_LEADERBOARD_SIZE = 100;
-    uint256 public constant MAX_SCORE = 1_000_000_000; // 1 billion cap
+    uint256 public constant MAX_SCORE = 50_000; // Aligned with API validation
 
     // ── State ───────────────────────────────────────────────────────────
     address public owner;
+    address public pendingOwner;  // Ownable2Step: pending new owner
     address public scoreSigner;  // Backend wallet that signs valid scores
+
+    // Relayer access control
+    mapping(address => bool) public isRelayer;
 
     // Leaderboard
     address[] public leaderboardAddresses;
@@ -145,9 +149,29 @@ contract GameLeaderboard {
         uint256 timestamp
     );
 
+    event RelayerUpdated(
+        address indexed relayer,
+        bool indexed status
+    );
+
+    event OwnershipTransferStarted(
+        address indexed previousOwner,
+        address indexed newOwner
+    );
+
+    event OwnershipTransferred(
+        address indexed previousOwner,
+        address indexed newOwner
+    );
+
     // ── Modifiers ───────────────────────────────────────────────────────
     modifier onlyOwner() {
         require(msg.sender == owner, "Not owner");
+        _;
+    }
+
+    modifier onlyRelayerOrOwner() {
+        require(msg.sender == owner || isRelayer[msg.sender], "Not relayer or owner");
         _;
     }
 
@@ -181,13 +205,14 @@ contract GameLeaderboard {
      * @notice Gasless submission — the backend (or any relayer) submits on
      *         behalf of the player.  The signature still proves the
      *         scoreSigner approved this exact (player, score, nonce) tuple.
+     *         Only the owner or approved relayers can call this.
      */
     function submitScoreFor(
         address player,
         uint256 score,
         uint256 nonce,
         bytes calldata signature
-    ) external {
+    ) external onlyRelayerOrOwner {
         _submitScoreInternal(player, score, nonce, signature);
     }
 
@@ -453,6 +478,36 @@ contract GameLeaderboard {
         address old = scoreSigner;
         scoreSigner = newSigner;
         emit ScoreSignerUpdated(newSigner, old);
+    }
+
+    /**
+     * @notice Grant or revoke relayer access for gasless submissions.
+     */
+    function setRelayer(address relayer, bool status) external onlyOwner {
+        require(relayer != address(0), "Invalid relayer");
+        isRelayer[relayer] = status;
+        emit RelayerUpdated(relayer, status);
+    }
+
+    /**
+     * @notice Ownable2Step: initiate ownership transfer.
+     *         New owner must call acceptOwnership() to complete.
+     */
+    function transferOwnership(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "Invalid new owner");
+        pendingOwner = newOwner;
+        emit OwnershipTransferStarted(owner, newOwner);
+    }
+
+    /**
+     * @notice Ownable2Step: accept pending ownership transfer.
+     */
+    function acceptOwnership() external {
+        require(msg.sender == pendingOwner, "Not pending owner");
+        address oldOwner = owner;
+        owner = pendingOwner;
+        pendingOwner = address(0);
+        emit OwnershipTransferred(oldOwner, msg.sender);
     }
 
     /**

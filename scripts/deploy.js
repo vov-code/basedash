@@ -3,9 +3,16 @@ const fs = require('fs')
 const path = require('path')
 
 async function main() {
-  console.log('🚀 Deploying GameLeaderboard to Base Sepolia...')
+  const networkName = hre.network.name
+  const isMainnet = networkName === 'base'
+  const networkLabel = isMainnet ? 'Base Mainnet' : 'Base Sepolia'
+  const basescanUrl = isMainnet
+    ? 'https://basescan.org/address'
+    : 'https://sepolia.basescan.org/address'
 
-  // Проверяем приватный ключ
+  console.log(`🚀 Deploying GameLeaderboard to ${networkLabel}...`)
+
+  // Check private key
   const privateKey = process.env.PRIVATE_KEY
   if (!privateKey) {
     console.error('❌ PRIVATE_KEY not found in .env.local')
@@ -23,9 +30,9 @@ async function main() {
   await leaderboard.waitForDeployment()
 
   const address = await leaderboard.getAddress()
-  console.log('✅ GameLeaderboard deployed to:', address)
+  console.log(`✅ GameLeaderboard deployed to: ${address}`)
 
-  // Сохраняем адрес для frontend
+  // Save address for frontend
   const contractsDir = path.join(process.cwd(), 'app', 'contracts')
 
   if (!fs.existsSync(contractsDir)) {
@@ -34,7 +41,7 @@ async function main() {
 
   const contractInfo = {
     address: address,
-    network: 'base-sepolia',
+    network: networkName,
     deployedAt: new Date().toISOString(),
   }
 
@@ -45,7 +52,7 @@ async function main() {
 
   console.log('📄 Contract info saved to app/contracts/contract-info.json')
 
-  // Копируем ABI
+  // Copy ABI
   const artifactPath = path.join(
     process.cwd(),
     'artifacts',
@@ -63,13 +70,17 @@ async function main() {
     console.log('📄 ABI saved to app/contracts/GameLeaderboardABI.json')
   }
 
-  // Обновляем .env.local
+  // Update .env.local
   const envPath = path.join(process.cwd(), '.env.local')
   let envContent = ''
 
   if (fs.existsSync(envPath)) {
     envContent = fs.readFileSync(envPath, 'utf8')
   }
+
+  const envKey = isMainnet
+    ? 'NEXT_PUBLIC_CONTRACT_ADDRESS_MAINNET'
+    : 'NEXT_PUBLIC_CONTRACT_ADDRESS_TESTNET'
 
   envContent = envContent.replace(
     /NEXT_PUBLIC_CONTRACT_ADDRESS=.*/,
@@ -79,11 +90,16 @@ async function main() {
   fs.writeFileSync(envPath, envContent)
   console.log('📄 .env.local updated with contract address')
 
-  console.log('\n✅ Deployment complete!')
+  console.log(`\n✅ Deployment to ${networkLabel} complete!`)
   console.log('📝 Next steps:')
   console.log('   1. Restart your dev server: npm run dev')
-  console.log('   2. Check contract on Basescan:')
-  console.log(`      https://sepolia.basescan.org/address/${address}`)
+  console.log(`   2. Check contract on Basescan:`)
+  console.log(`      ${basescanUrl}/${address}`)
+  if (isMainnet) {
+    console.log('   3. Call setScoreSigner(backendAddress) on the contract')
+    console.log('   4. Call setRelayer(relayerAddress, true) on the contract')
+    console.log('   5. Set NEXT_PUBLIC_USE_TESTNET=false in your environment')
+  }
 }
 
 main()
